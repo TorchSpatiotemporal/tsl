@@ -1,0 +1,84 @@
+import torch.nn as nn
+from tsl.nn.base import TemporalConv2d, GatedTemporalConv2d
+from torch.nn import functional as F
+
+from einops import rearrange
+
+
+class TemporalConvNet(nn.Module):
+    r"""
+    Simple TCN encoder with optional linear readout.
+
+    Args:
+        input_channels (int): Input size.
+        hidden_channels (int): Channels in the hidden layers.
+        kernel_size (int): Size of the convolutional kernel.
+        dilation (int): Dilation coefficient of the convolutional kernel.
+        stride (int, optional): Stride of the convolutional kernel.
+        output_channels (int, optional): Channels in the output layer.
+        n_layers (int, optional): Number of hidden layers. (default: 1)
+        gated (bool, optional): Whether to used the GatedTanH activation function. (default: `False`)
+        dropout (float, optional): Dropout probability.
+        activation (str, optional): Activation function. (default: `relu`)
+        exponential_dilation (bool, optional): Whether to increase exponentially the dilation factor at each layer.
+        weight_norm (bool, optional): Whether to apply weight normalization to the temporal convolutional filters.
+        causal_padding (bool, optional): Whether to pad the input sequence to preserve causality.
+        bias (bool, optional): Whether to add a learnable bias to the output.
+        channel_last (bool, optional): If `True` input must have layout (b s n c), (b c n s) otherwise.
+    """
+    def __init__(self,
+                 input_channels,
+                 hidden_channels,
+                 kernel_size,
+                 dilation,
+                 stride=1,
+                 output_channels=None,
+                 n_layers=1,
+                 gated=False,
+                 dropout=0.,
+                 activation='relu',
+                 exponential_dilation=False,
+                 weight_norm=False,
+                 causal_padding=True,
+                 bias=True,
+                 channel_last=True):
+        super(TemporalConvNet, self).__init__()
+        self.channel_last = channel_last
+        base_conv = TemporalConv2d if not gated else GatedTemporalConv2d
+        layers = []
+        d = dilation
+        for i in range(n_layers):
+            if exponential_dilation:
+                d = dilation ** i
+            layers.append(base_conv(input_channels=input_channels if i == 0 else hidden_channels,
+                                    output_channels=hidden_channels,
+                                    kernel_size=kernel_size,
+                                    dilation=d,
+                                    stride=stride,
+                                    causal_pad=causal_padding,
+                                    weight_norm=weight_norm,
+                                    bias=bias
+                                    ))
+
+        self.convs = nn.ModuleList(layers)
+        self.f = getattr(F, activation) if not gated else nn.Identity()
+        self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
+
+        if output_channels is not None:
+            self.readout = TemporalConv2d(input_channels=hidden_channels,
+                                          output_channels=output_channels,
+                                          kernel_size=1)
+        else:
+            self.register_parameter('readout', None)
+
+    def forward(self, x):
+        """"""
+        if self.channel_last:
+            x = rearrange(x, 'b s n c -> b c n s')
+        for conv in self.convs:
+            x = self.dropout(self.f(conv(x)))
+        if self.readout is not None:
+            x = self.readout(x)
+        if self.channel_last:
+            x = rearrange(x, 'b c n s -> b s n c')
+        return x

@@ -1,0 +1,12 @@
+window: 24
+batch_size: 32
+use_lr_schedule: True
+lr: 0.001
+epochs: 100
+
+hidden_size: 64
+cell: 'gru'
+concat_mask: True
+detach_input: False
+process_nodes_independently: False
+state_init: 'zero'

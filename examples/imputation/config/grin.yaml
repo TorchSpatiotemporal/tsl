@@ -1,0 +1,22 @@
+window: 24
+warm_up_steps: [ 3, 3 ]
+
+batch_size: 32
+use_lr_schedule: True
+lr: 0.001
+epochs: 300
+batches_per_epoch: 120
+val_len: 0.05
+test_len: 0.2
+# aggregate_by: 'mean'
+
+hidden_size: 32
+ff_size: 128
+embedding_size: 8
+n_layers: 1
+kernel_size: 2
+decoder_order: 1
+layer_norm: False
+dropout: 0
+ff_dropout: 0
+merge_mode: 'mlp'

@@ -1,0 +1,15 @@
+window: 12
+horizon: 12
+batch_size: 64
+l2_reg: 0.0001
+use_lr_schedule: True
+lr: 0.001
+epochs: 100
+
+hidden_size: 32
+ff_size: 64
+rec_layers: 2
+ff_layers: 1
+rec_dropout: 0.1
+ff_dropout: 0.1
+cell_type: gru
