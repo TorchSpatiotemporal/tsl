@@ -27,7 +27,7 @@ class GraphConv(MessagePassing):
     """
 
     def __init__(self, input_size: int, output_size: int, bias: bool = True, root_weight: bool = True, **kwargs):
-        super(GraphConv, self).__init__(aggr="mean", node_dim=-2)
+        super(GraphConv, self).__init__(aggr="add", node_dim=-2)
         super().__init__(**kwargs)
 
         self.in_channels = input_size
