@@ -54,5 +54,5 @@ setup(
     extras_require={
         'full': full_install_requires,
     },
-    packages=find_packages(),
+    packages=find_packages(exclude=['examples*']),
 )
