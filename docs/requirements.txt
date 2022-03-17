@@ -1,3 +1,4 @@
-pyDeprecate==0.3.1
+https://data.pyg.org/whl/torch-1.11.0%2Bcpu/torch_scatter-2.0.9-cp38-cp38-linux_x86_64.whl
+https://data.pyg.org/whl/torch-1.11.0%2Bcpu/torch_sparse-0.6.13-cp38-cp38-linux_x86_64.whl
 sphinx==4.2.0
-sphinx_rtd_theme==1.0.0
+sphinx_rtd_theme==0.5.2

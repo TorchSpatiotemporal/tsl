@@ -17,10 +17,10 @@ install_requires = [
     'scipy',
     'tables',
     'test_tube',
-    'torch>=1.10',
+    'torch>=1.9',
     'torch_geometric>=2.0',
     'torchmetrics>=0.7',
-    'tqdm==4.62.3',
+    'tqdm',
 ]
 
 full_install_requires = [
@@ -46,6 +46,7 @@ setup(
         'geometric-deep-learning',
         'graph-neural-networks',
         'graph-convolutional-networks',
+        'temporal-graph-networks',
         'spatiotemporal-processing',
     ],
     python_requires='>=3.7',
