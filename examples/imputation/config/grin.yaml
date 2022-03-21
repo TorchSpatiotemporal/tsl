@@ -1,17 +1,18 @@
 window: 24
-warm_up_steps: [ 3, 3 ]
+#warm_up_steps: [ 3, 3 ]
 
 batch_size: 32
 use_lr_schedule: True
 lr: 0.001
 epochs: 300
-batches_per_epoch: 120
-val_len: 0.05
+batches_per_epoch: 160
+val_len: 0.1
 test_len: 0.2
-# aggregate_by: 'mean'
 
-hidden_size: 32
-ff_size: 128
+scale_target: True
+
+hidden_size: 64
+ff_size: 64
 embedding_size: 8
 n_layers: 1
 kernel_size: 2

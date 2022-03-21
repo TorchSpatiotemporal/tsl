@@ -1,12 +1,12 @@
 from typing import Optional, Union, Tuple, Mapping, List
 
 import numpy as np
-import torch
 from torch import Tensor
 from torch_geometric.utils import dense_to_sparse
 
 from tsl.typing import TensArray
-from . import utils
+from . import utils, BatchMap, BatchMapItem
+from .utils import SynchMode
 
 
 class DataParsingMixin:
@@ -123,3 +123,39 @@ class DataParsingMixin:
                               value: Union[TensArray, List, Tuple, Mapping]):
         keys = ['value', 'node_level', 'add_to_batch']
         return self._value_to_kwargs(value, keys)
+
+
+class BatchMapMixin:
+
+    # Map Dataset to item #####################################################
+
+    @property
+    def targets(self) -> BatchMap:
+        return BatchMap(y=BatchMapItem('data', SynchMode.HORIZON,
+                                       cat_dim=None, preprocess=False,
+                                       n_channels=self.n_channels))
+
+    def default_input_map(self) -> BatchMap:
+        im = BatchMap(x=BatchMapItem('data', SynchMode.WINDOW, cat_dim=None,
+                                     preprocess=True,
+                                     n_channels=self.n_channels))
+        for key, exo in self.exogenous.items():
+            im[key] = BatchMapItem(key, SynchMode.WINDOW,
+                                   cat_dim=None, preprocess=True,
+                                   n_channels=exo.shape[-1])
+        return im
+
+    def set_input_map(self, input_map=None, **kwargs):
+        self.input_map = BatchMap(_parent=self)
+        self.update_input_map(input_map, **kwargs)
+
+    def update_input_map(self, input_map=None, **kwargs):
+        # check input map
+        if input_map is not None:
+            assert isinstance(input_map, Mapping), \
+                f"Type {type(input_map)} is not valid for `input_map`"
+        # update from input_map
+        if input_map is not None:
+            self.input_map.update(**input_map)
+        # update from kwargs
+        self.input_map.update(**kwargs)

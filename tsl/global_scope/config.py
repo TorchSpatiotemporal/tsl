@@ -9,11 +9,11 @@ class Config(dict):
         if 'config_dir' in kwargs:
             self.config_dir = kwargs.pop('config_dir')
         else:
-            self.config_dir = None
+            self.config_dir = os.path.join(self.curr_dir, 'config')
         if 'log_dir' in kwargs:
             self.log_dir = kwargs.pop('log_dir')
         else:
-            self.log_dir = os.path.join(self.curr_dir, 'log_dir')
+            self.log_dir = os.path.join(self.curr_dir, 'log')
         self.update(**kwargs)
 
     def __setitem__(self, key: str, value):

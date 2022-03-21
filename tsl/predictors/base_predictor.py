@@ -152,18 +152,19 @@ class Predictor(pl.LightningModule):
         :param return_target: whether to return the prediction target y_true and the prediction mask
         :return: (y_true), y_hat, (mask)
         """
-        x, y, mask, transform = self._unpack_batch(batch)
+        inputs, targets, mask, transform = self._unpack_batch(batch)
         if preprocess:
             for key, trans in transform.items():
-                if key in x:
-                    x[key] = trans.transform(x[key])
-        y_hat = self.forward(**x)
+                if key in inputs:
+                    inputs[key] = trans.transform(inputs[key])
+        y_hat = self.forward(**inputs)
         # Rescale outputs
         if postprocess:
             trans = transform.get('y')
-            y_hat = trans.inverse_transform(y_hat)
+            if trans is not None:
+                y_hat = trans.inverse_transform(y_hat)
         if return_target:
-            y = y.get('y')
+            y = targets.get('y')
             return y, y_hat, mask
         return y_hat
 

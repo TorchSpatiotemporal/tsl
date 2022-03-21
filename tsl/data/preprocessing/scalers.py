@@ -326,28 +326,40 @@ class ScalerModule(Module):
         scale = self.scale.detach().cpu().numpy()
         return Scaler(bias=bias, scale=scale)
 
-    @classmethod
-    def cat_tensors(cls, scalers, sizes, key, dim, fill_value):
+    @staticmethod
+    def cat_tensors(scalers, sizes, key, dim, fill_value):
+        # arrange tensors in numbered dictionary where if tensors[i] exists then
+        # the i-th scaler is not None and has a tensor at {scaler}.{key}
         tensors = {i: getattr(s, key) for i, s in enumerate(scalers)
                    if s is not None and getattr(s, key) is not None}
+        # if no valid tensor return
         if len(tensors) == 0:
             return None
         # get dtype and device of first tensor
         dtype, device = tensors[0].dtype, tensors[0].device
-        shapes = []
+        # for each scaler (also the ones with no tensor to be concatenated)
+        # retrieve the tensor (or create one if not present) and the broadcast
+        # shape
+        out, shapes = [], []
         for i, scaler in enumerate(scalers):
+            # retrieve tensor
             tensor = tensors.get(i)
             if tensor is None:  # i.e., if scaler is None or has key=None
                 shape = [1] * len(sizes[i])
-                shape[dim] = sizes[i][dim]
                 tensor = torch.full(shape, fill_value,
                                     dtype=dtype, device=device)
-                tensors[i] = tensor
-            shapes.append(tensor.size())
+            out.append(tensor)
+            # compute broadcast shape
+            shape = list(tensor.size())
+            shape[dim] = sizes[i][dim]
+            shapes.append(shape)
+        # compute out shape as maximum shape in all dims but concat dim
         expand_dims = list(np.max(shapes, 0))
-        expand_dims[dim] = -1
-        tensors = [tensor.expand(*expand_dims) for tensor in tensors.values()]
-        return torch.cat(tensors, dim=dim)
+        # expand each tensor for output shape
+        for i, shape in enumerate(shapes):
+            expand_dims[dim] = shape[dim]
+            out[i] = out[i].expand(*expand_dims)
+        return torch.cat(out, dim=dim)
 
     @classmethod
     def cat(cls, scalers: Union[List, Tuple], dim: int = -1,

@@ -101,7 +101,7 @@ class Imputer(Predictor):
         # move eval_mask from batch.input to batch
         batch.eval_mask = inputs.pop('eval_mask')
         # move mask from batch to batch.input
-        inputs.mask = inputs.pop('mask')
+        inputs.mask = batch.pop('mask')
         # whiten missing values
         if 'x' in inputs:
             inputs['x'] = inputs['x'] * inputs.mask.byte()
@@ -148,12 +148,11 @@ class Imputer(Predictor):
     def training_step(self, batch, batch_idx):
 
         # randomly mask out value with probability p = whiten_prob
-        whiten_mask = torch.rand(batch.mask.size(),
-                                 device=batch.mask.device) > self.whiten_prob
-        training_mask = batch.mask & whiten_mask
         eval_mask = batch.eval_mask
-        mask = (batch.mask | eval_mask) - training_mask  # all unseen data
-        batch.mask = training_mask
+        mask = batch.mask
+        whiten_mask = torch.rand(mask.size(),
+                                 device=mask.device) > self.whiten_prob
+        batch.mask = mask & whiten_mask
 
         y_hat, y, loss = self.shared_step(batch, mask)
 
