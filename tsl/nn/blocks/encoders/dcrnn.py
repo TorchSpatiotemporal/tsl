@@ -14,7 +14,7 @@ class DCRNNCell(_GraphGRUCell):
          k: Size of the diffusion kernel.
          root_weight: Whether to learn a separate transformation for the central node.
     """
-    def __init__(self, input_size, output_size, k=2, root_weight=False):
+    def __init__(self, input_size, output_size, k=2, root_weight=True):
         super(DCRNNCell, self).__init__()
         # instantiate gates
         self.forget_gate = DiffConv(input_size + output_size, output_size, k=k, root_weight=root_weight)
@@ -42,7 +42,7 @@ class DCRNN(_GraphRNN):
                  hidden_size,
                  n_layers=1,
                  k=2,
-                 root_weight=False):
+                 root_weight=True):
         super(DCRNN, self).__init__()
         self.d_in = input_size
         self.d_model = hidden_size

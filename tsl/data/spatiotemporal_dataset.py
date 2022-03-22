@@ -13,14 +13,14 @@ from tsl.typing import TensArray, TemporalIndex, IndexSlice
 from .batch import Batch
 from .data import Data
 from .batch_map import BatchMap, BatchMapItem
-from .mixin import DataParsingMixin
+from .mixin import DataParsingMixin, BatchMapMixin
 from .preprocessing.scalers import Scaler, ScalerModule
 from .utils import SynchMode, WINDOW, HORIZON, broadcast, outer_pattern
 
 _WINDOWING_KEYS = ['data', 'window', 'delay', 'horizon', 'stride']
 
 
-class SpatioTemporalDataset(Dataset, DataParsingMixin):
+class SpatioTemporalDataset(Dataset, DataParsingMixin, BatchMapMixin):
     r"""Base class for structures that are bridges between Datasets and Models.
 
     A :class:`SpatioTemporalDataset` takes as input a
@@ -99,7 +99,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # Initialize private data holders
         self._exogenous = dict()
         self._attributes = dict()
-        self.input_map = BatchMap()
+        self.input_map = BatchMap(_parent=self)
         # Store data
         self.data: Tensor = self._parse_data(data)
         # Store time information
@@ -115,18 +115,20 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         self.stride = stride
         self.window_lag = window_lag
         self.horizon_lag = horizon_lag
+        # Store exogenous and attributes
+        if exogenous is not None:
+            for name, value in exogenous.items():
+                self.add_exogenous(name, **self._exog_value_to_kwargs(value),
+                                   add_to_input_map=False)
+        if attributes is not None:
+            for name, value in attributes.items():
+                self.add_attribute(name, **self._attr_value_to_kwargs(value),
+                                   add_to_batch=False)
         # Updated input map (i.e., how to map data, exogenous and attribute
         # inside item)
         if input_map is None:
             input_map = self.default_input_map()
         self.set_input_map(input_map)
-        # Store exogenous and attributes
-        if exogenous is not None:
-            for name, value in exogenous.items():
-                self.add_exogenous(name, **self._exog_value_to_kwargs(value))
-        if attributes is not None:
-            for name, value in attributes.items():
-                self.add_attribute(name, **self._attr_value_to_kwargs(value))
         # Store preprocessing options
         self.trend = None
         if trend is not None:
@@ -171,48 +173,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             del self._exogenous[item]
         elif item in self._attributes:
             del self._attributes[item]
-
-    # Map Dataset to item #####################################################
-
-    @property
-    def targets(self) -> BatchMap:
-        return BatchMap(y=BatchMapItem('data', SynchMode.HORIZON,
-                                       cat_dim=None, preprocess=False,
-                                       n_channels=self.n_channels))
-
-    def default_input_map(self) -> BatchMap:
-        im = BatchMap(x=BatchMapItem('data', SynchMode.WINDOW, cat_dim=None,
-                                     preprocess=True,
-                                     n_channels=self.n_channels))
-        for key, exo in self.exogenous.items():
-            im[key] = BatchMapItem(key, SynchMode.WINDOW,
-                                   cat_dim=None, preprocess=True,
-                                   n_channels=exo.shape[-1])
-        return im
-
-    def set_input_map(self, input_map=None, **kwargs):
-        if input_map is None:
-            self.input_map = BatchMap()
-        elif isinstance(input_map, BatchMap):
-            self.input_map = input_map
-        elif isinstance(input_map, Mapping):
-            self.input_map = BatchMap(**input_map)
-        else:
-            raise TypeError(f"Type {type(input_map)} is not valid "
-                            f"for `input_map`")
-        self.update_input_map(**kwargs)
-
-    def update_input_map(self, input_map=None, **kwargs):
-        keys = []
-        if input_map is not None:
-            self.input_map.update(**input_map)
-            keys += list(input_map.keys())
-        self.input_map.update(**kwargs)
-        keys += list(kwargs.keys())
-        for key, item in self.input_map.items():
-            if key in keys:
-                item.n_channels = sum([getattr(self, k).shape[-1]
-                                       for k in item.keys])
 
     @property
     def keys(self) -> list:

@@ -4,13 +4,37 @@ import torch
 import torch.nn as nn
 from torch import Tensor, LongTensor
 from torch_geometric.typing import OptTensor
-from torch_geometric.utils import remove_self_loops
+from torch_geometric.utils import remove_self_loops, to_scipy_sparse_matrix, \
+    from_scipy_sparse_matrix
+from torch_geometric.utils.num_nodes import maybe_num_nodes
 
 from .diff_conv import DiffConv
 from ..norm import LayerNorm
 from ...base.embedding import StaticGraphEmbedding
 from tsl.nn.blocks.encoders.dcrnn import DCRNNCell
 from ...utils.connectivity import power_series, normalize, transpose
+
+
+def compute_support(edge_index: LongTensor, edge_weight: OptTensor = None,
+                    order: int = 1,
+                    num_nodes: Optional[int] = None,
+                    add_backward: bool = True):
+    num_nodes = maybe_num_nodes(edge_index, num_nodes)
+    edge_index, edge_weight = remove_self_loops(edge_index, edge_weight)
+    ei, ew = normalize(edge_index, edge_weight, dim=1, num_nodes=num_nodes)
+    a = to_scipy_sparse_matrix(ei, ew, num_nodes)
+    support = []
+    ak = a
+    for i in range(order-1):
+        ak = ak * a
+        ak.setdiag(0.)
+        ak.eliminate_zeros()
+        support.append(ak)
+    support = [(ei, ew)] + [from_scipy_sparse_matrix(ak) for ak in support]
+    if add_backward:
+        ei_t, ew_t = transpose(edge_index, edge_weight)
+        return support + compute_support(ei_t, ew_t, order, num_nodes, False)
+    return support
 
 
 class SpatialDecoder(nn.Module):
@@ -109,7 +133,7 @@ class GRIL(nn.Module):
             in_channels = rnn_input_size if i == 0 else self.hidden_size
             cell = DCRNNCell(input_size=in_channels,
                              output_size=self.hidden_size,
-                             k=kernel_size)
+                             k=kernel_size, root_weight=True)
             self.cells.append(cell)
             norm = LayerNorm(self.hidden_size) if layer_norm else nn.Identity()
             self.norms.append(norm)

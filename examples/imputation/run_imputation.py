@@ -166,7 +166,7 @@ def run_experiment(args):
                                       stride=args.stride,
                                       precision=args.precision)
 
-    scalers = {'data': StandardScaler(axis=(0, 1, 2))}
+    scalers = {'data': StandardScaler(axis=(0, 1))}
     splitter = dataset.get_splitter(val_len=args.val_len,
                                     test_len=args.test_len)
     dm = SpatioTemporalDataModule(
