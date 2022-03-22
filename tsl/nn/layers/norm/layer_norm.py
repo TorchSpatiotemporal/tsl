@@ -5,7 +5,7 @@ from torch_geometric.nn import inits
 
 
 class LayerNorm(torch.nn.Module):
-    r"""Applies graph-wise layer normalization.
+    r"""Applies layer normalization.
 
     Args:
         in_channels (int): Size of each input sample.
@@ -37,8 +37,8 @@ class LayerNorm(torch.nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         """"""
-        mean = torch.mean(x, dim=(-2, -1), keepdim=True)
-        std = torch.std(x, dim=(-2, -1), unbiased=False, keepdim=True)
+        mean = torch.mean(x, dim=-1, keepdim=True)
+        std = torch.std(x, dim=-1, unbiased=False, keepdim=True)
 
         out = (x - mean) / (std + self.eps)
 

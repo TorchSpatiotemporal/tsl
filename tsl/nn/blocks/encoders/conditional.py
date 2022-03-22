@@ -3,7 +3,7 @@ from torch.nn import Module
 from torch.nn import functional as F
 
 from tsl.nn.base import TemporalConv2d, GatedTemporalConv2d
-from tsl.nn.utils.utils import get_layer_activation
+from tsl.nn.utils import utils
 
 
 class ConditionalBlock(Module):
@@ -36,7 +36,7 @@ class ConditionalBlock(Module):
         self.d_in = input_size
         self.d_u = exog_size
         self.d_out = output_size
-        self.activation = getattr(F, activation)
+        self.activation = utils.get_functional_activation(activation)
         self.dropout = nn.Dropout(dropout)
 
         # inputs module
@@ -126,7 +126,7 @@ class ConditionalTCNBlock(nn.Module):
                                kernel_size=kernel_size,
                                dilation=dilation,
                                weight_norm=weight_norm),
-                get_layer_activation(activation)(),
+                utils.get_layer_activation(activation)(),
                 nn.Dropout(dropout)
             )
             self.conditions_conv = nn.Sequential(
@@ -135,7 +135,7 @@ class ConditionalTCNBlock(nn.Module):
                                kernel_size=kernel_size,
                                dilation=dilation,
                                weight_norm=weight_norm),
-                get_layer_activation(activation)(),
+                utils.get_layer_activation(activation)(),
                 nn.Dropout(dropout)
             )
         self.out_input = nn.Linear(output_size, output_size)

@@ -1,6 +1,7 @@
 import torch.nn as nn
 from tsl.nn.base import TemporalConv2d, GatedTemporalConv2d
-from torch.nn import functional as F
+from tsl.nn.utils import utils
+from tsl.nn.utils.utils import _maybe_cat_exog
 
 from einops import rearrange
 
@@ -15,6 +16,7 @@ class TemporalConvNet(nn.Module):
         kernel_size (int): Size of the convolutional kernel.
         dilation (int): Dilation coefficient of the convolutional kernel.
         stride (int, optional): Stride of the convolutional kernel.
+        output_channels (int, optional): Channels of the optional exogenous variables.
         output_channels (int, optional): Channels in the output layer.
         n_layers (int, optional): Number of hidden layers. (default: 1)
         gated (bool, optional): Whether to used the GatedTanH activation function. (default: `False`)
@@ -32,6 +34,7 @@ class TemporalConvNet(nn.Module):
                  kernel_size,
                  dilation,
                  stride=1,
+                 exog_channels=None,
                  output_channels=None,
                  n_layers=1,
                  gated=False,
@@ -45,6 +48,10 @@ class TemporalConvNet(nn.Module):
         super(TemporalConvNet, self).__init__()
         self.channel_last = channel_last
         base_conv = TemporalConv2d if not gated else GatedTemporalConv2d
+
+        if exog_channels is not None:
+            input_channels += exog_channels
+
         layers = []
         d = dilation
         for i in range(n_layers):
@@ -61,7 +68,7 @@ class TemporalConvNet(nn.Module):
                                     ))
 
         self.convs = nn.ModuleList(layers)
-        self.f = getattr(F, activation) if not gated else nn.Identity()
+        self.f = utils.get_functional_activation(activation) if not gated else nn.Identity()
         self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
 
         if output_channels is not None:
@@ -71,10 +78,14 @@ class TemporalConvNet(nn.Module):
         else:
             self.register_parameter('readout', None)
 
-    def forward(self, x):
+    def forward(self, x, u=None):
         """"""
         if self.channel_last:
+            x = _maybe_cat_exog(x, u, -1)
             x = rearrange(x, 'b s n c -> b c n s')
+        else:
+            x = _maybe_cat_exog(x, u, 1)
+
         for conv in self.convs:
             x = self.dropout(self.f(conv(x)))
         if self.readout is not None:

@@ -3,6 +3,7 @@ from torch.nn import functional as F
 
 from tsl.nn.base.graph_conv import GraphConv
 from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
+from tsl.nn.utils import utils
 
 
 class GCNDecoder(nn.Module):
@@ -38,7 +39,7 @@ class GCNDecoder(nn.Module):
                           output_size=hidden_size)
             )
         self.convs = nn.ModuleList(graph_convs)
-        self.activation = getattr(F, activation)
+        self.activation = utils.get_functional_activation(activation)
         self.dropout = nn.Dropout(dropout)
         self.readout = MLPDecoder(input_size=hidden_size,
                                   hidden_size=hidden_size,

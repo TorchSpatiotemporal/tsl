@@ -1,9 +1,10 @@
 from torch import nn
-from torch.nn import functional as F
 
 from tsl.nn.layers.graph_convs.diff_conv import DiffConv
 from tsl.nn.blocks.encoders.tcn import TemporalConvNet
 from tsl.nn.layers.norm.norm import Norm
+
+from tsl.nn.utils import utils
 
 
 class SpatioTemporalConvNet(nn.Module):
@@ -65,7 +66,7 @@ class SpatioTemporalConvNet(nn.Module):
         self.spatial_norms = nn.ModuleList(Norm(norm_type=norm, in_channels=output_size)
                                            for _ in range(spatial_convs))
         self.dropout = nn.Dropout(dropout)
-        self.activation = getattr(F, activation)
+        self.activation = utils.get_functional_activation(activation)
 
     def forward(self, x, edge_index, edge_weight=None):
         """"""

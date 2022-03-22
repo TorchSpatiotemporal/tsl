@@ -4,6 +4,7 @@ import torch
 from torch import nn, Tensor
 import numpy as np
 
+from ..functional import expand_then_cat
 
 class Lambda(nn.Module):
 
@@ -23,11 +24,7 @@ class Concatenate(nn.Module):
 
     def forward(self, tensors: Union[Tuple[Tensor, ...], List[Tensor]]) \
             -> Tensor:
-        shapes = [t.shape for t in tensors]
-        expand_dims = list(np.max(shapes, 0))
-        expand_dims[self.dim] = -1
-        tensors = [t.expand(*expand_dims) for t in tensors]
-        return torch.cat(tensors, dim=self.dim)
+        return expand_then_cat(tensors, self.dim)
 
 
 class Select(nn.Module):

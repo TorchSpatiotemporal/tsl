@@ -2,7 +2,7 @@ from torch import nn
 
 from tsl.nn.base.attention import MultiHeadAttention
 from tsl.nn.layers.norm import LayerNorm
-from tsl.nn.utils.utils import get_layer_activation
+from tsl.nn.utils import utils
 from functools import partial
 
 import torch.nn.functional as F
@@ -50,7 +50,7 @@ class TransformerLayer(nn.Module):
         self.mlp = nn.Sequential(
             LayerNorm(hidden_size),
             nn.Linear(hidden_size, ff_size),
-            get_layer_activation(activation)(),
+            utils.get_layer_activation(activation)(),
             nn.Dropout(dropout),
             nn.Linear(ff_size, hidden_size),
             nn.Dropout(dropout)
@@ -58,7 +58,7 @@ class TransformerLayer(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-        self.activation = getattr(F, activation)
+        self.activation = utils.get_functional_activation(activation)
 
     def forward(self, x, mask=None):
         """"""
@@ -114,7 +114,7 @@ class SpatioTemporalTransformerLayer(nn.Module):
         self.mlp = nn.Sequential(
             LayerNorm(hidden_size),
             nn.Linear(hidden_size, ff_size),
-            get_layer_activation(activation)(),
+            utils.get_layer_activation(activation)(),
             nn.Dropout(dropout),
             nn.Linear(ff_size, hidden_size),
             nn.Dropout(dropout)

@@ -1,5 +1,7 @@
 import math
-from typing import Optional
+from typing import Optional, Union, Tuple, List
+
+import numpy as np
 
 import torch
 import torch.nn.functional as F
@@ -11,11 +13,27 @@ from torch_scatter.utils import broadcast
 import tsl
 
 __all__ = [
+    'expand_then_cat',
     'gated_tanh',
     'reverse_tensor',
     'sparse_softmax',
     'sparse_multi_head_attention'
 ]
+
+
+def expand_then_cat(tensors: Union[Tuple[Tensor, ...], List[Tensor]], dim=-1) -> Tensor:
+    r"""
+    Match the dimensions of tensors in the input list and then concatenate.
+
+    Args:
+        tensors: Tensors to concatenate.
+        dim (int): Dimension along which to concatenate.
+    """
+    shapes = [t.shape for t in tensors]
+    expand_dims = list(np.max(shapes, 0))
+    expand_dims[dim] = -1
+    tensors = [t.expand(*expand_dims) for t in tensors]
+    return torch.cat(tensors, dim=dim)
 
 
 @torch.jit.script

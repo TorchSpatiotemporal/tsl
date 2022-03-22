@@ -3,6 +3,7 @@ import torch
 from torch import nn
 from einops import rearrange
 
+from ...utils.utils import _maybe_cat_exog
 
 class RNN(nn.Module):
     r"""
@@ -11,6 +12,7 @@ class RNN(nn.Module):
         Args:
             input_size (int): Input size.
             hidden_size (int): Units in the hidden layers.
+            exog_size (int, optional): Size of the optional exogenous variables.
             output_size (int, optional): Size of the optional readout.
             n_layers (int, optional): Number of hidden layers. (default: 1)
             cell (str, optional): Type of cell that should be use (options: [`gru`, `lstm`]). (default: `gru`)
@@ -19,6 +21,7 @@ class RNN(nn.Module):
     def __init__(self,
                  input_size,
                  hidden_size,
+                 exog_size=None,
                  output_size=None,
                  n_layers=1,
                  dropout=0.,
@@ -32,6 +35,9 @@ class RNN(nn.Module):
         else:
             raise NotImplementedError(f'"{cell}" cell not implemented.')
 
+        if exog_size is not None:
+            input_size += exog_size
+
         self.rnn = cell(input_size=input_size,
                         hidden_size=hidden_size,
                         num_layers=n_layers,
@@ -42,7 +48,7 @@ class RNN(nn.Module):
         else:
             self.register_parameter('readout', None)
 
-    def forward(self, x, return_last_state=False):
+    def forward(self, x, u=None, return_last_state=False):
         """
 
         Args:
@@ -50,6 +56,7 @@ class RNN(nn.Module):
             return_last_state: Whether to return only the state corresponding to the last time step.
         """
         # x: [batches, steps, nodes, features]
+        x = _maybe_cat_exog(x, u)
         b, *_ = x.size()
         x = rearrange(x, 'b s n f -> s (b n) f')
         x, *_ = self.rnn(x)
