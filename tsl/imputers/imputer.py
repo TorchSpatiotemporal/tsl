@@ -39,6 +39,9 @@ class Imputer(Predictor):
             :math:`\ell(\bar{y}_i, y, m)` is the forecasting error of prediction
             :math:`\bar{y}_i`, and :math:`\lambda` is :obj:`prediction_loss_weight`.
             (default: :obj:`1.0`)
+        impute_only_missing (bool): Whether to impute only missing values in
+            inference all the whole sequence.
+            (default: :obj:`True`)
         warm_up_steps (int, tuple): Number of steps to be considered as warm up
             stage at the beginning of the sequence. If a tuple is provided, the
             padding is applied both at the beginning and the end of the sequence.
@@ -66,6 +69,7 @@ class Imputer(Predictor):
                  scale_target: bool = False,
                  whiten_prob: float = 0.05,
                  prediction_loss_weight: float = 1.0,
+                 impute_only_missing: bool = True,
                  warm_up_steps: Union[int, Tuple[int, int]] = 0,
                  metrics: Optional[Mapping[str, Metric]] = None,
                  scheduler_class: Optional = None,
@@ -81,6 +85,7 @@ class Imputer(Predictor):
         self.scale_target = scale_target
         self.whiten_prob = whiten_prob
         self.prediction_loss_weight = prediction_loss_weight
+        self.impute_only_missing = impute_only_missing
 
         if isinstance(warm_up_steps, int):
             self.warm_up_steps = (warm_up_steps, 0)
@@ -117,7 +122,8 @@ class Imputer(Predictor):
         y_hat = self.predict_batch(batch, preprocess=False, postprocess=True)
         if isinstance(y_hat, (list, tuple)):
             y_hat = y_hat[0]
-        y_hat = torch.where(batch.mask.bool(), y, y_hat)
+        if self.impute_only_missing:
+            y_hat = torch.where(batch.mask.bool(), y, y_hat)
         output = dict(y=batch.y, y_hat=y_hat, mask=batch.eval_mask)
         return output
 
@@ -193,5 +199,6 @@ class Imputer(Predictor):
         parser.add_argument('--scale-target', type=bool, default=False)
         parser.add_argument('--whiten-prob', type=float, default=0.05)
         parser.add_argument('--prediction-loss-weight', type=float, default=1.0)
+        parser.add_argument('--impute-only-missing', type=bool, default=True)
         parser.add_argument('--warm-up-steps', type=tuple, default=(0, 0))
         return parser

@@ -31,10 +31,8 @@ class BatchMapItem:
 
 class BatchMap(Mapping):
 
-    def __init__(self, _parent=None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__()
-        self._parent = _parent
-        self._mapping = dict()
         for k, v in kwargs.items():
             self[k] = v
 
@@ -51,36 +49,21 @@ class BatchMap(Mapping):
         else:
             raise TypeError('Invalid type for InputMap item "{}"'
                             .format(type(value)))
-        try:
-            value.n_channels = sum([getattr(self._parent, k).shape[-1]
-                                    for k in value.keys])
-        except AttributeError:
-            pass
-        self._mapping[key] = value
-        return self
+        self.__dict__[key] = value
 
     def __getitem__(self, k):
-        return self._mapping[k]
+        return self.__dict__[k]
 
     def __len__(self) -> int:
-        return len(self._mapping)
+        return len(self.__dict__)
 
     def __iter__(self) -> Iterator:
-        return iter(self._mapping)
+        return iter(self.__dict__)
 
     def __repr__(self):
         s = ['({}={}, {})'.format(key, value.keys, value.synch_mode.name)
              for key, value in self.items()]
         return "{}[{}]".format(self.__class__.__name__, ', '.join(s))
-
-    def keys(self):
-        return self._mapping.keys()
-
-    def values(self):
-        return self._mapping.values()
-
-    def items(self):
-        return self._mapping.items()
 
     def update(self, **kwargs):
         for k, v in kwargs.items():

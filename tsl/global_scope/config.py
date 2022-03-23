@@ -3,20 +3,27 @@ from typing import Mapping, Optional
 
 
 class Config(dict):
+    """Manage the package configuration from a single object.
+
+    With a :obj:`Config` object you can edit settings within the tsl scope, like
+    directory in which you store configuration files for experiments
+    (:obj:`config_dir`), logs (:obj:`log_dir`), and data (:obj:`data_dir`).
+    """
 
     def __init__(self, **kwargs):
         super(Config, self).__init__()
-        if 'config_dir' in kwargs:
-            self.config_dir = kwargs.pop('config_dir')
-        else:
-            self.config_dir = os.path.join(self.curr_dir, 'config')
-        if 'log_dir' in kwargs:
-            self.log_dir = kwargs.pop('log_dir')
-        else:
-            self.log_dir = os.path.join(self.curr_dir, 'log')
+        # configure paths for config files and logs
+        self.config_dir = kwargs.pop('config_dir', 'config')
+        self.log_dir = kwargs.pop('log_dir', 'log')
+        # set 'data_dir' as directory for data loading and downloading
+        # defaults to '{tsl_path}/.storage'
+        default_storage = os.path.join(self.root_dir, '.storage')
+        self.data_dir = kwargs.pop('data_dir', default_storage)
         self.update(**kwargs)
 
     def __setitem__(self, key: str, value):
+        # when adding a directory, transform it to an absolute path (if it is
+        # not already) considering the path relative to the current directory
         if key.endswith('_dir') and value is not None:
             if not os.path.isabs(value):
                 value = os.path.join(self.curr_dir, value)
@@ -40,15 +47,13 @@ class Config(dict):
 
     @property
     def root_dir(self):
+        """Path to tsl installation."""
         return os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
     @property
     def curr_dir(self):
+        """System current directory."""
         return os.getcwd()
-
-    @property
-    def store_dir(self):
-        return os.path.join(self.root_dir, '.storage')
 
     def update(self, mapping: Optional[Mapping] = None, **kwargs) -> None:
         mapping = dict(mapping or {}, **kwargs)
@@ -60,6 +65,7 @@ class Config(dict):
         logger.disabled = True
 
     def load_config_file(self, filename: str):
+        """Load a configuration from a json or yaml file."""
         with open(filename, 'r') as fp:
             if filename.endswith('.json'):
                 import json
@@ -74,6 +80,7 @@ class Config(dict):
 
     @classmethod
     def from_config_file(cls, filename: str):
+        """Create new configuration from a json or yaml file."""
         config = cls()
         config.load_config_file(filename)
         return config

@@ -13,14 +13,14 @@ from tsl.typing import TensArray, TemporalIndex, IndexSlice
 from .batch import Batch
 from .data import Data
 from .batch_map import BatchMap, BatchMapItem
-from .mixin import DataParsingMixin, BatchMapMixin
+from .mixin import DataParsingMixin
 from .preprocessing.scalers import Scaler, ScalerModule
 from .utils import SynchMode, WINDOW, HORIZON, broadcast, outer_pattern
 
 _WINDOWING_KEYS = ['data', 'window', 'delay', 'horizon', 'stride']
 
 
-class SpatioTemporalDataset(Dataset, DataParsingMixin, BatchMapMixin):
+class SpatioTemporalDataset(Dataset, DataParsingMixin):
     r"""Base class for structures that are bridges between Datasets and Models.
 
     A :class:`SpatioTemporalDataset` takes as input a
@@ -99,7 +99,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin, BatchMapMixin):
         # Initialize private data holders
         self._exogenous = dict()
         self._attributes = dict()
-        self.input_map = BatchMap(_parent=self)
+        self.input_map = BatchMap()
         # Store data
         self.data: Tensor = self._parse_data(data)
         # Store time information
@@ -173,6 +173,46 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin, BatchMapMixin):
             del self._exogenous[item]
         elif item in self._attributes:
             del self._attributes[item]
+
+    # Map Dataset to item #####################################################
+
+    @property
+    def targets(self) -> BatchMap:
+        return BatchMap(y=BatchMapItem('data', SynchMode.HORIZON,
+                                       cat_dim=None, preprocess=False,
+                                       n_channels=self.n_channels))
+
+    def default_input_map(self) -> BatchMap:
+        im = BatchMap(x=BatchMapItem('data', SynchMode.WINDOW, cat_dim=None,
+                                     preprocess=True,
+                                     n_channels=self.n_channels))
+        for key, exo in self.exogenous.items():
+            im[key] = BatchMapItem(key, SynchMode.WINDOW,
+                                   cat_dim=None, preprocess=True,
+                                   n_channels=exo.shape[-1])
+        return im
+
+    def set_input_map(self, input_map=None, **kwargs):
+        self.input_map = BatchMap()
+        self.update_input_map(input_map, **kwargs)
+
+    def update_input_map(self, input_map=None, **kwargs):
+        # check input map
+        if input_map is not None:
+            assert isinstance(input_map, Mapping), \
+                f"Type {type(input_map)} is not valid for `input_map`"
+        keys = set(kwargs.keys())  # store the updated keys to add 'n_channels'
+        # update from input_map
+        if input_map is not None:
+            self.input_map.update(**input_map)
+            keys.update(input_map.keys())
+        # update from kwargs
+        self.input_map.update(**kwargs)
+        # update 'n_channels' to newly added/updated keys
+        for key in keys:
+            item = self.input_map[key]
+            item.n_channels = sum([getattr(self, k).shape[-1]
+                                   for k in item.keys])
 
     @property
     def keys(self) -> list:

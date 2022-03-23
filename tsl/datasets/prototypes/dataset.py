@@ -173,7 +173,7 @@ class Dataset(object):
         if isinstance(self.root, str):
             root = os.path.expanduser(os.path.normpath(self.root))
         elif self.root is None:
-            root = os.path.join(config.store_dir, self.__class__.__name__)
+            root = os.path.join(config.data_dir, self.__class__.__name__)
         else:
             raise ValueError
         return root
@@ -231,7 +231,6 @@ class Dataset(object):
 
     def load(self, *args, **kwargs):
         """Loads raw dataset and preprocess data."""
-        # pre_built=True, impute_nan=True, drop_nan=True, save=True):
         raise NotImplementedError
 
     def clean_downloads(self):
