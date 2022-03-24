@@ -16,7 +16,7 @@ class PandasParsingMixin:
         else:
             df = checks.to_channels_columns(df)
         df = checks.cast_df(df, precision=self.precision)
-        return df.sort_index() if self.sort_index else df
+        return df
 
     def _to_indexed_df(self, array: np.ndarray):
         if array.ndim == 1:
@@ -62,6 +62,18 @@ class PandasParsingMixin:
                              "'channels') or 2 ('nodes', 'channels') column "
                              "levels.")
         return df
+
+    def _check_name(self, name: str, check_type: str):
+        assert check_type in ['exogenous', 'attribute']
+        invalid_names = set(dir(self))
+        if check_type == 'exogenous':
+            invalid_names.update(self._exogenous)
+        else:
+            invalid_names.update(self._attributes)
+        if name in invalid_names:
+            raise ValueError(f"Cannot set {check_type} with name '{name}', "
+                             f"{self.__class__.__name__} contains already an "
+                             f"attribute named '{name}'.")
 
 
 class TemporalFeaturesMixin:

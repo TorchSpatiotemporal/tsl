@@ -3,8 +3,6 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from tsl.datasets.prototypes.checks import is_datetime_like_index
-
 
 def to_numpy(df):
     if df.columns.nlevels == 1:
@@ -16,9 +14,7 @@ def to_numpy(df):
 
 
 def compute_mean(x: Union[pd.DataFrame, np.ndarray],
-                 index: Union[pd.DatetimeIndex,
-                              pd.PeriodIndex,
-                              pd.TimedeltaIndex] = None
+                 index: pd.DatetimeIndex = None
                  ) -> Union[pd.DataFrame, np.ndarray]:
     """Compute the mean values for each row.
 
@@ -36,7 +32,7 @@ def compute_mean(x: Union[pd.DataFrame, np.ndarray],
             (default :obj:`None`)
     """
     if index is not None:
-        if not is_datetime_like_index(index):
+        if not isinstance(index, pd.DatetimeIndex):
             # try casting
             index = pd.to_datetime(index)
         assert len(index) == len(x)
@@ -78,7 +74,7 @@ def holidays(index):
     Args:
         index (pd.DateTimeIndex): The datetime-like index.
     """
-    assert is_datetime_like_index(index)
+    assert isinstance(index, pd.DatetimeIndex)
     holidays = (index.month == 1) & (index.day == 1)  # new year
     holidays |= (index.month == 1) & (index.day == 6)  # epiphany
     holidays |= (index.month == 5) & (index.day == 21)  # ascension day

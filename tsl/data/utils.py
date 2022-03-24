@@ -1,11 +1,13 @@
 from enum import Enum
 from typing import Iterable, Optional, Union, List
 
+import pandas as pd
 import torch
 from einops import rearrange
 from torch import Tensor
 
 import tsl
+from tsl.ops.dataframe import to_numpy
 
 
 class SynchMode(Enum):
@@ -57,6 +59,8 @@ def to_nodes_channels(obj):
 def copy_to_tensor(obj):
     if isinstance(obj, torch.Tensor):
         obj = obj.clone().detach()
+    elif isinstance(obj, pd.DataFrame):
+        obj = torch.as_tensor(to_numpy(obj))
     else:
         obj = torch.as_tensor(obj)
     obj = torch.atleast_1d(obj)

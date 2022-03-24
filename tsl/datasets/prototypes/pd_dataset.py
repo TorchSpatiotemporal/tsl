@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Optional, Mapping, Union, Sequence, Dict, Tuple, Iterable
+from typing import Optional, Mapping, Union, Sequence, Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -102,17 +102,12 @@ class PandasDataset(Dataset, PandasParsingMixin, TemporalFeaturesMixin):
 
         # set dataset's dataframe
         self.df = self._parse_dataframe(dataframe)
+        if self.sort_index:
+            self.df.sort_index(inplace=True)
 
         if mask is not None:
             mask = self._to_primary_df_schema(mask).values.astype('uint8')
         self.mask = mask
-
-        # Set dataset frequency
-        try:
-            freq = freq or self.df.index.freq or self.df.index.inferred_freq
-        except AttributeError:
-            pass
-        self.freq = None if freq is None else checks.to_pandas_freq(freq)
 
         # Store exogenous and attributes
         if exogenous is not None:
@@ -122,8 +117,18 @@ class PandasDataset(Dataset, PandasParsingMixin, TemporalFeaturesMixin):
             for name, value in attributes.items():
                 self.add_attribute(value, name)
 
-        # make sure that all the dataframes are aligned
-        self.resample_(freq=self.freq, aggr=self.temporal_aggregation)
+        # Set dataset frequency
+        if freq is not None:
+            self.freq = checks.to_pandas_freq(freq)
+            # resample all dataframes to new frequency
+            self.resample_(freq=self.freq, aggr=self.temporal_aggregation)
+        else:
+            try:
+                freq = self.df.index.freq or self.df.index.inferred_freq
+            except AttributeError:
+                pass
+            self.freq = None if freq is None else checks.to_pandas_freq(freq)
+            self.index.freq = self.freq
 
     def __getattr__(self, item):
         if '_exogenous' in self.__dict__ and item in self._exogenous:
@@ -231,10 +236,7 @@ class PandasDataset(Dataset, PandasParsingMixin, TemporalFeaturesMixin):
             name = name[7:]
             node_level = False
         # name cannot be an attribute of self, but allow override of exogenous
-        invalid_names = set(dir(self)).union(self._attributes)
-        invalid_names.difference_update(self._exogenous)
-        if name in invalid_names:
-            raise ValueError(f"Can't set exogenous with name '{name}'.")
+        self._check_name(name, 'exogenous')
         # add exogenous
         if not isinstance(obj, pd.DataFrame):
             obj = np.asarray(obj)
@@ -250,10 +252,7 @@ class PandasDataset(Dataset, PandasParsingMixin, TemporalFeaturesMixin):
     def add_attribute(self, obj: FrameArray, name: str):
         assert isinstance(obj, (pd.DataFrame, np.ndarray))
         # name cannot be an attribute of self, but allow override of attribute
-        invalid_names = set(dir(self)).union(self._exogenous)
-        invalid_names.difference_update(self._attributes)
-        if name in invalid_names:
-            raise ValueError(f"Can't set attribute with name '{name}'.")
+        self._check_name(name, 'attribute')
         # add attribute
         self._attributes[name] = obj
         return self

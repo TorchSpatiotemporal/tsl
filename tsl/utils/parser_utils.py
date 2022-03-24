@@ -83,10 +83,19 @@ def filter_function_args(args: Union[Namespace, dict], function, return_dict=Fal
 
 def filter_argparse_args(args: Union[Namespace, dict], cls: Type,
                          return_dict: bool = False):
-    if 'add_argparse_args' not in dir(cls):
-        raise RuntimeError()
+    """Filter the arguments in an :class:`~argparse.ArgumentParser` added by
+    :obj:`cls`. A valid target class must implement one of the methods
+    'add_argparse_args' or 'add_model_specific_args'."""
+
     parser = ArgumentParser()
-    parser = cls.add_argparse_args(parser)
+    if 'add_argparse_args' in dir(cls):
+        parser = cls.add_argparse_args(parser)
+    elif 'add_model_specific_args' in dir(cls):
+        parser = cls.add_model_specific_args(parser)
+    else:
+        raise RuntimeError(f"Target class {cls} has not valid method for "
+                           f"argparse filtering.")
+
     cls_args = vars(parser.parse_known_args()[0])
     if isinstance(args, Namespace):
         args = vars(args)

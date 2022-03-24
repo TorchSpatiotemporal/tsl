@@ -234,8 +234,10 @@ class Predictor(pl.LightningModule):
         mask = batch.mask
 
         # Compute predictions and compute loss
-        y_hat = y_hat_loss = self.predict_batch(batch, preprocess=False,
-                                                postprocess=not self.scale_target)
+        y_hat_loss = self.predict_batch(batch, preprocess=False,
+                                        postprocess=not self.scale_target)
+        y_hat = y_hat_loss.detach()
+
         # Scale target and output, eventually
         if self.scale_target:
             y_loss = batch.transform['y'].transform(y)
@@ -245,7 +247,7 @@ class Predictor(pl.LightningModule):
         loss = self.loss_fn(y_hat_loss, y_loss, mask)
 
         # Logging
-        self.train_metrics.update(y_hat.detach(), y, mask)
+        self.train_metrics.update(y_hat, y, mask)
         self.log_metrics(self.train_metrics, batch_size=batch.batch_size)
         self.log_loss('train', loss, batch_size=batch.batch_size)
         return loss
@@ -256,8 +258,10 @@ class Predictor(pl.LightningModule):
         mask = batch.mask
 
         # Compute predictions
-        y_hat = y_hat_loss = self.predict_batch(batch, preprocess=False,
-                                                postprocess=not self.scale_target)
+        y_hat_loss = self.predict_batch(batch, preprocess=False,
+                                        postprocess=not self.scale_target)
+        y_hat = y_hat_loss.detach()
+
         # Scale target and output, eventually
         if self.scale_target:
             y_loss = batch.transform['y'].transform(y)
@@ -267,7 +271,7 @@ class Predictor(pl.LightningModule):
         val_loss = self.loss_fn(y_hat_loss, y_loss, mask)
 
         # Logging
-        self.val_metrics.update(y_hat.detach(), y, mask)
+        self.val_metrics.update(y_hat, y, mask)
         self.log_metrics(self.val_metrics, batch_size=batch.batch_size)
         self.log_loss('val', val_loss, batch_size=batch.batch_size)
         return val_loss
@@ -297,3 +301,8 @@ class Predictor(pl.LightningModule):
             if metric is not None:
                 cfg['monitor'] = metric
         return cfg
+
+    @staticmethod
+    def add_argparse_args(parser, **kwargs):
+        parser.add_argument('--scale-target', type=bool, default=False)
+        return parser

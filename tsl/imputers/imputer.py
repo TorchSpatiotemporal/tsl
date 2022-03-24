@@ -196,7 +196,7 @@ class Imputer(Predictor):
 
     @staticmethod
     def add_argparse_args(parser, **kwargs):
-        parser.add_argument('--scale-target', type=bool, default=False)
+        parser = Predictor.add_argparse_args(parser)
         parser.add_argument('--whiten-prob', type=float, default=0.05)
         parser.add_argument('--prediction-loss-weight', type=float, default=1.0)
         parser.add_argument('--impute-only-missing', type=bool, default=True)

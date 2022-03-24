@@ -9,7 +9,7 @@ from torch import Tensor
 from torch.utils.data import Dataset
 from torch_geometric.utils import subgraph
 
-from tsl.typing import TensArray, TemporalIndex, IndexSlice
+from tsl.typing import DataArray, TemporalIndex, IndexSlice, OptDataArray
 from .batch import Batch
 from .data import Data
 from .batch_map import BatchMap, BatchMapItem
@@ -28,13 +28,13 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     build a proper structure to feed deep models.
 
     Args:
-        data (TensArray): Data relative to the primary channels.
+        data (DataArray): Data relative to the primary channels.
         index (TemporalIndex, optional): Temporal indices for the data.
             (default: :obj:`None`)
-        mask (TensArray, optional): Boolean mask denoting if signal in data is
+        mask (DataArray, optional): Boolean mask denoting if signal in data is
             valid (1) or not (0).
             (default: :obj:`None`)
-        connectivity (TensArray, tuple, optional): The adjacency matrix defining nodes'
+        connectivity (DataArray, tuple, optional): The adjacency matrix defining nodes'
             relational information. It can be either a dense matrix
             :math:`\mathbf{A} \in \mathbb{R}^{N \times N}` or in COO format as a
             tuple (:obj:`edge_index` :math:`\in \mathbb{N}^{2 \times E}`,
@@ -56,7 +56,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             mapping are keys in :obj:`item.input`, while values are
             :obj:`~tsl.data.new.BatchMapItem`.
             (default: :obj:`None`)
-        trend (TensArray, optional): Trend paired with main signal. Must be of
+        trend (DataArray, optional): Trend paired with main signal. Must be of
             the same shape of `data`.
             (default: :obj:`None`)
         scalers (Mapping or None): Dictionary of scalers that must be used for
@@ -74,15 +74,15 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             horizon.
     """
 
-    def __init__(self, data: TensArray,
+    def __init__(self, data: DataArray,
                  index: Optional[TemporalIndex] = None,
-                 mask: Optional[TensArray] = None,
+                 mask: Optional[DataArray] = None,
                  connectivity: Optional[
-                     Union[TensArray, Tuple[TensArray]]] = None,
-                 exogenous: Optional[Mapping[str, TensArray]] = None,
-                 attributes: Optional[Mapping[str, TensArray]] = None,
+                     Union[DataArray, Tuple[DataArray]]] = None,
+                 exogenous: Optional[Mapping[str, DataArray]] = None,
+                 attributes: Optional[Mapping[str, DataArray]] = None,
                  input_map: Optional[Union[Mapping, BatchMap]] = None,
-                 trend: Optional[TensArray] = None,
+                 trend: Optional[DataArray] = None,
                  scalers: Optional[Mapping[str, Scaler]] = None,
                  window: int = 24,
                  horizon: int = 24,
@@ -103,6 +103,11 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # Store data
         self.data: Tensor = self._parse_data(data)
         # Store time information
+        # if index is not explicitly passed and data is a dataframe, defaults to
+        # data's index
+        if index is None and isinstance(data, pd.DataFrame):
+            if isinstance(data.index, TemporalIndex.__args__):
+                index = data.index
         self.index: Optional[TemporalIndex] = index
         # Store mask
         self.mask: Optional[Tensor] = self._parse_mask(mask)
@@ -276,25 +281,26 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     # Setters #################################################################
 
-    def set_data(self, data: TensArray):
+    def set_data(self, data: DataArray):
         self.data = self._parse_data(data)
 
-    def set_mask(self, mask: TensArray):
+    def set_mask(self, mask: DataArray):
         self.mask = self._parse_mask(mask)
 
-    def set_connectivity(self, connectivity: Union[TensArray,
-                                                   Tuple[TensArray]]):
+    def set_connectivity(self, connectivity: Union[DataArray,
+                                                   Tuple[OptDataArray]]):
         self.edge_index, self.edge_weight = self._parse_adj(connectivity)
 
-    def set_trend(self, trend: TensArray):
-        self.trend: Tensor = self._parse_node_level_exogenous(trend, 'trend')
+    def set_trend(self, trend: DataArray):
+        self.trend: Tensor = self._parse_exogenous(trend, 'trend',
+                                                   node_level=True)
 
     def set_scaler(self, key: str, value: Scaler):
         self.scalers[key] = value
 
     # Setter for secondary data
 
-    def add_exogenous(self, name: str, value: TensArray,
+    def add_exogenous(self, name: str, value: DataArray,
                       node_level: bool = True,
                       add_to_input_map: bool = True,
                       synch_mode: SynchMode = WINDOW,
@@ -305,13 +311,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # validate name
         self._check_name(name)
         # check if node-level or graph-level
-        if node_level:
-            value = self._parse_node_level_exogenous(value, name)
-        else:
-            value = self._parse_graph_level_exogenous(value, name)
+        value = self._parse_exogenous(value, name, node_level)
         # add exogenous and set as attribute
-        self._exogenous[name] = dict(value=value,
-                                     node_level=node_level)
+        self._exogenous[name] = dict(value=value, node_level=node_level)
         setattr(self, name, value)
         if add_to_input_map:
             im = {name: BatchMapItem(name, synch_mode, preprocess,
@@ -320,25 +322,23 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         return self
 
     def update_exogenous(self, name: str,
-                         value: Optional[TensArray] = None,
+                         value: Optional[DataArray] = None,
                          node_level: Optional[bool] = None):
         if name not in self._exogenous:
             raise AttributeError(f"No exogenous named '{name}'.")
-        # defaults to current value if None
+        # defaults to current values
         if value is None:
             value = self._exogenous[name]['value']
-        # if node_level is provided, parse value according to node_level
-        if node_level is True:
-            value = self._parse_node_level_exogenous(value, name)
-            self._exogenous[name]['node_level'] = node_level
-        elif node_level is False:
-            value = self._parse_graph_level_exogenous(value, name)
-            self._exogenous[name]['node_level'] = node_level
-        # update value (eventually)
+        if node_level is None:
+            node_level = self._exogenous[name]['node_level']
+        # parse value according to node_level
+        value = self._parse_exogenous(value, name, node_level)
+        # update exogenous
         self._exogenous[name]['value'] = value
+        self._exogenous[name]['node_level'] = node_level
         setattr(self, name, value)
 
-    def add_attribute(self, name: str, value: TensArray,
+    def add_attribute(self, name: str, value: DataArray,
                       node_level: bool = True,
                       add_to_batch: bool = True) -> "SpatioTemporalDataset":
         if name.startswith('global_'):
@@ -346,35 +346,30 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             node_level = False
         # validate name
         self._check_name(name)
-        if node_level:
-            value = self._parse_node_level_attribute(value, name)
-        else:
-            value = self._parse_graph_level_attribute(value)
+        value = self._parse_attribute(value, name, node_level)
         self._attributes[name] = dict(value=value, node_level=node_level,
                                       add_to_batch=add_to_batch)
         setattr(self, name, value)
         return self
 
     def update_attribute(self, name: str,
-                         value: Optional[TensArray] = None,
+                         value: Optional[DataArray] = None,
                          node_level: Optional[bool] = None,
                          add_to_batch: Optional[bool] = None):
         if name not in self._attributes:
             raise AttributeError(f"No attribute named '{name}'.")
-        # defaults to current value if None
+        # defaults to current values
         if value is None:
             value = self._attributes[name]['value']
-        # if node_level is provided, parse value according to node_level
-        if node_level is True:
-            value = self._parse_node_level_attribute(value, name)
-            self._attributes[name]['node_level'] = node_level
-        elif node_level is False:
-            value = self._parse_graph_level_attribute(value)
-            self._attributes[name]['node_level'] = node_level
+        if node_level is None:
+            node_level = self._attributes[name]['node_level']
+        # parse value according to node_level
+        value = self._parse_attribute(value, name, node_level)
         if add_to_batch is not None:
             self._attributes[name]['add_to_batch'] = add_to_batch
-        # update value (eventually)
+        # update attribute
         self._attributes[name]['value'] = value
+        self._attributes[name]['node_level'] = node_level
         setattr(self, name, value)
 
     # Dataset properties ######################################################
@@ -603,14 +598,13 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
         if merge:
             unique = True
-            return expand_indices_range(0, hrz_end)
+            start = 0 if self.window > 0 else self.horizon_offset
+            return expand_indices_range(start, hrz_end)
 
         ds_indices = dict()
         if self.window > 0:
             ds_indices[WINDOW] = expand_indices_range(0, self.window)
-        if self.horizon > 0:
-            ds_indices[HORIZON] = expand_indices_range(self.horizon_offset,
-                                                       hrz_end)
+        ds_indices[HORIZON] = expand_indices_range(self.horizon_offset, hrz_end)
         return ds_indices
 
     def overlapping_indices(self, idxs1, idxs2,
@@ -635,7 +629,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         return Batch.from_data_list([self.get(idx) for idx in indices])
 
     def numpy(self):
-        return np.as_array(self.data)
+        return np.asarray(self.data)
 
     def dataframe(self):
         columns = pd.MultiIndex.from_product([np.arange(self.n_nodes),

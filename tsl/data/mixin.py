@@ -1,58 +1,51 @@
 from typing import Optional, Union, Tuple, Mapping, List
 
-import numpy as np
 from torch import Tensor
 from torch_geometric.utils import dense_to_sparse
 
-from tsl.typing import TensArray
+from tsl.typing import DataArray
 from . import utils
 
 
 class DataParsingMixin:
 
-    def _parse_data(self, obj: TensArray) -> Tensor:
+    def _parse_data(self, obj: DataArray) -> Tensor:
         assert obj is not None
-        obj = utils.to_steps_nodes_channels(obj)
         obj = utils.copy_to_tensor(obj)
+        obj = utils.to_steps_nodes_channels(obj)
         obj = utils.cast_tensor(obj, self.precision)
         return obj
 
-    def _parse_mask(self, mask: Optional[TensArray]) -> Optional[Tensor]:
+    def _parse_mask(self, mask: Optional[DataArray]) -> Optional[Tensor]:
         if mask is None:
             return None
-        mask = utils.to_steps_nodes_channels(mask)
         mask = utils.copy_to_tensor(mask)
+        mask = utils.to_steps_nodes_channels(mask)
         mask = utils.cast_tensor(mask)
         return mask
 
-    def _parse_node_level_exogenous(self, obj: TensArray, name: str) -> Tensor:
-        obj = utils.to_steps_nodes_channels(obj)
+    def _parse_exogenous(self, obj: DataArray, name: str,
+                         node_level: bool) -> Tensor:
         obj = utils.copy_to_tensor(obj)
-        obj = utils.cast_tensor(obj, self.precision)
+        if node_level:
+            obj = utils.to_steps_nodes_channels(obj)
+            self._check_same_dim(obj.shape[1], 'n_nodes', name)
+        else:
+            obj = utils.to_steps_channels(obj)
         self._check_same_dim(obj.shape[0], 'n_steps', name)
-        self._check_same_dim(obj.shape[1], 'n_nodes', name)
-        return obj
-
-    def _parse_graph_level_exogenous(self, obj: TensArray, name: str) -> Tensor:
-        obj = utils.to_steps_channels(obj)
-        obj = utils.copy_to_tensor(obj)
-        obj = utils.cast_tensor(obj, self.precision)
-        self._check_same_dim(obj.shape[0], 'n_steps', name)
-        return obj
-
-    def _parse_node_level_attribute(self, obj: TensArray, name: str) -> Tensor:
-        obj = utils.to_nodes_channels(obj)
-        obj = utils.copy_to_tensor(obj)
-        obj = utils.cast_tensor(obj, self.precision)
-        self._check_same_dim(obj.shape[0], 'n_nodes', name)
-        return obj
-
-    def _parse_graph_level_attribute(self, obj: TensArray) -> Tensor:
-        obj = utils.copy_to_tensor(obj)
         obj = utils.cast_tensor(obj, self.precision)
         return obj
 
-    def _parse_adj(self, connectivity: Union[TensArray, Tuple[TensArray]]
+    def _parse_attribute(self, obj: DataArray, name: str,
+                         node_level: bool) -> Tensor:
+        obj = utils.copy_to_tensor(obj)
+        if node_level:
+            obj = utils.to_nodes_channels(obj)
+            self._check_same_dim(obj.shape[0], 'n_nodes', name)
+        obj = utils.cast_tensor(obj, self.precision)
+        return obj
+
+    def _parse_adj(self, connectivity: Union[DataArray, Tuple[DataArray]]
                    ) -> Tuple[Optional[Tensor], Optional[Tensor]]:
         if connectivity is None:
             return None, None
@@ -62,7 +55,7 @@ class DataParsingMixin:
             edge_index = utils.copy_to_tensor(edge_index)
             if edge_weight is not None:
                 edge_weight = utils.copy_to_tensor(edge_weight)
-        elif isinstance(connectivity, (np.ndarray, Tensor)):
+        elif isinstance(connectivity, DataArray.__args__):
             connectivity = utils.copy_to_tensor(connectivity)
             assert connectivity.ndim == 2
             # if connectivity is edge_index
@@ -101,9 +94,9 @@ class DataParsingMixin:
                              f"is already an attribute named '{name}' in the "
                              "dataset.")
 
-    def _value_to_kwargs(self, value: Union[TensArray, List, Tuple, Mapping],
+    def _value_to_kwargs(self, value: Union[DataArray, List, Tuple, Mapping],
                          keys: Optional[Union[List, Tuple]] = None):
-        if isinstance(value, TensArray.__args__):
+        if isinstance(value, DataArray.__args__):
             return dict(value=value)
         if isinstance(value, (list, tuple)):
             return dict(zip(keys, value))
@@ -113,12 +106,12 @@ class DataParsingMixin:
             raise TypeError('Invalid type for value "{}"'.format(type(value)))
 
     def _exog_value_to_kwargs(self,
-                              value: Union[TensArray, List, Tuple, Mapping]):
+                              value: Union[DataArray, List, Tuple, Mapping]):
         keys = ['value', 'node_level', 'add_to_input_map', 'synch_mode',
                 'preprocess']
         return self._value_to_kwargs(value, keys)
 
     def _attr_value_to_kwargs(self,
-                              value: Union[TensArray, List, Tuple, Mapping]):
+                              value: Union[DataArray, List, Tuple, Mapping]):
         keys = ['value', 'node_level', 'add_to_batch']
         return self._value_to_kwargs(value, keys)

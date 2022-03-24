@@ -10,6 +10,9 @@ OptTensArray = Optional[TensArray]
 FrameArray = Union[DataFrame, ndarray]
 OptFrameArray = Optional[FrameArray]
 
+DataArray = Union[DataFrame, ndarray, Tensor]
+OptDataArray = Optional[DataArray]
+
 TemporalIndex = Union[DatetimeIndex, PeriodIndex, TimedeltaIndex]
 
 Index = Union[List, Tuple, TensArray]
