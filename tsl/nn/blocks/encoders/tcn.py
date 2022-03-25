@@ -1,7 +1,7 @@
 import torch.nn as nn
 from tsl.nn.base import TemporalConv2d, GatedTemporalConv2d
 from tsl.nn.utils import utils
-from tsl.nn.utils.utils import _maybe_cat_exog
+from tsl.nn.utils.utils import maybe_cat_exog
 
 from einops import rearrange
 
@@ -81,10 +81,10 @@ class TemporalConvNet(nn.Module):
     def forward(self, x, u=None):
         """"""
         if self.channel_last:
-            x = _maybe_cat_exog(x, u, -1)
+            x = maybe_cat_exog(x, u, -1)
             x = rearrange(x, 'b s n c -> b c n s')
         else:
-            x = _maybe_cat_exog(x, u, 1)
+            x = maybe_cat_exog(x, u, 1)
 
         for conv in self.convs:
             x = self.dropout(self.f(conv(x)))

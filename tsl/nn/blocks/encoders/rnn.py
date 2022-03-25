@@ -3,7 +3,7 @@ import torch
 from torch import nn
 from einops import rearrange
 
-from ...utils.utils import _maybe_cat_exog
+from ...utils.utils import maybe_cat_exog
 
 class RNN(nn.Module):
     r"""
@@ -56,7 +56,7 @@ class RNN(nn.Module):
             return_last_state: Whether to return only the state corresponding to the last time step.
         """
         # x: [batches, steps, nodes, features]
-        x = _maybe_cat_exog(x, u)
+        x = maybe_cat_exog(x, u)
         b, *_ = x.size()
         x = rearrange(x, 'b s n f -> s (b n) f')
         x, *_ = self.rnn(x)

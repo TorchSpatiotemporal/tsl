@@ -3,7 +3,7 @@ from torch import nn
 
 from torch.nn import functional as F
 
-from ...utils.utils import _maybe_cat_exog, get_layer_activation
+from ...utils.utils import maybe_cat_exog, get_layer_activation
 
 
 class MLP(nn.Module):
@@ -48,7 +48,7 @@ class MLP(nn.Module):
 
     def forward(self, x, u=None):
         """"""
-        x = _maybe_cat_exog(x, u)
+        x = maybe_cat_exog(x, u)
         out = self.mlp(x)
         if self.readout is not None:
             return self.readout(out)

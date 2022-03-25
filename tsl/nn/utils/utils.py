@@ -38,13 +38,16 @@ def get_layer_activation(activation: Optional[str] = None):
                         'relu': 'ReLU',
                         'sigmoid': 'Sigmoid',
                         'softplus': 'Softplus',
-                        'tanh': 'Tanh'}
+                        'tanh': 'Tanh',
+                        'silu': 'SiLU',
+                        'swish': 'SiLU'
+                        }
     if activation in torch_activations_dict:
         return getattr(nn, torch_activations_dict[activation])
     raise ValueError(f"Activation '{activation}' not valid.")
 
 
-def _maybe_cat_exog(x, u, dim=-1):
+def maybe_cat_exog(x, u, dim=-1):
     r"""
     Concatenate `x` and `u` if `u` is not `None`.
 

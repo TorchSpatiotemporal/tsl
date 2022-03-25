@@ -37,6 +37,7 @@ from tsl.nn.models.stgn.dcrnn_model import DCRNNModel
 from tsl.nn.models.stgn.stcn_model import STCNModel
 from tsl.nn.models.stgn.graph_wavenet_model import GraphWaveNetModel
 from tsl.nn.models.stgn.rnn2gcn_model import RNNEncGCNDecModel as Rnn2GcnModel
+from tsl.nn.models.stgn.gated_gn_model import GatedGraphNetworkModel
 
 from tsl.nn.models import RNNModel, TransformerModel, TCNModel, FCRNNModel
 
@@ -60,6 +61,8 @@ def get_model_class(model_str):
         model = TransformerModel
     elif model_str == 'rnn2gcn':
         model = Rnn2GcnModel
+    elif model_str == 'gatedgn':
+        model = GatedGraphNetworkModel
     else:
         raise NotImplementedError(f'Model "{model_str}" not available.')
     return model
