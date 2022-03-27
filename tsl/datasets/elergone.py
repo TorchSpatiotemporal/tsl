@@ -11,7 +11,7 @@ from tsl.datasets.prototypes import PandasDataset
 from tsl.ops import similarities as sims
 
 
-class Electricity(PandasDataset):
+class Elergone(PandasDataset):
     """
     Dataset of load profiles from https://archive.ics.uci.edu/ml/datasets/ElectricityLoadDiagrams20112014.
 
@@ -53,7 +53,7 @@ class Electricity(PandasDataset):
 
     @property
     def required_file_names(self):
-        return ['electricity.h5']
+        return ['elergone.h5']
 
     def download(self) -> None:
         path = download_url(self.url, self.root_dir)
@@ -75,7 +75,7 @@ class Electricity(PandasDataset):
                          decimal=',')
 
         df.index.freq = df.index.inferred_freq
-        path = os.path.join(self.root_dir, 'electricity.h5')
+        path = os.path.join(self.root_dir, 'elergone.h5')
         df.to_hdf(path, key='raw')
         self.clean_downloads()
         return df

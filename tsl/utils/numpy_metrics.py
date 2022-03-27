@@ -8,12 +8,12 @@ def mae(y_hat, y):
 
 
 def nmae(y_hat, y):
-    delta = np.max(y) - np.min(y) + 1e-8
+    delta = np.max(y) - np.min(y) + tsl.epsilon
     return mae(y_hat, y) * 100 / delta
 
 
 def mape(y_hat, y):
-    return 100 * np.abs((y_hat - y) / (y + 1e-8)).mean()
+    return 100 * np.abs((y_hat - y) / (y + tsl.epsilon)).mean()
 
 
 def mse(y_hat, y):
@@ -25,7 +25,7 @@ def rmse(y_hat, y):
 
 
 def nrmse(y_hat, y):
-    delta = np.max(y) - np.min(y) + 1e-8
+    delta = np.max(y) - np.min(y) + tsl.epsilon
     return rmse(y_hat, y) * 100 / delta
 
 
