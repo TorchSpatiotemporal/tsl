@@ -1,9 +1,19 @@
-import torch
 from torch import nn
 
-from torch.nn import functional as F
+from ...utils import utils
 
-from ...utils.utils import maybe_cat_exog, get_layer_activation
+
+class Dense(nn.Module):
+    def __init__(self, input_size, output_size, activation, dropout=0., bias=True):
+        super(Dense, self).__init__()
+        self.layer = nn.Sequential(
+            nn.Linear(input_size, output_size, bias=bias),
+            utils.get_layer_activation(activation)(),
+            nn.Dropout(dropout) if dropout > 0. else nn.Identity()
+        )
+
+    def forward(self, x):
+        return self.layer(x)
 
 
 class MLP(nn.Module):
@@ -31,14 +41,12 @@ class MLP(nn.Module):
 
         if exog_size is not None:
             input_size += exog_size
-
-        layers = []
-        for i in range(n_layers):
-            layers.append(nn.Linear(input_size if i == 0 else hidden_size, hidden_size))
-            layers.append(get_layer_activation(activation)())
-            if dropout > 0.:
-                layers.append(nn.Dropout(dropout))
-
+        layers = [
+            Dense(input_size=input_size if i == 0 else hidden_size,
+                  output_size=hidden_size,
+                  activation=activation,
+                  dropout=dropout) for i in range(n_layers)
+        ]
         self.mlp = nn.Sequential(*layers)
 
         if output_size is not None:
@@ -48,9 +56,71 @@ class MLP(nn.Module):
 
     def forward(self, x, u=None):
         """"""
-        x = maybe_cat_exog(x, u)
+        x = utils.maybe_cat_exog(x, u)
         out = self.mlp(x)
         if self.readout is not None:
             return self.readout(out)
         return out
+
+
+class ResidualMLP(nn.Module):
+    r"""
+    Multi-layer Perceptron with residual connections.
+
+    Args:
+        input_size (int): Input size.
+        hidden_size (int): Units in the hidden layers.
+        output_size (int, optional): Size of the optional readout.
+        exog_size (int, optional): Size of the optional exogenous variables.
+        n_layers (int, optional): Number of hidden layers. (default: 1)
+        activation (str, optional): Activation function. (default: `relu`)
+        dropout (float, optional): Dropout probability. (default: 0.)
+        parametrized_skip (bool, optional): Whether to use parametrized skip connections for the residuals.
+    """
+    def __init__(self,
+                 input_size,
+                 hidden_size,
+                 output_size=None,
+                 exog_size=None,
+                 n_layers=1,
+                 activation='relu',
+                 dropout=0.,
+                 parametrized_skip=False):
+        super(ResidualMLP, self).__init__()
+
+        if exog_size is not None:
+            input_size += exog_size
+
+        self.layers = nn.ModuleList([
+            nn.Sequential(
+                Dense(input_size=input_size if i == 0 else hidden_size,
+                      output_size=hidden_size,
+                      activation=activation,
+                      dropout=dropout),
+                nn.Linear(output_size, output_size)
+            ) for i in range(n_layers)
+        ])
+
+        self.skip_connections = nn.ModuleList()
+        for i in range(n_layers):
+            if i == 0 and input_size != output_size:
+                self.skip_connections.append(nn.Linear(input_size, hidden_size))
+            elif parametrized_skip:
+                self.skip_connections.append(nn.Linear(hidden_size, hidden_size))
+            else:
+                self.skip_connections.append(nn.Identity())
+
+        if output_size is not None:
+            self.readout = nn.Linear(hidden_size, output_size)
+        else:
+            self.register_parameter('readout', None)
+
+    def forward(self, x, u=None):
+        """"""
+        x = utils.maybe_cat_exog(x, u)
+        for layer, skip in zip(self.layers, self.skip_connections):
+            x = layer(x) + skip(x)
+        if self.readout is not None:
+            return self.readout(x)
+        return x
 
