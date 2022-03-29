@@ -1,19 +1,7 @@
 from torch import nn
 
+from ...base.dense import Dense
 from ...utils import utils
-
-
-class Dense(nn.Module):
-    def __init__(self, input_size, output_size, activation, dropout=0., bias=True):
-        super(Dense, self).__init__()
-        self.layer = nn.Sequential(
-            nn.Linear(input_size, output_size, bias=bias),
-            utils.get_layer_activation(activation)(),
-            nn.Dropout(dropout) if dropout > 0. else nn.Identity()
-        )
-
-    def forward(self, x):
-        return self.layer(x)
 
 
 class MLP(nn.Module):
@@ -97,9 +85,8 @@ class ResidualMLP(nn.Module):
                       output_size=hidden_size,
                       activation=activation,
                       dropout=dropout),
-                nn.Linear(output_size, output_size)
-            ) for i in range(n_layers)
-        ])
+                nn.Linear(hidden_size, hidden_size)
+            ) for i in range(n_layers)])
 
         self.skip_connections = nn.ModuleList()
         for i in range(n_layers):
