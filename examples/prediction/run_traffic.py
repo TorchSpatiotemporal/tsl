@@ -147,12 +147,11 @@ def run_experiment(args):
     exog_vars = dataset.datetime_encoded('day').values
     exog_vars = {'global_u': exog_vars}
 
-    adj = dataset.get_connectivity(method='distance',
-                                   threshold=0.1,
-                                   sparse=False)
+    adj = dataset.get_connectivity(method='distance', threshold=0.1,
+                                   layout='coo')
 
     torch_dataset = SpatioTemporalDataset(*dataset.numpy(return_idx=True),
-                                          connectivity=adj.T,
+                                          connectivity=adj,
                                           mask=dataset.mask,
                                           horizon=args.horizon,
                                           window=args.window,

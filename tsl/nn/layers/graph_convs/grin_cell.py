@@ -12,7 +12,7 @@ from .diff_conv import DiffConv
 from ..norm import LayerNorm
 from ...base.embedding import StaticGraphEmbedding
 from tsl.nn.blocks.encoders.dcrnn import DCRNNCell
-from ...utils.connectivity import power_series, normalize, transpose
+from tsl.ops.connectivity import power_series, normalize, transpose
 
 
 def compute_support(edge_index: LongTensor, edge_weight: OptTensor = None,

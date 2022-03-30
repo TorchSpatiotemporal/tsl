@@ -7,6 +7,7 @@ from torch import Tensor
 from torch_geometric.utils import dense_to_sparse, to_scipy_sparse_matrix, \
     from_scipy_sparse_matrix
 from torch_geometric.utils.num_nodes import maybe_num_nodes as pyg_num_nodes
+from torch_sparse import SparseTensor
 
 from tsl.typing import TensArray, OptTensArray
 
@@ -20,7 +21,87 @@ def maybe_num_nodes(edge_index, num_nodes=None):
         return pyg_num_nodes(edge_index, num_nodes)
 
 
+def convert_torch_connectivity(connectivity: Union[Tensor, SparseTensor],
+                               target_layout: str,
+                               input_layout: Optional[str] = None,
+                               num_nodes: Optional[int] = None):
+    formats = ['dense', 'sparse', 'edge_index']
+    assert (input_layout is None or input_layout in formats) \
+           and target_layout in formats
+    weights = None
+
+    if input_layout == 'dense':
+        assert isinstance(connectivity, Tensor) \
+               and connectivity.size(0) == connectivity.size(1)
+    elif input_layout == 'sparse':
+        assert isinstance(connectivity, SparseTensor)
+    elif input_layout == 'edge_index':
+        if isinstance(connectivity, (list, tuple)):
+            connectivity, weights = connectivity
+        assert isinstance(connectivity, Tensor) \
+               and connectivity.size(0) == 2 and connectivity.ndim == 2
+        connectivity = (connectivity, weights)
+
+    elif input_layout is None:
+        if isinstance(connectivity, SparseTensor):
+            input_layout = 'sparse'
+        elif isinstance(connectivity, (list, tuple)):
+            connectivity, weights = connectivity
+        if isinstance(connectivity, Tensor):
+            if connectivity.size(0) == connectivity.size(1):
+                if connectivity.size(0) == 2 and connectivity.ndim == 2:
+                    raise RuntimeError("Cannot infer input_format from [2, 2] "
+                                       "connectivity matrix.")
+                input_layout = 'dense'
+            elif connectivity.size(0) == 2 and connectivity.ndim == 2:
+                input_layout = 'edge_index'
+                connectivity = (connectivity, weights)
+
+    if input_layout is None:
+        raise RuntimeError("Cannot infer input_format from connectivity.")
+
+    if input_layout == target_layout:
+        return connectivity
+
+    # edge index -> sparse tensor
+    if input_layout == 'edge_index' and target_layout == 'sparse':
+        edge_index, edge_weights = connectivity
+        return SparseTensor.from_edge_index(edge_index, edge_weights,
+                                            (num_nodes, num_nodes)).t()
+    # edge index -> dense tensor
+    if input_layout == 'edge_index' and target_layout == 'dense':
+        edge_index, edge_weights = connectivity
+        return edge_index_to_adj(edge_index, edge_weights, num_nodes=num_nodes)
+    # dense tensor -> sparse tensor
+    if input_layout == 'dense' and target_layout == 'sparse':
+        return SparseTensor.from_dense(connectivity)
+    # dense tensor -> edge index
+    if input_layout == 'dense' and target_layout == 'edge_index':
+        return adj_to_edge_index(connectivity)
+    # sparse tensor -> dense tensor
+    if input_layout == 'sparse' and target_layout == 'dense':
+        return connectivity.to_dense()
+    # sparse tensor -> edge index
+    if input_layout == 'sparse' and target_layout == 'edge_index':
+        row, col, edge_weight = connectivity.t().coo()
+        edge_index = torch.stack([row, col], dim=0)
+        return edge_index, edge_weight
+
+
 def adj_to_edge_index(adj: TensArray) -> Tuple[TensArray, TensArray]:
+    """Convert adjacency matrix from dense layout to (:obj:`edge_index`,
+    :obj:`edge_weight`) tuple. The input adjacency matrix is transposed before
+    conversion.
+
+    Args:
+        adj: dense adjacency matrix as torch.Tensor or np.ndarray.
+
+    Returns:
+        tuple: (:obj:`edge_index`, :obj:`edge_weight`) tuple of same type of
+            :obj:`adj` (torch.Tensor or np.ndarray).
+
+    """
+    adj = adj.T
     if isinstance(adj, Tensor):
         return dense_to_sparse(adj)
     else:
@@ -45,7 +126,7 @@ def edge_index_to_adj(edge_index: TensArray,
             edge_weights = np.ones(edge_index.shape[1], dtype=np.float32)
         adj = np.zeros((N, N), dtype=edge_weights.dtype)
     adj[edge_index[0], edge_index[1]] = edge_weights
-    return adj
+    return adj.T
 
 
 def transpose(edge_index: TensArray, edge_weights: OptTensArray = None) \

@@ -5,6 +5,7 @@ import pandas as pd
 import torch
 from einops import rearrange
 from torch import Tensor
+from torch_sparse import SparseTensor
 
 import tsl
 from tsl.ops.dataframe import to_numpy
@@ -67,20 +68,20 @@ def copy_to_tensor(obj):
     return obj
 
 
-def cast_tensor(obj: torch.Tensor, precision: Union[int, str] = 32):
+def cast_tensor(obj: Union[Tensor, SparseTensor],
+                precision: Union[int, str] = 32):
     if isinstance(precision, str):
         precision = dict(half=16, full=32, double=64).get(precision)
     assert precision in [16, 32, 64], \
         "precision must be one of 16 (or 'half'), 32 (or 'full') or 64 " \
         f"(or 'double'). Default is 32, invalid input '{precision}'."
-    if obj.dtype in [torch.float16, torch.float32, torch.float64]:
-        dtype = getattr(torch, f'float{precision}')
-        return obj.to(dtype)
-    elif obj.dtype in [torch.int16, torch.int32, torch.int64]:
-        dtype = getattr(torch, f'int{precision}')
-        return obj.to(dtype)
-    elif obj.dtype is torch.bool:
-        return obj.byte()
+    from_dtype = obj.dtype() if isinstance(obj, SparseTensor) else obj.dtype
+    if from_dtype in [torch.float16, torch.float32, torch.float64]:
+        to_dtype = getattr(torch, f'float{precision}')
+        return obj.to(to_dtype)
+    elif from_dtype in [torch.int16, torch.int32, torch.int64]:
+        to_dtype = getattr(torch, f'int{precision}')
+        return obj.to(to_dtype)
     return obj
 
 

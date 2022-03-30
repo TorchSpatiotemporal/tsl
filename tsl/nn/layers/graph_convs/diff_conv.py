@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch_geometric.nn import MessagePassing
 
-from tsl.nn.utils.connectivity import transpose, normalize
+from tsl.ops.connectivity import transpose, normalize
 
 
 class DiffConv(MessagePassing):

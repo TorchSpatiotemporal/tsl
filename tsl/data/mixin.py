@@ -1,9 +1,12 @@
 from typing import Optional, Union, Tuple, Mapping, List
 
 from torch import Tensor
-from torch_geometric.utils import dense_to_sparse
+from torch_geometric.data.storage import recursive_apply
+from torch_geometric.typing import Adj
+from torch_sparse import SparseTensor
 
-from tsl.typing import DataArray
+from tsl.ops.connectivity import convert_torch_connectivity
+from tsl.typing import DataArray, SparseTensArray, ScipySparseMatrix
 from . import utils
 
 
@@ -21,6 +24,10 @@ class DataParsingMixin:
             return None
         mask = utils.copy_to_tensor(mask)
         mask = utils.to_steps_nodes_channels(mask)
+        self._check_same_dim(mask.size(0), 'n_steps', 'mask')
+        self._check_same_dim(mask.size(1), 'n_nodes', 'mask')
+        if mask.size(-1) > 1:
+            self._check_same_dim(mask.size(-1), 'n_channels', 'mask')
         mask = utils.cast_tensor(mask)
         return mask
 
@@ -45,35 +52,39 @@ class DataParsingMixin:
         obj = utils.cast_tensor(obj, self.precision)
         return obj
 
-    def _parse_adj(self, connectivity: Union[DataArray, Tuple[DataArray]]
-                   ) -> Tuple[Optional[Tensor], Optional[Tensor]]:
+    def _parse_adj(self, connectivity: Union[SparseTensArray, Tuple[DataArray]],
+                   target_layout: Optional[str] = None
+                   ) -> Tuple[Optional[Adj], Optional[Tensor]]:
+        # format in [sparse, edge_index, None], where None means keep as input
         if connectivity is None:
             return None, None
-        # if connectivity is (edge_index, edge_weight)
-        if isinstance(connectivity, (list, tuple)):
-            edge_index, edge_weight = connectivity
-            edge_index = utils.copy_to_tensor(edge_index)
-            if edge_weight is not None:
-                edge_weight = utils.copy_to_tensor(edge_weight)
-        elif isinstance(connectivity, DataArray.__args__):
+
+        # Convert to torch
+        # from np.ndarray, pd.DataFrame or torch.Tensor
+        if isinstance(connectivity, DataArray.__args__):
             connectivity = utils.copy_to_tensor(connectivity)
-            assert connectivity.ndim == 2
-            # if connectivity is edge_index
-            if connectivity.size(0) == 2:
-                edge_index, edge_weight = connectivity, None
-            # if connectivity is dense_adj
-            elif connectivity.size(0) == connectivity.size(1):
-                self._check_same_dim(connectivity.size(0), 'n_nodes',
-                                     'connectivity')
-                edge_index, edge_weight = dense_to_sparse(connectivity)
-            else:
-                raise ValueError("`connectivity` must be a dense matrix or in "
-                                 "COO format (i.e., an `edge_index`).")
-        else:
+        elif isinstance(connectivity, (list, tuple)):
+            connectivity = recursive_apply(connectivity, utils.copy_to_tensor)
+        # from scipy sparse matrix
+        elif isinstance(connectivity, ScipySparseMatrix):
+            connectivity = SparseTensor.from_scipy(connectivity)
+        elif not isinstance(connectivity, SparseTensor):
             raise TypeError("`connectivity` must be a dense matrix or in "
                             "COO format (i.e., an `edge_index`).")
-        if edge_weight is not None:
-            edge_weight = utils.cast_tensor(edge_weight, self.precision)
+
+        if target_layout is not None:
+            connectivity = convert_torch_connectivity(connectivity,
+                                                      target_layout,
+                                                      num_nodes=self.n_nodes)
+
+        if isinstance(connectivity, (list, tuple)):
+            edge_index, edge_weight = connectivity
+            if edge_weight is not None:
+                edge_weight = utils.cast_tensor(edge_weight, self.precision)
+        else:
+            edge_index, edge_weight = connectivity, None
+            self._check_same_dim(edge_index.size(0), 'n_nodes', 'connectivity')
+
         return edge_index, edge_weight
 
     def _check_same_dim(self, dim: int, attr: str, name: str):

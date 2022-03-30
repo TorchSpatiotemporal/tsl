@@ -12,9 +12,9 @@ data = dataset.numpy()
 exogenous = dict(prev_speed=np.roll(data, -1, 0),
                  global_avg_speed=data.mean(1))
 
-adj = dataset.get_connectivity(threshold=0.1, sparse=False)
+adj = dataset.get_connectivity(threshold=0.1, include_self=False, layout='coo')
 
-attributes = dict(adj=adj, nodes_emb=np.random.random((dataset.n_nodes, 16)))
+attributes = dict(nodes_emb=np.random.random((dataset.n_nodes, 16)))
 
 trend = dataset.df.groupby(dataset.index.month).transform(np.mean).values
 
