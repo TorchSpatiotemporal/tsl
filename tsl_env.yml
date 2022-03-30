@@ -21,6 +21,5 @@ dependencies:
       - scipy
       - tables
       - test-tube
-      - torch-spatiotemporal
       - torchmetrics>=0.7
       - tqdm
