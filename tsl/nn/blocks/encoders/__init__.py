@@ -3,7 +3,7 @@ from .dcrnn import DCRNNCell, DCRNN
 from .dense_dcrnn import DenseDCRNNCell, DenseDCRNN
 from .gcgru import GraphConvGRUCell, GraphConvGRU
 from .gclstm import GraphConvLSTMCell, GraphConvLSTM
-from .mlp import MLP
+from .mlp import MLP, ResidualMLP
 from .rnn import RNN
 from .stcn import SpatioTemporalConvNet
 from .tcn import TemporalConvNet
@@ -14,6 +14,7 @@ general_classes = [
     'ConditionalBlock',
     'ConditionalTCNBlock',
     'MLP',
+    'ResidualMLP',
     'RNN',
 ]
 

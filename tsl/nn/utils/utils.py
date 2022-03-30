@@ -30,8 +30,6 @@ def get_layer_activation(activation: Optional[str] = None):
     if activation is None:
         return nn.Identity
     activation = activation.lower()
-    if activation == 'linear':
-        return nn.Identity
     # todo extend with all activations
     torch_activations_dict = {'elu': 'ELU',
                         'leaky_relu': 'LeakyReLU',
@@ -40,7 +38,8 @@ def get_layer_activation(activation: Optional[str] = None):
                         'softplus': 'Softplus',
                         'tanh': 'Tanh',
                         'silu': 'SiLU',
-                        'swish': 'SiLU'
+                        'swish': 'SiLU',
+                        'linear': 'Identity'
                         }
     if activation in torch_activations_dict:
         return getattr(nn, torch_activations_dict[activation])
