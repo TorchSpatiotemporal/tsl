@@ -406,7 +406,9 @@ class Dataset(object):
         if 'sparse' in kwargs:
             import warnings
             warnings.warn("The argument 'sparse' is deprecated and will be "
-                          "removed in future version of tsl. Please use ")
+                          "removed in future version of tsl. Please use "
+                          "the argument `layout` instead.")
+            layout = 'edge_index' if kwargs['sparse'] else 'dense'
         if method == 'full':
             adj = np.ones((self.n_nodes, self.n_nodes))
         elif method == 'identity':

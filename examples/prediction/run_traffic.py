@@ -148,7 +148,7 @@ def run_experiment(args):
     exog_vars = {'global_u': exog_vars}
 
     adj = dataset.get_connectivity(method='distance', threshold=0.1,
-                                   layout='coo')
+                                   layout='edge_index')
 
     torch_dataset = SpatioTemporalDataset(*dataset.numpy(return_idx=True),
                                           connectivity=adj,
