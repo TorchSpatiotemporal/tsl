@@ -21,7 +21,6 @@ class MaskedMultiLoss(MaskedMetric):
         self.metrics = nn.ModuleList(metrics)
         self.weights = weights
 
-
     def __repr__(self):
         name = (
             f"{self.__class__.__name__}("
