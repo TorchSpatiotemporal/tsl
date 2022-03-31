@@ -22,7 +22,7 @@ __all__ = [
 
 def zeros_to_one_(scale):
     """Set to 1 scales of near constant features, detected by identifying
-    scales close to machine precision.
+    scales close to machine precision, in place.
     Adapted from :class:`sklearn.preprocessing._data._handle_zeros_in_scale`
     """
     if np.isscalar(scale):
@@ -248,19 +248,18 @@ class RobustScaler(Scaler):
             raise ValueError("Invalid quantile range: {}"
                              .format(self.quantile_range))
 
+        dtype = x.dtype
         if mask is not None:
-            dtype = x.dtype
             x = np.where(mask, x, np.nan).astype(np.float32)
             self.bias = np.nanmedian(x, axis=self.axis,
                                      keepdims=keepdims).astype(dtype)
             min_q, max_q = np.nanpercentile(x, self.quantile_range,
                                             axis=self.axis, keepdims=keepdims)
-            self.scale = (max_q - min_q).astype(dtype)
         else:
             self.bias = np.median(x, axis=self.axis, keepdims=keepdims)
             min_q, max_q = np.percentile(x, self.quantile_range,
                                          axis=self.axis, keepdims=keepdims)
-            self.scale = max_q - min_q
+        self.scale = (max_q - min_q).astype(dtype)
         self.scale = zeros_to_one_(self.scale)
         if self.unit_variance:
             adjust = stats.norm.ppf(q_max / 100.0) - stats.norm.ppf(

@@ -8,25 +8,28 @@ methods, with a focus on Graph Neural Networks.
 In particular, `tsl` offers a wide range of utilities to develop neural networks in *PyTorch* for processing spatiotemporal data signals.
 
 ## Installation
-`tsl` is compatible with Python 3.7. The simplest way to install the library is from pip:
 
-```bash
-pip install torch-spatiotemporal
-```
-
-We recommend using Anaconda and the provided environment configuration by running the command:
-
-```bash
-conda env create -f tsl_env.yml
-```
-
-To install `tsl` from source, run this in a terminal:
+`tsl` is compatible with Python>=3.7. We recommend installation from source to be up-to-date with the latest version:
 
 ```bash
 git clone https://github.com/TorchSpatiotemporal/tsl.git
 cd tsl
 python setup.py install  # Or 'pip install .'
 ```
+
+To solve all dependencies, we recommend using Anaconda and the provided environment configuration by running the command:
+
+```bash
+conda env create -f tsl_env.yml
+```
+
+Alternatively, you can install the library from pip:
+
+```bash
+pip install torch-spatiotemporal
+```
+
+Please refer to [PyG installation guidelines](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) for installation of PyG ecosystem without conda.
 
 ## Tutorial
 

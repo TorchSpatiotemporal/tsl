@@ -141,11 +141,8 @@ def run_experiment(args):
 
     trainlen = len(dm.splitter.train_idxs)
 
-    adj = dataset.get_connectivity(method='correntropy',
-                                   gamma=10,
-                                   sparse=False,
-                                   trainlen=trainlen,
-                                   knn=20)
+    adj = dataset.get_connectivity(method='correntropy', knn=20, gamma=10,
+                                   layout='edge_index', trainlen=trainlen)
 
     if args.model_name == 'dcrnn':
         torch_dataset.set_connectivity(adj)

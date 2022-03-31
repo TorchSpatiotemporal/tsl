@@ -11,6 +11,5 @@ torch>=1.9
 torchvision
 torchaudio
 torch_geometric>=2.0
-torch_spatiotemporal
 torchmetrics>=0.7
 tqdm

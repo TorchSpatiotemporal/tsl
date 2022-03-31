@@ -5,7 +5,7 @@ from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.typing import Adj, OptTensor
 
-from tsl.nn.utils.connectivity import normalize
+from tsl.ops.connectivity import normalize
 
 
 class GraphConv(MessagePassing):

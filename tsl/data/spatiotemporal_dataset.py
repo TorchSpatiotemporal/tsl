@@ -9,7 +9,8 @@ from torch import Tensor
 from torch.utils.data import Dataset
 from torch_geometric.utils import subgraph
 
-from tsl.typing import DataArray, TemporalIndex, IndexSlice, OptDataArray
+from tsl.typing import DataArray, TemporalIndex, IndexSlice, OptDataArray, \
+    TensArray
 from .batch import Batch
 from .data import Data
 from .batch_map import BatchMap, BatchMapItem
@@ -105,6 +106,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # Initialize private data holders
         self._exogenous = dict()
         self._attributes = dict()
+        self._indices = None
         self.input_map = BatchMap()
         self.target_map = BatchMap()
         # Store data
@@ -438,6 +440,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     @property
     def patterns(self):
         patterns = dict(data='s n c')
+        if self.mask is not None:
+            patterns['mask'] = 's n c'
         patterns.update({key: 's n c' if value['node_level'] else 's c'
                          for key, value in self._exogenous.items()})
         patterns.update({key: 'n c' if value['node_level'] else 'c'
@@ -531,7 +535,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         if self.index is None:
             return None
         ds_indices = self.expand_indices(indices, unique=unique)
-        index = self.index.to_numpy()
+        index = self.index if unique else self.index.to_numpy()
         ds_timestamps = {k: index[v] for k, v in ds_indices.items()}
         return ds_timestamps
 
@@ -606,16 +610,18 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             return self.get_horizon_indices(item)
         return self.get_window_indices(item), self.get_horizon_indices(item)
 
+    def set_indices(self, indices: TensArray):
+        indices = torch.as_tensor(indices, dtype=torch.long)
+        max_index = self.n_steps - self.sample_span
+        assert all((indices >= 0) & (indices <= max_index)), \
+            f"indices must be in the range [0, {max_index}] for {self.name}."
+        self._indices = indices
+
     def expand_indices(self, indices=None, unique=False, merge=False):
         indices = np.arange(len(self._indices)) if indices is None else indices
         hrz_end = self.horizon_offset + self.horizon
 
         def expand_indices_range(rng_start, rng_end):
-            allowable_offset = rng_end - rng_start - self.stride + 1
-            contiguous = all(np.diff(indices) <= allowable_offset)
-            if unique and contiguous:
-                return np.arange(self._indices[indices[0]] + rng_start,
-                                 self._indices[indices[-1]] + rng_end)
             ind_mtrx = [self._indices[indices].numpy() + inc for inc in
                         range(rng_start, rng_end)]
             idx = np.swapaxes(ind_mtrx, 0, 1)

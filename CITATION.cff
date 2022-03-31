@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this code in your work, please cite it as below."
+authors:
+  - family-names: "Cini"
+    given-names: "Andrea"
+  - family-names: "Marisca"
+    given-names: "Ivan"
+title: "Torch Spatiotemporal"
+date-released: 2022-03-16
+license: MIT
+url: "https://github.com/TorchSpatiotemporal/tsl"

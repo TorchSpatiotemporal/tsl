@@ -13,13 +13,15 @@ from typing import (
 import numpy as np
 from numpy import ndarray
 from pandas import DataFrame, Series
+from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
 from torch import TensorType
 
 import tsl
 from tsl import logger, config
 from ...data.datamodule import splitters, Splitter
 from ...ops.similarities import top_k
-from tsl.nn.utils.connectivity import adj_to_edge_index
+from tsl.ops.connectivity import adj_to_edge_index
+from ...typing import ScipySparseMatrix
 from ...utils import preprocessing
 from ...utils.io import save_pickle, load_pickle
 from ...utils.python_utils import ensure_list, files_exist, hash_dict
@@ -358,12 +360,11 @@ class Dataset(object):
 
     def get_connectivity(self, method: Optional[str] = None,
                          threshold: Optional[float] = None,
-                         knn: Optional[int] = None,
-                         include_self: bool = True,
+                         knn: Optional[int] = None, include_self: bool = True,
                          force_symmetric: bool = False,
                          normalize_axis: Optional[int] = None,
-                         sparse: bool = True,
-                         **kwargs) -> Union[ndarray, List]:
+                         layout: str = 'edge_index',
+                         **kwargs) -> Union[ndarray, Tuple, ScipySparseMatrix]:
         r"""Returns the weighted adjacency matrix :math:`\mathbf{W} \in
         \mathbb{R}^{N \\times N}`, where :math:`N=`:obj:`self.n_nodes`. The
         element :math:`w_{i,j} \in \mathbf{W}` is 0 if there not exists an edge
@@ -390,15 +391,30 @@ class Dataset(object):
                 :math:`\sum_k w_{k, j}`, if :obj:`normalize_axis=1`. :obj:`None`
                 for no normalization.
                 (default: :obj:`None`)
-            sparse (bool): Convert dense matrix to sparse edge index.
-                (default: :obj:`True`)
+            layout (str): Convert matrix to a dense/sparse format. Available
+                options are:
+                  - dense: keep matrix dense
+                  - edge_index: convert to (edge_index, edge_weight) tuple
+                  - coo, csr, csc: convert to specified scipy sparse matrix
+                (default: 'dense')
             **kwargs (optional): Additional optional keyword arguments for
                 similarity computation.
 
         Returns:
             The similarity dense matrix.
         """
-        adj = self.get_similarity(method, **kwargs)
+        if 'sparse' in kwargs:
+            import warnings
+            warnings.warn("The argument 'sparse' is deprecated and will be "
+                          "removed in future version of tsl. Please use "
+                          "the argument `layout` instead.")
+            layout = 'edge_index' if kwargs['sparse'] else 'dense'
+        if method == 'full':
+            adj = np.ones((self.n_nodes, self.n_nodes))
+        elif method == 'identity':
+            adj = np.eye(self.n_nodes)
+        else:
+            adj = self.get_similarity(method, **kwargs)
         if threshold is not None:
             adj[adj < threshold] = 0
         if knn is not None:
@@ -409,9 +425,19 @@ class Dataset(object):
             adj = np.maximum.reduce([adj, adj.T])
         if normalize_axis:
             adj = adj / (adj.sum(normalize_axis, keepdims=True) + tsl.epsilon)
-        if sparse:
-            adj = adj_to_edge_index(adj)
-        return adj
+        if layout == 'dense':
+            return adj
+        elif layout == 'edge_index':
+            return adj_to_edge_index(adj)
+        elif layout == 'coo':
+            return coo_matrix(adj)
+        elif layout == 'csr':
+            return csr_matrix(adj)
+        elif layout == 'csc':
+            return csc_matrix(adj)
+        else:
+            raise ValueError(f"Invalid format for connectivity: {layout}. Valid"
+                             " options are [dense, edge_index, coo, csr, csc].")
 
     # Cross-validation splitting options
 
