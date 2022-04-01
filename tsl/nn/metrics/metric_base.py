@@ -29,7 +29,7 @@ def convert_to_masked_metric(metric_fn, **kwargs):
 
 
 class MaskedMetric(Metric):
-    """
+    r"""
     Base class to implement the metrics used in `tsl`.
 
     In particular a `MaskedMetric` accounts for missing values in the input sequences by accepting a boolean mask as
@@ -39,9 +39,9 @@ class MaskedMetric(Metric):
         metric_fn: Base function to compute the metric point wise.
         mask_nans (bool, optional): Whether to automatically mask nan values.
         mask_inf (bool, optional): Whether to automatically mask infinite values.
-        compute_on_step (bool, optional): Whether to compute the metric right-away or if accumulate the results.
+        compute_on_step (bool, optional): Whether to compute the metric right-away or to accumulate the results.
                          This should be `True` when using the metric to compute a loss function, `False` if the metric
-                         is used for logging the aggregate error across different minibatches.
+                         is used for logging the aggregate value across different mini-batches.
         at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
     def __init__(self,

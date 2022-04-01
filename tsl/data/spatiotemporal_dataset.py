@@ -57,6 +57,11 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             mapping are keys in :obj:`item.input`, while values are
             :obj:`~tsl.data.new.BatchMapItem`.
             (default: :obj:`None`)
+        target_map (BatchMap or dict, optional): Defines how data, exogenous and
+            attributes are mapped to the target of dataset samples. Keys in the
+            mapping are keys in :obj:`item.target`, while values are
+            :obj:`~tsl.data.new.BatchMapItem`.
+            (default: :obj:`None`)
         trend (DataArray, optional): Trend paired with main signal. Must be of
             the same shape of `data`.
             (default: :obj:`None`)
@@ -83,6 +88,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                  exogenous: Optional[Mapping[str, DataArray]] = None,
                  attributes: Optional[Mapping[str, DataArray]] = None,
                  input_map: Optional[Union[Mapping, BatchMap]] = None,
+                 target_map: Optional[Union[Mapping, BatchMap]] = None,
                  trend: Optional[DataArray] = None,
                  scalers: Optional[Mapping[str, Scaler]] = None,
                  window: int = 24,
@@ -102,6 +108,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         self._attributes = dict()
         self._indices = None
         self.input_map = BatchMap()
+        self.target_map = BatchMap()
         # Store data
         self.data: Tensor = self._parse_data(data)
         # Store time information
@@ -132,10 +139,19 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                 self.add_attribute(name, **self._attr_value_to_kwargs(value),
                                    add_to_batch=False)
         # Updated input map (i.e., how to map data, exogenous and attribute
-        # inside item)
+        # inside item.input)
         if input_map is None:
             input_map = self.default_input_map()
         self.set_input_map(input_map)
+
+        # Updated target map (i.e., how to map data, exogenous and attribute
+        # inside item.target)
+        if target_map is None:
+            target_map = BatchMap(y=BatchMapItem('data', SynchMode.HORIZON,
+                                                 cat_dim=None, preprocess=False,
+                                                 n_channels=self.n_channels))
+        self.set_target_map(target_map)
+
         # Store preprocessing options
         self.trend = None
         if trend is not None:
@@ -185,9 +201,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     @property
     def targets(self) -> BatchMap:
-        return BatchMap(y=BatchMapItem('data', SynchMode.HORIZON,
-                                       cat_dim=None, preprocess=False,
-                                       n_channels=self.n_channels))
+        return self.target_map
 
     def default_input_map(self) -> BatchMap:
         im = BatchMap(x=BatchMapItem('data', SynchMode.WINDOW, cat_dim=None,
@@ -203,21 +217,32 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         self.input_map = BatchMap()
         self.update_input_map(input_map, **kwargs)
 
+    def set_target_map(self, target_map=None, **kwargs):
+        self.target_map = BatchMap()
+        self.update_target_map(target_map, **kwargs)
+
     def update_input_map(self, input_map=None, **kwargs):
-        # check input map
-        if input_map is not None:
-            assert isinstance(input_map, Mapping), \
-                f"Type {type(input_map)} is not valid for `input_map`"
+        self._update_batch_map('input', input_map, **kwargs)
+
+    def update_target_map(self, target_map=None, **kwargs):
+        self._update_batch_map('target', target_map, **kwargs)
+
+    def _update_batch_map(self, endpoint, batch_map=None, **kwargs):
+        # check batch map
+        if batch_map is not None:
+            assert isinstance(batch_map, Mapping), \
+                f"Type {type(batch_map)} is not valid for `input_map`"
         keys = set(kwargs.keys())  # store the updated keys to add 'n_channels'
-        # update from input_map
-        if input_map is not None:
-            self.input_map.update(**input_map)
-            keys.update(input_map.keys())
+        # update from batch_map
+        endpoint = getattr(self, f"{endpoint}_map")
+        if batch_map is not None:
+            endpoint.update(**batch_map)
+            keys.update(batch_map.keys())
         # update from kwargs
-        self.input_map.update(**kwargs)
+        endpoint.update(**kwargs)
         # update 'n_channels' to newly added/updated keys
         for key in keys:
-            item = self.input_map[key]
+            item = endpoint[key]
             item.n_channels = sum([getattr(self, k).shape[-1]
                                    for k in item.keys])
 
