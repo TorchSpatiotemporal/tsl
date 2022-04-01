@@ -67,9 +67,9 @@ class PandasParsingMixin:
         assert check_type in ['exogenous', 'attribute']
         invalid_names = set(dir(self))
         if check_type == 'exogenous':
-            invalid_names.update(self._exogenous)
-        else:
             invalid_names.update(self._attributes)
+        else:
+            invalid_names.update(self._exogenous)
         if name in invalid_names:
             raise ValueError(f"Cannot set {check_type} with name '{name}', "
                              f"{self.__class__.__name__} contains already an "

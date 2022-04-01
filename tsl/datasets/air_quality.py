@@ -105,7 +105,7 @@ class AirQuality(PandasDataset, MissingValuesMixin):
                  small: bool = False,
                  test_months: Sequence = (3, 6, 9, 12),
                  infer_eval_from: str = 'next',
-                 freq: str = 'H',
+                 freq: Optional[str] = None,
                  masked_sensors: Optional[Sequence] = None):
         self.root = root
         self.small = small

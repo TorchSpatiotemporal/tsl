@@ -22,7 +22,7 @@ class MetrLA(PandasDataset):
     temporal_aggregation_options = {'mean', 'nearest'}
     spatial_aggregation_options = None
 
-    def __init__(self, root=None, impute_zeros=True, freq='5T'):
+    def __init__(self, root=None, impute_zeros=True, freq=None):
         # set root path
         self.root = root
         # load dataset

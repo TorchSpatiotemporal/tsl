@@ -12,6 +12,7 @@ from tsl import logger
 from . import checks
 from .dataset import Dataset
 from .mixin import TemporalFeaturesMixin, PandasParsingMixin
+from ...ops.dataframe import aggregate
 from ...typing import FrameArray, OptFrameArray
 from ...utils.python_utils import ensure_list
 
@@ -343,33 +344,44 @@ class PandasDataset(Dataset, PandasParsingMixin, TemporalFeaturesMixin):
     def aggregate_(self, node_index: Optional[Union[Index, Mapping]] = None,
                    mask_tolerance: float = 0.):
 
+        # get aggregation function among numpy functions
+        aggr_fn = getattr(np, self.spatial_aggregation)
+
+        # node_index parsing: eventually must be an n_nodes-sized array where
+        # value at position i is the cluster id of i-th node
         if node_index is None:
+            # if not provided, aggregate all nodes together, with cluster id 0
             node_index = np.zeros(self.n_nodes)
+        # otherwise, node_index can be a mapping {cluster_id: [nodes]}
+        # the set of all nodes in mapping values must be equal to dataset nodes
         elif isinstance(node_index, Mapping):
             ids, groups = [], []
             for group_id, group in node_index.items():
                 ids += [group_id] * len(group)
                 groups += list(group)
             assert set(groups) == set(self.nodes)
+            # reorder node_index according to nodes order in dataset
             ids, groups = np.array(ids), np.array(groups)
             _, order = np.where(self.nodes[:, None] == groups)
             node_index = ids[order]
 
         assert len(node_index) == self.n_nodes
 
-        aggr_fn = getattr(np, self.spatial_aggregation)
-
-        if self.has_mask:
-            new_mask = pd.DataFrame(self._mask, index=self.index)
-            new_mask = new_mask.groupby(node_index, 1).mean()
+        # aggregate mask (if node-wise) and threshold aggregated value
+        if self.has_mask and self.mask.ndim == 3:
+            columns = self.columns(channels=pd.RangeIndex(self.mask.shape[-1]))
+            new_mask = pd.DataFrame(self._mask, self.index, columns)
+            new_mask = aggregate(new_mask, node_index, np.mean)
             mask = new_mask >= (1. - mask_tolerance)
             self._mask = mask.to_numpy(dtype='uint8')
 
-        self.df = self.df.groupby(node_index, 1).aggregate(aggr_fn)
+        # aggregate main dataframe
+        self.df = aggregate(self.df, node_index, aggr_fn)
 
-        for name, value in self._exogenous.items():
-            df = value.groupby(node_index, 1).aggregate(aggr_fn)
-            self._exogenous[name] = df
+        # aggregate all node-level exogenous
+        for name, value in self.exogenous.items():
+            df = aggregate(value, node_index, aggr_fn)
+            self.add_exogenous(df, name, node_level=True)
 
     def aggregate(self, node_index: Optional[Union[Index, Mapping]] = None,
                   mask_tolerance: float = 0.):
