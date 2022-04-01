@@ -25,7 +25,7 @@ class PemsBay(PandasDataset):
     temporal_aggregation_options = {'mean', 'nearest'}
     spatial_aggregation_options = None
 
-    def __init__(self, root=None, freq='5T'):
+    def __init__(self, root=None, freq=None):
         # Set root path
         self.root = root
         # load dataset

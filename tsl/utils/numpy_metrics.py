@@ -40,7 +40,7 @@ def r2(y_hat, y):
 
 def masked_mae(y_hat, y, mask=None):
     if mask is None:
-        mask = np.ones(y.shape, dtype=bool)
+        mask = slice(None)
     else:
         mask = np.asarray(mask, dtype=bool)
     err = y_hat[mask] - y[mask]
@@ -49,7 +49,7 @@ def masked_mae(y_hat, y, mask=None):
 
 def masked_mape(y_hat, y, mask=None):
     if mask is None:
-        mask = np.ones(y.shape, dtype=bool)
+        mask = slice(None)
     else:
         mask = np.asarray(mask, dtype=bool)
     err = (y_hat[mask] - y[mask]) / (y[mask] + tsl.epsilon)
@@ -58,7 +58,7 @@ def masked_mape(y_hat, y, mask=None):
 
 def masked_mse(y_hat, y, mask=None):
     if mask is None:
-        mask = np.ones(y.shape, dtype=bool)
+        mask = slice(None)
     else:
         mask = np.asarray(mask, dtype=bool)
     err = y_hat[mask] - y[mask]
@@ -67,7 +67,7 @@ def masked_mse(y_hat, y, mask=None):
 
 def masked_rmse(y_hat, y, mask=None):
     if mask is None:
-        mask = np.ones(y.shape, dtype=bool)
+        mask = slice(None)
     else:
         mask = np.asarray(mask, dtype=bool)
     err = np.square(y_hat[mask] - y[mask])
@@ -76,7 +76,7 @@ def masked_rmse(y_hat, y, mask=None):
 
 def masked_mre(y_hat, y, mask=None):
     if mask is None:
-        mask = np.ones(y.shape, dtype=bool)
+        mask = slice(None)
     else:
         mask = np.asarray(mask, dtype=bool)
     err = np.abs(y_hat[mask] - y[mask])

@@ -1,7 +1,9 @@
-from typing import Union
+from typing import Union, Callable
 
 import numpy as np
 import pandas as pd
+
+from tsl.typing import Index
 
 
 def to_numpy(df):
@@ -11,6 +13,28 @@ def to_numpy(df):
     cols = pd.MultiIndex.from_product(cols)
     df = df.reindex(columns=cols)
     return df.values.reshape((-1, *cols.levshape))
+
+
+def aggregate(df: pd.DataFrame, node_index: Index, aggr_fn: Callable = np.sum):
+    """Aggregate nodes in MultiIndexed DataFrames.
+
+    Args:
+        df (pd.DataFrame): MultiIndexed DataFrame to be aggregated. Columns must
+            be a :class:`~pandas.MultiIndex` object with :obj:`nodes` in first
+            level and :obj:`channels` in second.
+        node_index (Index): A sequence of :obj:`cluster_id` with length equal to
+            number of nodes in :obj:`df`. The i-th node will be mapped to
+            cluster at i-th position in :obj:`node_index`.
+        aggr_fn (Callable): Function to be used for cluster aggregation.
+    """
+    assert df.columns.nlevels == 2,\
+        "This function currently supports only MultiIndexed DataFrames."
+    channels = df.columns.unique(1).values
+    grouper = pd.MultiIndex.from_product([node_index, channels],
+                                         names=df.columns.names)
+    df = df.groupby(grouper, axis=1).aggregate(aggr_fn)
+    df.columns = pd.MultiIndex.from_tuples(df.columns, names=grouper.names)
+    return df
 
 
 def compute_mean(x: Union[pd.DataFrame, np.ndarray],

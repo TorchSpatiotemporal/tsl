@@ -1,12 +1,29 @@
 from typing import Optional
 
-import torch
-from torch.nn import functional as F
-from torch import nn
-
 from einops import rearrange
+from torch import nn
+from torch.nn import functional as F
 
 from ..ops import expand_then_cat
+
+_torch_activations_dict = {
+    'elu': 'ELU',
+    'leaky_relu': 'LeakyReLU',
+    'prelu': 'PReLU',
+    'relu': 'ReLU',
+    'rrelu': 'RReLU',
+    'selu': 'SELU',
+    'celu': 'CELU',
+    'gelu': 'GELU',
+    'glu': 'GLU',
+    'mish': 'Mish',
+    'sigmoid': 'Sigmoid',
+    'softplus': 'Softplus',
+    'tanh': 'Tanh',
+    'silu': 'SiLU',
+    'swish': 'SiLU',
+    'linear': 'Identity'
+}
 
 
 def _identity(x):
@@ -19,9 +36,7 @@ def get_functional_activation(activation: Optional[str] = None):
     activation = activation.lower()
     if activation == 'linear':
         return _identity
-    # todo extend with all activations
-    torch_activations = ['elu', 'leaky_relu', 'relu', 'sigmoid', 'softplus', 'tanh']
-    if activation in torch_activations:
+    if activation in _torch_activations_dict:
         return getattr(F, activation)
     raise ValueError(f"Activation '{activation}' not valid.")
 
@@ -30,19 +45,8 @@ def get_layer_activation(activation: Optional[str] = None):
     if activation is None:
         return nn.Identity
     activation = activation.lower()
-    # todo extend with all activations
-    torch_activations_dict = {'elu': 'ELU',
-                        'leaky_relu': 'LeakyReLU',
-                        'relu': 'ReLU',
-                        'sigmoid': 'Sigmoid',
-                        'softplus': 'Softplus',
-                        'tanh': 'Tanh',
-                        'silu': 'SiLU',
-                        'swish': 'SiLU',
-                        'linear': 'Identity'
-                        }
-    if activation in torch_activations_dict:
-        return getattr(nn, torch_activations_dict[activation])
+    if activation in _torch_activations_dict:
+        return getattr(nn, _torch_activations_dict[activation])
     raise ValueError(f"Activation '{activation}' not valid.")
 
 
@@ -55,6 +59,7 @@ def maybe_cat_exog(x, u, dim=-1):
     Args:
         x: Input 4-d tensor.
         u: Optional exogenous variable.
+        dim (int): Concatenation dimension.
 
     Returns:
         Concatenated `x` and `u`.
