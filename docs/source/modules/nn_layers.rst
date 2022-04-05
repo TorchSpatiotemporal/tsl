@@ -1,19 +1,8 @@
 Layers
 ======
 
-
-General Layers
---------------
-
-.. currentmodule:: tsl.nn.layers
-.. autosummary::
-   :nosignatures:
-   {% for cls in tsl.nn.layers.classes %}
-     {{ cls }}
-   {% endfor %}
-
-.. automodule:: tsl.nn.layers
-    :members:
+.. contents:: Contents
+    :local:
 
 
 Graph Convolutions
@@ -41,4 +30,18 @@ Norm Layers
    {% endfor %}
 
 .. automodule:: tsl.nn.layers.norm
+    :members:
+
+
+General Layers
+--------------
+
+.. currentmodule:: tsl.nn.layers
+.. autosummary::
+   :nosignatures:
+   {% for cls in tsl.nn.layers.classes %}
+     {{ cls }}
+   {% endfor %}
+
+.. automodule:: tsl.nn.layers
     :members:
