@@ -6,9 +6,9 @@ from tsl.ops.connectivity import transpose, normalize
 
 
 class DiffConv(MessagePassing):
-    r"""An implementation of the Diffusion Convolution Layer.
-    For details see: `"Diffusion Convolutional Recurrent Neural Network:
-    Data-Driven Traffic Forecasting" <https://arxiv.org/abs/1707.01926>`.
+    r"""An implementation of the Diffusion Convolution Layer from `"Diffusion
+    Convolutional Recurrent Neural Network: Data-Driven Traffic Forecasting"
+    <https://arxiv.org/abs/1707.01926>`_.
 
     Args:
         in_channels (int): Number of input features.

@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 from torch_geometric.utils.num_nodes import maybe_num_nodes
-from torch_scatter import scatter
+from torch_scatter import scatter, segment_csr, gather_csr
 from torch_scatter.utils import broadcast
 
 import tsl
@@ -21,7 +21,8 @@ __all__ = [
 ]
 
 
-def expand_then_cat(tensors: Union[Tuple[Tensor, ...], List[Tensor]], dim=-1) -> Tensor:
+def expand_then_cat(tensors: Union[Tuple[Tensor, ...], List[Tensor]],
+                    dim=-1) -> Tensor:
     r"""
     Match the dimensions of tensors in the input list and then concatenate.
 
@@ -69,10 +70,12 @@ def reverse_tensor(tensor: Tensor, dim: int) -> Tensor:
 
 
 @torch.jit.script
-def sparse_softmax(src: Tensor, index: Tensor, num_nodes: Optional[int] = None,
+def sparse_softmax(src: Tensor, index: Optional[Tensor] = None,
+                   ptr: Optional[Tensor] = None,
+                   num_nodes: Optional[int] = None,
                    dim: int = -2) -> Tensor:
     r"""Extension of ~torch_geometric.softmax with index broadcasting to compute
-    a sparsely evaluated softmax.
+    a sparsely evaluated softmax over multiple broadcast dimensions.
 
     Given a value tensor :attr:`src`, this function first groups the values
     along the first dimension based on the indices specified in :attr:`index`,
@@ -80,19 +83,31 @@ def sparse_softmax(src: Tensor, index: Tensor, num_nodes: Optional[int] = None,
 
     Args:
         src (Tensor): The source tensor.
-        index (Tensor): The indices of elements for applying the softmax.
+        index (Tensor, optional): The indices of elements for applying the softmax.
+        ptr (LongTensor, optional): If given, computes the softmax based on
+            sorted inputs in CSR representation. (default: :obj:`None`)
         num_nodes (int, optional): The number of nodes, *i.e.*
             :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
         dim (int, optional): The dimension in which to normalize, i.e., the edge
             dimension. (default: :obj:`-2`)
     """
-    N = maybe_num_nodes(index, num_nodes)
-    expanded_index = broadcast(index, src, dim)
-    src_max = scatter(src, expanded_index, dim, dim_size=N, reduce='max')
-    src_max = src_max.index_select(dim, index)
-    out = (src - src_max).exp()
-    out_sum = scatter(out, expanded_index, dim, dim_size=N, reduce='sum')
-    out_sum = out_sum.index_select(dim, index)
+    if ptr is not None:
+        dim = dim + src.dim() if dim < 0 else dim
+        size = ([1] * dim) + [-1]
+        ptr = ptr.view(size)
+        src_max = gather_csr(segment_csr(src, ptr, reduce='max'), ptr)
+        out = (src - src_max).exp()
+        out_sum = gather_csr(segment_csr(out, ptr, reduce='sum'), ptr)
+    elif index is not None:
+        N = maybe_num_nodes(index, num_nodes)
+        expanded_index = broadcast(index, src, dim)
+        src_max = scatter(src, expanded_index, dim, dim_size=N, reduce='max')
+        src_max = src_max.index_select(dim, index)
+        out = (src - src_max).exp()
+        out_sum = scatter(out, expanded_index, dim, dim_size=N, reduce='sum')
+        out_sum = out_sum.index_select(dim, index)
+    else:
+        raise NotImplementedError
 
     return out / (out_sum + tsl.epsilon)
 
@@ -135,7 +150,7 @@ def sparse_multi_head_attention(q: Tensor, k: Tensor, v: Tensor, index: Tensor,
     N = maybe_num_nodes(index, dim_size)
     # scores
     alpha = (q * k).sum(dim=-1) / math.sqrt(E)
-    alpha = sparse_softmax(alpha, index, N, dim)
+    alpha = sparse_softmax(alpha, index, num_nodes=N, dim=dim)
     if dropout_p > 0.0:
         alpha = F.dropout(alpha, p=dropout_p)
     v *= alpha.view(-1, H, 1)

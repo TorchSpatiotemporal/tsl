@@ -9,11 +9,11 @@ from torch import Tensor
 from torch.utils.data import Dataset
 from torch_geometric.utils import subgraph
 
-from tsl.typing import DataArray, TemporalIndex, IndexSlice, OptDataArray, \
-    TensArray
+from tsl.typing import DataArray, TemporalIndex, IndexSlice, TensArray, \
+    SparseTensArray
 from .batch import Batch
-from .data import Data
 from .batch_map import BatchMap, BatchMapItem
+from .data import Data
 from .mixin import DataParsingMixin
 from .preprocessing.scalers import Scaler, ScalerModule
 from .utils import SynchMode, WINDOW, HORIZON, broadcast, outer_pattern
@@ -35,15 +35,19 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         mask (DataArray, optional): Boolean mask denoting if signal in data is
             valid (1) or not (0).
             (default: :obj:`None`)
-        connectivity (DataArray, tuple, optional): The adjacency matrix defining nodes'
-            relational information. It can be either a dense matrix
-            :math:`\mathbf{A} \in \mathbb{R}^{N \times N}` or in COO format as a
-            tuple (:obj:`edge_index` :math:`\in \mathbb{N}^{2 \times E}`,
-            :obj:`edge_weight` :math:`\in \mathbb{R}^{E})`.
+        connectivity (SparseTensArray, tuple, optional): The adjacency matrix
+            defining nodes' relational information. It can be either a
+            dense/sparse matrix :math:`\mathbf{A} \in \mathbb{R}^{N \times N}`
+            or an (:obj:`edge_index` :math:`\in \mathbb{N}^{2 \times E}`,
+            :obj:`edge_weight` :math:`\in \mathbb{R}^{E})` tuple. The input
+            layout will be preserved (e.g., a sparse matrix will be stored as a
+            :class:`torch_sparse.SparseTensor`). In any case, the connectivity
+            will be stored in the attribute :obj:`edge_index`, and the weights
+            will be eventually stored as :obj:`edge_weight`.
             (default: :obj:`None`)
         exogenous (dict, optional): Dictionary of exogenous channels with label.
             An :obj:`exogenous` element is a temporal array with node- or graph-
-            level channels which are covariate to the main signal. The temporal
+            level channels which are covariates to the main signal. The temporal
             dimension must be equal to the temporal dimension of data, as well
             as the number of nodes if the exogenous is node-level.
             (default: :obj:`None`)
@@ -84,7 +88,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                  index: Optional[TemporalIndex] = None,
                  mask: Optional[DataArray] = None,
                  connectivity: Optional[
-                     Union[DataArray, Tuple[DataArray]]] = None,
+                     Union[SparseTensArray, Tuple[DataArray]]] = None,
                  exogenous: Optional[Mapping[str, DataArray]] = None,
                  attributes: Optional[Mapping[str, DataArray]] = None,
                  input_map: Optional[Union[Mapping, BatchMap]] = None,
@@ -309,20 +313,56 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     # Setters #################################################################
 
     def set_data(self, data: DataArray):
+        r"""Set sequence of primary channels at :obj:`self.data`."""
         self.data = self._parse_data(data)
 
     def set_mask(self, mask: DataArray):
+        r"""Set mask of primary channels, i.e., a bool for each (node, step,
+        channel) triple denoting if corresponding value in data is observed (1)
+        or not (0)."""
         self.mask = self._parse_mask(mask)
 
-    def set_connectivity(self, connectivity: Union[DataArray,
-                                                   Tuple[OptDataArray]]):
-        self.edge_index, self.edge_weight = self._parse_adj(connectivity)
+    def set_connectivity(self,
+                         connectivity: Union[SparseTensArray, Tuple[DataArray]],
+                         target_layout: Optional[str] = None):
+        r"""Set dataset connectivity.
+
+        The input can be either a
+        dense/sparse matrix :math:`\mathbf{A} \in \mathbb{R}^{N \times N}`
+        or an (:obj:`edge_index` :math:`\in \mathbb{N}^{2 \times E}`,
+        :obj:`edge_weight` :math:`\in \mathbb{R}^{E})` tuple. If
+        :obj:`target_layout` is :obj:`None`, the input layout will be
+        preserved (e.g., a sparse matrix will be stored as a
+        :class:`torch_sparse.SparseTensor`), otherwise the connectivity is
+        converted to the specified layout. In any case, the connectivity
+        will be stored in the attribute :obj:`edge_index`, and the weights
+        will be eventually stored as :obj:`edge_weight`.
+
+        Args:
+            connectivity (SparseTensArray, tuple, optional): The connectivity
+            target_layout (str, optional): If specified, the input connectivity
+                is converted to this layout. Possible options are [dense,
+                sparse, edge_index]. If :obj:`None`, the target layout is
+                inferred from the input.
+                (default: :obj:`None`)
+        """
+        self.edge_index, self.edge_weight = self._parse_adj(connectivity,
+                                                            target_layout)
 
     def set_trend(self, trend: DataArray):
+        r"""Set trend of primary channels."""
         self.trend: Tensor = self._parse_exogenous(trend, 'trend',
                                                    node_level=True)
 
     def set_scaler(self, key: str, value: Scaler):
+        r"""Set a :class:`tsl.data.preprocessing.Scaler` for the temporal
+        variable :obj:`key`.
+
+        Args:
+            key (str): The name of the variable associated to the scaler. It
+                must be a temporal variable, i.e., :obj:`data` or an exogenous.
+            value (Scaler): The scaler.
+        """
         self.scalers[key] = value
 
     # Setter for secondary data
@@ -332,6 +372,41 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                       add_to_input_map: bool = True,
                       synch_mode: SynchMode = WINDOW,
                       preprocess: bool = True) -> "SpatioTemporalDataset":
+        r"""Add an exogenous variable to the dataset.
+
+        Exogenous variables are covariates to the main signal (stored in
+        :obj:`data`). They can either be graph-level (i.e., with same temporal
+        length as :obj:`data` but with no node dimension) or node-level (i.e.,
+        with same temporal and node size as :obj:`data`). The exogenous variable
+        can then be accessed as :obj:`dataset.{name}` or
+        :obj:`dataset.exogenous[{name}]`.
+
+        Args:
+            name (str): The name of the exogenous variable. If the name starts
+                with "global_", the variable is assumed to be graph-level
+                (overriding parameter :obj:`node_level`), and the "global_"
+                prefix is removed from the name.
+            value (DataArray): The data sequence. Can be a
+                :class:`~pandas.DataFrame`, a :class:`~numpy.ndarray` or a
+                :class:`~torch.Tensor`.
+            node_level (bool): Whether the input variable is node- or
+                graph-level. If a 2-dimensional array is given and node-level is
+                :obj:`True`, it is assumed that the input has one channel.
+                (default: :obj:`True`)
+            add_to_input_map (bool): Whether to map the exogenous variable to
+                dataset item when calling :obj:`get` methods.
+                (default: :obj:`True`)
+            synch_mode (SynchMode): How to synchronize the exogenous variable
+                inside dataset item, i.e., with the window slice
+                (:obj:`SynchMode.WINDOW`) or horizon (:obj:`SynchMode.HORIZON`).
+                (default: :obj:`SynchMode.WINDOW`)
+            preprocess (bool): If :obj:`True` and the dataset has a scaler with
+                same key, then data are scaled when calling :obj:`get` methods.
+                (default: :obj:`True`)
+
+        Returns:
+            SpatioTemporalDataset: the dataset with added exogenous.
+        """
         if name.startswith('global_'):
             name = name[7:]
             node_level = False
@@ -351,6 +426,22 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     def update_exogenous(self, name: str,
                          value: Optional[DataArray] = None,
                          node_level: Optional[bool] = None):
+        r"""Update an existing exogenous variable in the dataset.
+
+        Use this method if you want to update the exogenous data (:obj:`value`),
+        and/or the :obj:`node_level` attribute of the exogenous.
+
+        Args:
+            name (str): The name of the exogenous variable. There must exist an
+                exogenous with this name in the dataset.
+            value (DataArray, optional): The new data sequence. Can be a
+                :class:`~pandas.DataFrame`, a :class:`~numpy.ndarray` or a
+                :class:`~torch.Tensor`.
+                (default: :obj:`None`)
+            node_level (bool, optional): Whether the exogenous is node- or
+                graph-level.
+                (default: :obj:`None`)
+        """
         if name not in self._exogenous:
             raise AttributeError(f"No exogenous named '{name}'.")
         # defaults to current values
@@ -368,6 +459,29 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     def add_attribute(self, name: str, value: DataArray,
                       node_level: bool = True,
                       add_to_batch: bool = True) -> "SpatioTemporalDataset":
+        r"""Add a static attribute to the dataset.
+
+        Attributes are static features related to the dataset. They can either
+        be graph-level (i.e., with no node dimension) or node-level (i.e.,
+        with same node size as :obj:`data`). Once added, an attribute can be
+        accessed as :obj:`dataset.{name}` or :obj:`dataset.attributes[{name}]`.
+
+        Args:
+            name (str): The name of the attribute. If the name starts
+                with "global_", the variable is assumed to be graph-level
+                (overriding parameter :obj:`node_level`), and the "global_"
+                prefix is removed from the name.
+            value (DataArray): The data sequence. Can be a
+                :class:`~pandas.DataFrame`, a :class:`~numpy.ndarray` or a
+                :class:`~torch.Tensor`.
+            node_level (bool): Whether the input variable is node- or
+                graph-level. If a 1-dimensional array is given and node-level is
+                :obj:`True`, it is assumed that the input has one channel.
+                (default: :obj:`True`)
+            add_to_batch (bool): Whether to map the attribute to dataset item
+                when calling :obj:`get` methods.
+                (default: :obj:`True`)
+        """
         if name.startswith('global_'):
             name = name[7:]
             node_level = False
@@ -383,6 +497,25 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                          value: Optional[DataArray] = None,
                          node_level: Optional[bool] = None,
                          add_to_batch: Optional[bool] = None):
+        r"""Update an existing attribute in the dataset.
+
+        Use this method if you want to update the attribute data (:obj:`value`),
+        and/or the level of the attribute (:obj:`node_level`).
+
+        Args:
+            name (str): The name of the attribute variable. There must exist an
+                attribute with this name in the dataset.
+            value (DataArray, optional): The new data. Can be a
+                :class:`~pandas.DataFrame`, a :class:`~numpy.ndarray` or a
+                :class:`~torch.Tensor`.
+                (default: :obj:`None`)
+            node_level (bool, optional): Whether the attribute is node- or
+                graph-level.
+                (default: :obj:`None`)
+            add_to_batch (bool): Whether to map the attribute to dataset item
+                when calling :obj:`get` methods.
+                (default: :obj:`None`)
+        """
         if name not in self._attributes:
             raise AttributeError(f"No attribute named '{name}'.")
         # defaults to current values
@@ -405,40 +538,59 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     @property
     def horizon_offset(self) -> int:
+        """Lag of starting step of horizon."""
         return self.window + self.delay
 
     @property
     def sample_span(self) -> int:
+        """Total number of steps of an item, including window and horizon."""
         return max(self.horizon_offset + self.horizon, self.window)
 
     @property
     def samples_offset(self) -> int:
+        """Difference (in number of steps) between two items."""
         return int(np.ceil(self.window / self.stride))
 
     @property
     def indices(self) -> Tensor:
+        """Indices of the dataset. The :obj:`i`-th item is mapped to
+        :obj:`indices[i]`"""
         return self._indices
 
     # Shape
 
     @property
     def n_steps(self) -> int:
+        """Total number of time steps in the dataset."""
         return self.data.shape[0]
 
     @property
     def n_nodes(self) -> int:
+        """Number of nodes in the dataset."""
         return self.data.shape[1]
 
     @property
     def n_channels(self) -> int:
+        """Number of primary channels in the dataset."""
         return self.data.shape[-1]
 
     @property
     def n_edges(self) -> int:
+        """Number of edges in the dataset, if a connectivity is set."""
         return self.edge_index.size(1) if self.edge_index is not None else None
 
     @property
     def patterns(self):
+        """Shows the dimension of dataset's tensors in a more informative way.
+
+        The pattern mapping can be useful to glimpse on how data are arranged.
+        The convention we use is the following:
+          * 'b' stands for “batch size”
+          * 'c' stands for “number of channels” (per node)
+          * 'e' stands for “number edges”
+          * 'n' stands for “number of nodes”
+          * 's' stands for “number of time steps”
+        """
         patterns = dict(data='s n c')
         if self.mask is not None:
             patterns['mask'] = 's n c'
@@ -458,10 +610,12 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     @property
     def exogenous(self) -> dict:
+        """Covariates to the main signal."""
         return {k: v['value'] for k, v in self._exogenous.items()}
 
     @property
     def attributes(self) -> dict:
+        """Static features related to the dataset."""
         return {k: v['value'] for k, v in self._attributes.items()}
 
     # Methods for accessing tensor ############################################
@@ -543,10 +697,38 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     def reduce(self, step_index: Optional[IndexSlice] = None,
                node_index: Optional[IndexSlice] = None):
+        """Reduce the dataset in terms of number of steps and nodes. Returns a
+        copy of the reduced dataset.
+
+        If dataset has a connectivity, edges ending to or starting from removed
+        nodes will be removed as well.
+
+        Args:
+            step_index (IndexSlice, optional): index or mask of the nodes to
+                keep after reduction.
+                (default: :obj:`None`)
+            node_index (IndexSlice, optional): index or mask of the nodes to
+                keep after reduction.
+                (default: :obj:`None`)
+        """
         return deepcopy(self).reduce_(step_index, node_index)
 
     def reduce_(self, step_index: Optional[IndexSlice] = None,
                 node_index: Optional[IndexSlice] = None):
+        """Reduce the dataset in terms of number of steps and nodes. This is an
+        inplace operation.
+
+        If dataset has a connectivity, edges ending to or starting from removed
+        nodes will be removed as well.
+
+        Args:
+            step_index (IndexSlice, optional): index or mask of the nodes to
+                keep after reduction.
+                (default: :obj:`None`)
+            node_index (IndexSlice, optional): index or mask of the nodes to
+                keep after reduction.
+                (default: :obj:`None`)
+        """
         if step_index is None:
             step_index = slice(None)
         if node_index is None:
