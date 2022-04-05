@@ -138,7 +138,7 @@ class Predictor(pl.LightningModule):
         return inputs, targets, mask, transform
 
     def predict_batch(self, batch, preprocess=False, postprocess=True,
-                      return_target=False):
+                      return_target=False, forward_kwargs=None):
         """
         This method takes as an input a batch as a two dictionaries containing tensors and outputs the predictions.
         Prediction should have a shape [batch, nodes, horizon]
@@ -150,6 +150,7 @@ class Predictor(pl.LightningModule):
         :param preprocess: whether the data need to be preprocessed (note that inputs are by default preprocessed before creating the batch)
         :param postprocess: whether to postprocess the predictions (if True we assume that the model has learned to predict the trasformed signal)
         :param return_target: whether to return the prediction target y_true and the prediction mask
+        :param forward_kwargs: optional, additional keyword arguments passed to the forward method.
         :return: (y_true), y_hat, (mask)
         """
         inputs, targets, mask, transform = self._unpack_batch(batch)
@@ -157,7 +158,10 @@ class Predictor(pl.LightningModule):
             for key, trans in transform.items():
                 if key in inputs:
                     inputs[key] = trans.transform(inputs[key])
-        y_hat = self.forward(**inputs)
+
+        if forward_kwargs is None:
+            forward_kwargs = dict()
+        y_hat = self.forward(**inputs, **forward_kwargs)
         # Rescale outputs
         if postprocess:
             trans = transform.get('y')
