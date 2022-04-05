@@ -1,8 +1,8 @@
 name: tsl
 channels:
-  - defaults
   - pytorch
   - pyg
+  - defaults
   - conda-forge
 dependencies:
   - pip
