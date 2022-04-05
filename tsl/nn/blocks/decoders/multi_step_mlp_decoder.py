@@ -45,20 +45,25 @@ class MultiHorizonMLPDecoder(nn.Module):
 
     def forward(self, x: torch.Tensor, u: torch.Tensor):
         """"""
-        # x: [batch, (steps), nodes, features]
-        # u: [batch, horizon, (nodes), features]
+        # x: [batch, (steps), nodes, channels]
+        # u: [batch, horizon, (nodes), channels]
+        # out: [batch, steps, nodes, channels]
         if x.dim() == 4:
             x = x[:, -1]
         n = x.size(1)
 
         if u.dim() == 3:
             u = repeat(u, 'b h c -> b h n c', n=n)
-        out = self.global_mlp.f(self.global_mlp(x))
+        u = rearrange(u, 'b h n c -> b n h c')
+
+        out = self.global_mlp(x)
         global_context, contexts = torch.split(out, [self.d_context, self.horizon * self.d_context], -1)
         global_context = repeat(global_context, 'b n c -> b n h c', h=self.horizon)
         contexts = rearrange(contexts, 'b n (h c) -> b n h c', c=self.d_context, h=self.horizon)
         x_dec = torch.cat([contexts, global_context, u], -1)
-        return self.local_mlp(x_dec)
+        x_dec = self.local_mlp(x_dec)
+
+        return rearrange(x_dec, 'b n h c -> b h n c')
 
     def reset_parameters(self):
         self.global_mlp.reset_parameters()
