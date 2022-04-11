@@ -47,7 +47,6 @@ class MaskedMAPE(MaskedMetric):
 
         Args:
             mask_nans (bool, optional): Whether to automatically mask nan values.
-            mask_inf (bool, optional): Whether to automatically mask infinite values.
             compute_on_step (bool, optional): Whether to compute the metric right-away or if accumulate the results.
                              This should be `True` when using the metric to compute a loss function, `False` if the metric
                              is used for logging the aggregate error across different minibatches.
@@ -85,6 +84,7 @@ class MaskedMSE(MaskedMetric):
     """
     def __init__(self,
                  mask_nans=False,
+                 mask_inf=False,
                  compute_on_step=True,
                  dist_sync_on_step=False,
                  process_group=None,
@@ -92,7 +92,7 @@ class MaskedMSE(MaskedMetric):
                  at=None):
         super(MaskedMSE, self).__init__(metric_fn=F.mse_loss,
                                         mask_nans=mask_nans,
-                                        mask_inf=True,
+                                        mask_inf=mask_inf,
                                         compute_on_step=compute_on_step,
                                         dist_sync_on_step=dist_sync_on_step,
                                         process_group=process_group,
