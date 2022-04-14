@@ -71,8 +71,8 @@ class MaskedMetric(Metric):
             self.at = slice(None)
         else:
             self.at = slice(at, at + 1)
-        self.add_state('value', dist_reduce_fx='sum', default=torch.tensor(0.).float())
-        self.add_state('numel', dist_reduce_fx='sum', default=torch.tensor(0))
+        self.add_state('value', dist_reduce_fx='sum', default=torch.tensor(0., dtype=torch.float))
+        self.add_state('numel', dist_reduce_fx='sum', default=torch.tensor(0., dtype=torch.float))
 
     def _check_mask(self, mask, val):
         if mask is None:
