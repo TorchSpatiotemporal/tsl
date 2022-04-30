@@ -12,7 +12,7 @@ In particular, `tsl` offers a wide range of utilities to develop neural networks
 `tsl` is compatible with Python>=3.7. We recommend installation from source to be up-to-date with the latest version:
 
 ```bash
-git clone https://github.com/TorchSpatiotemporal/tsl.git
+git clone https://github.com/arahosu/tsl.git
 cd tsl
 python setup.py install  # Or 'pip install .'
 ```
