@@ -174,9 +174,9 @@ class Transformer(nn.Module):
 
         layers = []
         for i in range(n_layers):
-            layers.append(transformer_layer(d_in=input_size if i == 0 else hidden_size,
-                                            d_model=hidden_size,
-                                            d_ff=ff_size,
+            layers.append(transformer_layer(input_size=input_size if i == 0 else hidden_size,
+                                            hidden_size=hidden_size,
+                                            ff_size=ff_size,
                                             n_heads=n_heads,
                                             causal=causal,
                                             activation=activation,
