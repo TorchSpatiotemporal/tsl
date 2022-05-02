@@ -188,12 +188,11 @@ class GATConv(MessagePassing):
         zeros(self.bias)
 
     def forward(self, x: Union[Tensor, OptPairTensor], edge_index: Adj,
-                edge_attr: OptTensor = None, size: Size = None,
-                need_weights: bool = False):
+                edge_attr: OptTensor = None, need_weights: bool = False):
         node_dim = self.node_dim
         self.node_dim = (node_dim + x.dim()) if node_dim < 0 else node_dim
 
-        H, C = self.heads, self.head_channels
+        N, H, C = x.size(self.node_dim), self.heads, self.head_channels
 
         # We first transform the input node features. If a tuple is passed, we
         # transform source and target node features via separate weights:
@@ -215,17 +214,10 @@ class GATConv(MessagePassing):
 
         if self.add_self_loops:
             if isinstance(edge_index, Tensor):
-                # We only want to add self-loops for nodes that appear both as
-                # source and target nodes
-                num_nodes = x_src.size(self.node_dim)
-                if x_dst is not None:
-                    num_nodes = min(num_nodes, x_dst.size(self.node_dim))
-                num_nodes = min(size) if size is not None else num_nodes
-                edge_index, edge_attr = remove_self_loops(
-                    edge_index, edge_attr)
+                edge_index, edge_attr = remove_self_loops(edge_index, edge_attr)
                 edge_index, edge_attr = add_self_loops(
-                    edge_index, edge_attr, fill_value=self.fill_value,
-                    num_nodes=num_nodes)
+                    edge_index, edge_attr,
+                    fill_value=self.fill_value, num_nodes=N)
             elif isinstance(edge_index, SparseTensor):
                 if self.edge_dim is None:
                     edge_index = set_diag(edge_index)
@@ -239,7 +231,7 @@ class GATConv(MessagePassing):
         alpha = self.edge_updater(edge_index, alpha=alpha, edge_attr=edge_attr)
 
         # propagate_type: (x: OptPairTensor, alpha: Tensor)
-        out = self.propagate(edge_index, x=x, alpha=alpha, size=size)
+        out = self.propagate(edge_index, x=x, alpha=alpha, size=(N, N))
 
         if self.concat:
             out = out.view(*out.shape[:-2], self.out_channels)
@@ -249,14 +241,19 @@ class GATConv(MessagePassing):
         if self.bias is not None:
             out += self.bias
 
+        if need_weights:
+            # alpha rearrange: [... e ... h] -> [e ... h]
+            alpha = torch.movedim(alpha, self.node_dim, 0)
+            if isinstance(edge_index, Tensor):
+                alpha = (edge_index, alpha)
+            elif isinstance(edge_index, SparseTensor):
+                alpha = edge_index.set_value(alpha, layout='coo')
+        else:
+            alpha = None
+
         self.node_dim = node_dim
 
-        if not need_weights:
-            return out, None
-        if isinstance(edge_index, Tensor):
-            return out, (edge_index, alpha)
-        elif isinstance(edge_index, SparseTensor):
-            return out, edge_index.set_value(alpha, layout='coo')
+        return out, alpha
 
     def edge_update(self, alpha_j: Tensor, alpha_i: OptTensor,
                     edge_attr: OptTensor, index: Tensor, ptr: OptTensor,
