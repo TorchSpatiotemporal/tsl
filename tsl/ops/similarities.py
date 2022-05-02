@@ -100,7 +100,7 @@ def geographical_distance(x: FrameArray, to_rad: bool = True):
 
 
 def top_k(matrix, k, include_self=False, keep_values=False):
-    """Find the top :obj:`k` values for each column.
+    """Find the top :obj:`k` values for each row.
 
     Args:
         matrix: 2-dimensional array-like input.
@@ -114,9 +114,9 @@ def top_k(matrix, k, include_self=False, keep_values=False):
     if not include_self:
         assert len(set(matrix.shape)) == 1
         matrix = matrix - np.diag([np.inf] * dim).astype(matrix.dtype)
-    non_topk = np.argpartition(matrix.T, -k)[:, :-k]
+    non_topk = np.argpartition(matrix, -k)[:, :-k]
     knn_matrix = matrix.copy() if keep_values else np.ones_like(matrix)
-    knn_matrix.T[np.arange(dim).reshape(-1, 1), non_topk] = 0
+    knn_matrix[np.arange(dim).reshape(-1, 1), non_topk] = 0
     return knn_matrix
 
 
