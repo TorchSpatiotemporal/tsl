@@ -72,11 +72,19 @@ class Predictor(pl.LightningModule):
         if metrics is None:
             metrics = dict()
         self._set_metrics(metrics)
-        # instantiate model
-        self.model = self.model_cls(**self.model_kwargs)
+
+        if self.model_cls is not None:
+            # instantiate model
+            self.model = self.model_cls(**self.model_kwargs)
+        else:
+            # can be used to set the model manually later
+            self.model = None
 
     def reset_model(self):
-        self.model = self.model_cls(**self.model_kwargs)
+        if self.model_cls is not None:
+            self.model = self.model_cls(**self.model_kwargs)
+        else:
+            self.model = None
 
     def load_model(self, filename: str):
         model = torch.load(filename, lambda storage, loc: storage)
