@@ -1,8 +1,10 @@
 import math
+from typing import Optional, Union, List
 
 import torch
 from torch import nn, Tensor
 from torch_geometric.nn import inits
+from torch_geometric.typing import OptTensor
 
 
 class StaticGraphEmbedding(nn.Module):
@@ -11,24 +13,30 @@ class StaticGraphEmbedding(nn.Module):
     Args:
         n_tokens (int): Number of elements for which to store an embedding.
         emb_size (int): Size of the embedding.
-        dim (int): Node dimension.
-        bind_to (nn.Module, optional): Bind the embedding to an nn.Module for lazy init.
-        initializer (str): Initialization methods.
-        requires_grad (bool): Whether to compute gradients w.r.t. the embeddings.
-        infer_nodes_from_pos (int): Index of the element of input data from which to infer the number of embeddings for lazy initt.
+        initializer (str or Tensor): Initialization methods.
+            (default :obj:`'uniform'`)
+        requires_grad (bool): Whether to compute gradients for the embeddings.
+            (default :obj:`True`)
+        bind_to (nn.Module, optional): Bind the embedding to a nn.Module for
+            lazy init. (default :obj:`None`)
+        infer_tokens_from_pos (int): Index of the element of input data from
+            which to infer the number of embeddings for lazy init.
+            (default :obj:`0`)
+        dim (int): Token dimension. (default :obj:`-2`)
     """
-    def __init__(self, n_tokens, emb_size,
-                 dim=-2,
-                 bind_to=None,
-                 initializer='uniform',
-                 requires_grad=True,
-                 infer_nodes_from_pos=0):
+
+    def __init__(self, n_tokens: int, emb_size: int,
+                 initializer: Union[str, Tensor] = 'uniform',
+                 requires_grad: bool = True,
+                 bind_to: Optional[nn.Module] = None,
+                 infer_tokens_from_pos: int = 0,
+                 dim: int = -2):
         super(StaticGraphEmbedding, self).__init__()
         assert emb_size > 0
         self.n_tokens = int(n_tokens)
         self.emb_size = int(emb_size)
         self.dim = int(dim)
-        self.infer_tokens_from_pos = infer_nodes_from_pos
+        self.infer_tokens_from_pos = infer_tokens_from_pos
 
         if isinstance(initializer, Tensor):
             self.initializer = "from_values"
@@ -78,12 +86,16 @@ class StaticGraphEmbedding(nn.Module):
         module._hook.remove()
         delattr(module, '_hook')
 
-    def forward(self, expand=None, nodes_first=True):
+    def forward(self, expand: Optional[List] = None,
+                token_index: OptTensor = None,
+                tokens_first: bool = True):
         """"""
+        emb = self.emb if token_index is None else self.emb[token_index]
+        if not tokens_first:
+            emb = emb.T
         if expand is None:
-            return self.emb if nodes_first else self.emb.T
+            return emb
         shape = [self.n_tokens, self.emb_size]
-        view = [1 if d > 0 else shape.pop(0 if nodes_first else -1)
+        view = [1 if d > 0 else shape.pop(0 if tokens_first else -1)
                 for d in expand]
-        return self.emb.view(*view).expand(*expand)
-
+        return emb.view(*view).expand(*expand)
