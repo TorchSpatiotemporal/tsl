@@ -83,8 +83,8 @@ class Predictor(pl.LightningModule):
         model_cls, model_kwargs = model['hyper_parameters']['model_class'], \
                                   model['hyper_parameters']['model_kwargs']
         assert model_cls == self.model_cls
-        # for k, v in model_kwargs.items():
-        #     assert v == self.model_kwargs[k]
+        for k, v in model_kwargs.items():
+            assert v == self.model_kwargs[k]
         self.load_state_dict(model['state_dict'])
 
     @property
