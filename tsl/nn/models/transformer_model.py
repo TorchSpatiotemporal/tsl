@@ -10,7 +10,9 @@ from tsl.nn.ops.ops import Select
 from tsl.nn.layers.positional_encoding import PositionalEncoding
 
 from einops.layers.torch import Rearrange
+from tsl.nn.base import StaticGraphEmbedding
 
+from tsl.nn.base.centrality_encoding import CentralityEncoding
 
 class TransformerModel(nn.Module):
     r"""
@@ -39,9 +41,16 @@ class TransformerModel(nn.Module):
                  horizon,
                  n_heads,
                  n_layers,
+                 n_nodes,
+                 max_in_degree,
+                 max_out_degree,
+                 in_degree_list,
+                 out_degree_list,
                  dropout,
                  axis,
-                 activation='elu'):
+                 activation='elu',
+                 with_sge = False,
+                 with_ce = False):
         super(TransformerModel, self).__init__()
 
         if exog_size > 0:
@@ -53,6 +62,10 @@ class TransformerModel(nn.Module):
             self.input_encoder = nn.Linear(input_size, hidden_size)
 
         self.pe = PositionalEncoding(hidden_size, max_len=100)
+
+        self.sge = StaticGraphEmbedding(n_nodes, hidden_size)
+        self.ce = CentralityEncoding(
+            hidden_size, max_in_degree, max_out_degree, in_degree_list, out_degree_list)
 
         self.transformer_encoder = nn.Sequential(
             Transformer(input_size=hidden_size,
@@ -85,6 +98,10 @@ class TransformerModel(nn.Module):
         else:
             x = self.input_encoder(x)
         x = self.pe(x)
+        if self.with_sge:
+            x += self.sge()
+        if self.with_ce:
+            x += self.ce()
         x = self.transformer_encoder(x)
 
         return self.readout(x)
