@@ -48,7 +48,7 @@ class TransformerModel(nn.Module):
                  out_degree_list,
                  dropout,
                  axis,
-                 activation='elu',
+                 activation,
                  with_sge = False,
                  with_ce = False):
         super(TransformerModel, self).__init__()
@@ -67,6 +67,8 @@ class TransformerModel(nn.Module):
         self.ce = CentralityEncoding(
             hidden_size, max_in_degree, max_out_degree, in_degree_list, out_degree_list)
 
+        self.with_sge = with_sge
+        self.with_ce = with_ce
         self.transformer_encoder = nn.Sequential(
             Transformer(input_size=hidden_size,
                         hidden_size=hidden_size,
