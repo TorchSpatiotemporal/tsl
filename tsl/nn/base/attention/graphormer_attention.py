@@ -1,25 +1,11 @@
 from typing import Optional, Tuple, List
 import warnings
 import torch
-from torch._C import _infer_size, _add_docstr
+from torch._C._nn import linear
 from torch import Tensor
 from torch import nn
 from torch.nn.functional import pad, softmax, dropout
-
-# linear = _add_docstr(
-#     torch._C._nn.linear,
-#     r"""
-# linear(input, weight, bias=None) -> Tensor
-# Applies a linear transformation to the incoming data: :math:`y = xA^T + b`.
-# This operator supports :ref:`TensorFloat32<tf32_on_ampere>`.
-# Shape:
-#     - Input: :math:`(*, in\_features)` where `*` means any number of
-#       additional dimensions, including none
-#     - Weight: :math:`(out\_features, in\_features)` or :math:`(in\_features)`
-#     - Bias: :math:`(out\_features)` or :math:`()`
-#     - Output: :math:`(*, out\_features)` or :math:`(*)`, based on the shape of the weight
-# """)
-
+import math
 
 def _in_projection_packed(
     q: Tensor,
@@ -131,29 +117,7 @@ def _scaled_dot_product_attention(
     attn_mask: Optional[Tensor] = None,
     dropout_p: float = 0.0,
 ) -> Tuple[Tensor, Tensor]:
-    r"""
-    Computes scaled dot product attention on query, key and value tensors, using
-    an optional attention mask if passed, and applying dropout if a probability
-    greater than 0.0 is specified.
-    Returns a tensor pair containing attended values and attention weights.
-    Args:
-        q, k, v: query, key and value tensors. See Shape section for shape details.
-        attn_mask: optional tensor containing mask values to be added to calculated
-            attention. May be 2D or 3D; see Shape section for details.
-        dropout_p: dropout probability. If greater than 0.0, dropout is applied.
-    Shape:
-        - q: :math:`(B, Nt, E)` where B is batch size, Nt is the target sequence length,
-            and E is embedding dimension.
-        - key: :math:`(B, Ns, E)` where B is batch size, Ns is the source sequence length,
-            and E is embedding dimension.
-        - value: :math:`(B, Ns, E)` where B is batch size, Ns is the source sequence length,
-            and E is embedding dimension.
-        - attn_bias :math:
-        - attn_mask: either a 3D tensor of shape :math:`(B, Nt, Ns)` or a 2D tensor of
-            shape :math:`(Nt, Ns)`.
-        - Output: attention values have shape :math:`(B, Nt, E)`; attention weights
-            have shape :math:`(B, Nt, Ns)`
-    """
+
     B, Nt, E = q.shape
     q = q / math.sqrt(E)
     # (B, Nt, E) x (B, E, Ns) -> (B, Nt, Ns)
@@ -247,65 +211,7 @@ def multi_head_attention_forward(
     static_v: Optional[Tensor] = None,
     average_attn_weights: bool = True,
 ) -> Tuple[Tensor, Optional[Tensor]]:
-    r"""
-    Args:
-        query, key, value: map a query and a set of key-value pairs to an output.
-            See "Attention Is All You Need" for more details.
-        embed_dim_to_check: total dimension of the model.
-        num_heads: parallel attention heads.
-        in_proj_weight, in_proj_bias: input projection weight and bias.
-        bias_k, bias_v: bias of the key and value sequences to be added at dim=0.
-        add_zero_attn: add a new batch of zeros to the key and
-                       value sequences at dim=1.
-        dropout_p: probability of an element to be zeroed.
-        out_proj_weight, out_proj_bias: the output projection weight and bias.
-        training: apply dropout if is ``True``.
-        key_padding_mask: if provided, specified padding elements in the key will
-            be ignored by the attention. This is an binary mask. When the value is True,
-            the corresponding value on the attention layer will be filled with -inf.
-        need_weights: output attn_output_weights.
-        attn_mask: 2D or 3D mask that prevents attention to certain positions. A 2D mask will be broadcasted for all
-            the batches while a 3D mask allows to specify a different mask for the entries of each batch.
-        use_separate_proj_weight: the function accept the proj. weights for query, key,
-            and value in different forms. If false, in_proj_weight will be used, which is
-            a combination of q_proj_weight, k_proj_weight, v_proj_weight.
-        q_proj_weight, k_proj_weight, v_proj_weight, in_proj_bias: input projection weight and bias.
-        static_k, static_v: static key and value used for attention operators.
-        average_attn_weights: If true, indicates that the returned ``attn_weights`` should be averaged across heads.
-            Otherwise, ``attn_weights`` are provided separately per head. Note that this flag only has an effect
-            when ``need_weights=True.``. Default: True
-    Shape:
-        Inputs:
-        - query: :math:`(L, E)` or :math:`(L, N, E)` where L is the target sequence length, N is the batch size, E is
-          the embedding dimension.
-        - key: :math:`(S, E)` or :math:`(S, N, E)`, where S is the source sequence length, N is the batch size, E is
-          the embedding dimension.
-        - value: :math:`(S, E)` or :math:`(S, N, E)` where S is the source sequence length, N is the batch size, E is
-          the embedding dimension.
-        - key_padding_mask: :math:`(S)` or :math:`(N, S)` where N is the batch size, S is the source sequence length.
-          If a ByteTensor is provided, the non-zero positions will be ignored while the zero positions
-          will be unchanged. If a BoolTensor is provided, the positions with the
-          value of ``True`` will be ignored while the position with the value of ``False`` will be unchanged.
-        - attn_mask: 2D mask :math:`(L, S)` where L is the target sequence length, S is the source sequence length.
-          3D mask :math:`(N*num_heads, L, S)` where N is the batch size, L is the target sequence length,
-          S is the source sequence length. attn_mask ensures that position i is allowed to attend the unmasked
-          positions. If a ByteTensor is provided, the non-zero positions are not allowed to attend
-          while the zero positions will be unchanged. If a BoolTensor is provided, positions with ``True``
-          are not allowed to attend while ``False`` values will be unchanged. If a FloatTensor
-          is provided, it will be added to the attention weight.
-        - static_k: :math:`(N*num_heads, S, E/num_heads)`, where S is the source sequence length,
-          N is the batch size, E is the embedding dimension. E/num_heads is the head dimension.
-        - static_v: :math:`(N*num_heads, S, E/num_heads)`, where S is the source sequence length,
-          N is the batch size, E is the embedding dimension. E/num_heads is the head dimension.
-        Outputs:
-        - attn_output: :math:`(L, E)` or :math:`(L, N, E)` where L is the target sequence length, N is the batch size,
-          E is the embedding dimension.
-        - attn_output_weights: Only returned when ``need_weights=True``. If ``average_attn_weights=True``, returns
-          attention weights averaged across heads of shape :math:`(L, S)` when input is unbatched or
-          :math:`(N, L, S)`, where :math:`N` is the batch size, :math:`L` is the target sequence length, and
-          :math:`S` is the source sequence length. If ``average_weights=False``, returns attention weights per
-          head of shape :math:`(num_heads, L, S)` when input is unbatched or :math:`(N, num_heads, L, S)`.
-    """
+
     tens_ops = (query, key, value, in_proj_weight, in_proj_bias, bias_k, bias_v, out_proj_weight, out_proj_bias)
     is_batched = _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads)
 
