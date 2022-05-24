@@ -5,7 +5,7 @@ from . import checks
 from tsl.ops.dataframe import to_numpy
 from ...typing import FrameArray
 from ...utils.python_utils import ensure_list
-
+import holidays
 
 class PandasParsingMixin:
 
@@ -105,6 +105,31 @@ class TemporalFeaturesMixin:
         dummies = pd.get_dummies(pd.DataFrame(datetime, index=self.index),
                                  columns=units)
         return dummies
+
+    def datetime_holidays(self, country, subdiv=None):
+        """Returns a DataFrame to indicate if Dataset timestamps are in a holiday.
+        See https://python-holidays.readthedocs.io/en/latest/
+
+        Args:
+        country (str): country for which holidays have to be checked. e.g. "CH" for Switzerland.
+        subdiv (dict, optional): optional country sub-division (state, region, province, canton)
+                                 e.g. "TI" for Ticino, Sitzerland.
+
+        Returns: 
+            pandas.DataFrame: df with one np.uint8 column and the same datetime index as self.
+                              It indicates if the timestamp is in a holiday or not.
+        """
+
+        years = np.unique(self.index.year.values)
+        h = holidays.country_holidays(country, subdiv=subdiv, years=years)
+
+        # label all the timestamps, whether holiday or not
+        out = np.zeros(len(self.index), dtype=np.uint8)
+        for i in range(len(out)):
+            if self.index[i].date() in h:
+                out[i] = 1
+
+        return pd.DataFrame(out, index=self.index, dtype=np.uint8)
 
 
 class MissingValuesMixin:
