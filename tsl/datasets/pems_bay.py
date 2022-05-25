@@ -108,42 +108,6 @@ class PemsBay(PandasDataset):
             sigma = 10
             return gaussian_kernel(self.dist, sigma)
 
-    # Old methods, still to be checked
-
-    def get_datetime_dummies(self):
-        df = self.dataframe()
-        df['day'] = df.index.weekday
-        df['hour'] = df.index.hour
-        df['minute'] = df.index.minute
-        dummies = pd.get_dummies(df[['day', 'hour', 'minute']],
-                                 columns=['day', 'hour', 'minute'])
-        return dummies.values
-
-    def get_datetime_features(self):
-        df = pd.DataFrame(index=self.df.index)
-        idx: pd.DatetimeIndex = df.index
-
-        # encode hour of the day
-        second_of_the_day = idx.hour * 60 * 60 + idx.minute * 60 + idx.second
-        seconds_per_day = 24 * 60 * 60
-        df['day_sin'] = np.sin(
-            second_of_the_day * (2 * np.pi / seconds_per_day))
-        df['day_cos'] = np.cos(
-            second_of_the_day * (2 * np.pi / seconds_per_day))
-
-        return df[['day_sin', 'day_cos']].values
-
-    def splitter(self, dataset, val_len=0, test_len=0, window=0):
-        idx = np.arange(len(dataset))
-        if test_len < 1:
-            test_len = int(test_len * len(idx))
-        if val_len < 1:
-            val_len = int(val_len * (len(idx) - test_len))
-        test_start = len(idx) - test_len
-        val_start = test_start - val_len
-        return [idx[:val_start - window], idx[val_start:test_start - window],
-                idx[test_start:]]
-
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
