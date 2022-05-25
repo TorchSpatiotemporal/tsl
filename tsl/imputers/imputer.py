@@ -1,7 +1,7 @@
 from typing import Type, Mapping, Callable, Optional, Union, Tuple, List
 
-import numpy as np
 import torch
+from torch import Tensor
 from torch_geometric.data.storage import recursive_apply
 from torchmetrics import Metric
 
@@ -85,9 +85,13 @@ class Imputer(Predictor):
                                       scheduler_class=scheduler_class,
                                       scheduler_kwargs=scheduler_kwargs)
         self.scale_target = scale_target
-        self.whiten_prob = whiten_prob
         self.prediction_loss_weight = prediction_loss_weight
         self.impute_only_missing = impute_only_missing
+
+        if isinstance(whiten_prob, (list, tuple)):
+            self.whiten_prob = torch.Tensor(whiten_prob)
+        else:
+            self.whiten_prob = whiten_prob
 
         if isinstance(warm_up_steps, int):
             self.warm_up_steps = (warm_up_steps, 0)
@@ -112,30 +116,33 @@ class Imputer(Predictor):
         """Rearrange batch for imputation:
             1. Move :obj:`eval_mask` from :obj:`batch.input` to :obj:`batch`
             2. Move :obj:`mask` from :obj:`batch` to :obj:`batch.input`
-            3. Whiten missing values in :obj:`batch.input.x`
         """
-        inputs = batch.input
         # move eval_mask from batch.input to batch
-        batch.eval_mask = inputs.pop('eval_mask')
+        batch.eval_mask = batch.input.pop('eval_mask')
         # move mask from batch to batch.input
-        inputs.mask = batch.pop('mask')
+        batch.input.mask = batch.pop('mask')
         # whiten missing values
-        if 'x' in inputs:
-            inputs['x'] = inputs['x'] * inputs.mask.byte()
+        if 'x' in batch.input:
+            batch.input.x = batch.input.x * batch.input.mask
         return batch
 
     def on_train_batch_start(self, batch, batch_idx: int,
                              unused: Optional[int] = 0) -> None:
         r"""For every training batch, randomly mask out value with probability
-        :math:`p = \texttt{self.whiten\_prob}`."""
+        :math:`p = \texttt{self.whiten\_prob}`. Then, whiten missing values in
+         :obj:`batch.input.x`"""
         super(Imputer, self).on_train_batch_start(batch, batch_idx, unused)
         # randomly mask out value with probability p = whiten_prob
-        batch.original_mask = mask = batch.mask
+        batch.original_mask = mask = batch.input.mask
         p = self.whiten_prob
-        if isinstance(p, (list, tuple)):
-            p = np.random.choice(p)
+        if isinstance(p, Tensor):
+            p_size = [mask.size(0)] + [1] * (mask.ndim - 1)
+            p = p[torch.randint(len(p), p_size)].to(device=mask.device)
         whiten_mask = torch.rand(mask.size(), device=mask.device) > p
-        batch.mask = mask & whiten_mask
+        batch.input.mask = mask & whiten_mask
+        # whiten missing values
+        if 'x' in batch.input:
+            batch.input.x = batch.input.x * batch.input.mask
 
     def _unpack_batch(self, batch):
         transform = batch.get('transform')

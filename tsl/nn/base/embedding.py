@@ -95,7 +95,7 @@ class StaticGraphEmbedding(nn.Module):
             emb = emb.T
         if expand is None:
             return emb
-        shape = [self.n_tokens, self.emb_size]
+        shape = [*emb.size()]
         view = [1 if d > 0 else shape.pop(0 if tokens_first else -1)
                 for d in expand]
         return emb.view(*view).expand(*expand)
