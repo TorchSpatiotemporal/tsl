@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from . import checks
 from tsl.ops.dataframe import to_numpy
+from . import checks
 from ...typing import FrameArray
 from ...utils.python_utils import ensure_list
 
@@ -105,6 +105,41 @@ class TemporalFeaturesMixin:
         dummies = pd.get_dummies(pd.DataFrame(datetime, index=self.index),
                                  columns=units)
         return dummies
+
+    def holidays_onehot(self, country, subdiv=None):
+        """Returns a DataFrame to indicate if dataset timestamps is holiday.
+        See https://python-holidays.readthedocs.io/en/latest/
+
+        Args:
+            country (str): country for which holidays have to be checked, e.g.,
+                "CH" for Switzerland.
+            subdiv (dict, optional): optional country sub-division (state,
+                region, province, canton), e.g., "TI" for Ticino, Switzerland.
+
+        Returns: 
+            pandas.DataFrame: DataFrame with one column ("holiday") as one-hot
+                encoding (1 if the timestamp is in a holiday, 0 otherwise).
+        """
+        try:
+            import holidays
+        except ModuleNotFoundError:
+            raise RuntimeError("You should install optional dependency "
+                               "'holidays' to call 'datetime_holidays'.")
+
+        years = np.unique(self.index.year.values)
+        h = holidays.country_holidays(country, subdiv=subdiv, years=years)
+
+        # label all the timestamps, whether holiday or not
+        out = pd.DataFrame(0, dtype=np.uint8,
+                           index=self.index.normalize(), columns=['holiday'])
+        for date in h.keys():
+            try:
+                out.loc[[date]] = 1
+            except KeyError:
+                pass
+        out.index = self.index
+
+        return out
 
 
 class MissingValuesMixin:
