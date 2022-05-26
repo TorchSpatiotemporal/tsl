@@ -24,6 +24,7 @@ install_requires = [
 ]
 
 full_install_requires = [
+    'holidays'
     'matplotlib',
     'mpld3',
     'neptune-client>=0.14',
