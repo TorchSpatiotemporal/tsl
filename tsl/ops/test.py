@@ -1,8 +1,6 @@
 from collections import namedtuple
 import scipy.stats
 import numpy as np
-import torch
-from torch_geometric.utils import to_undirected, remove_self_loops
 from tsl.typing import TensArray, OptTensArray, Optional, Union, Tuple
 
 
@@ -21,6 +19,7 @@ def _to_numpy(o):
         return float(o)
     if o is None:
         return o
+    import torch
     if isinstance(o, torch.Tensor):
         return o.numpy()
     raise NotImplementedError(f"I don't know how to convert {type(o)} to numpy")
