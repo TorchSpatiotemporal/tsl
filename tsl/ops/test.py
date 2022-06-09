@@ -70,54 +70,74 @@ def _to_undirected_no_selfloops(edge_index: np.ndarray,
     return edge_index_, edge_weight_
 
 
-AZWhitenessTestResult = namedtuple('AZWhitenessTestResult', ('statistic', 'pvalue'))
-AZWhitenessMultiTestResult = namedtuple('AZWhitenessMultiTestResult', ('statistic', 'pvalue', 'componentwise_tests'))
+AZWhitenessTestResult = namedtuple('AZWhitenessTestResult',
+                                   ('statistic', 'pvalue'))
+AZWhitenessMultiTestResult = namedtuple(
+    'AZWhitenessMultiTestResult',
+    ('statistic', 'pvalue', 'componentwise_tests')
+)
 
 
 def az_whiteness_test(x: TensArray,
                       edge_index: TensArray,
                       mask: OptTensArray = None,
-                      pattern: str = "T N F",
+                      pattern: str = "t n f",
                       edge_weight: Optional[Union[TensArray, float]] = None,
                       edge_weight_temporal: Optional[float] = None,
                       lamb: float = 0.5,
                       multivariate: bool = False,
                       remove_median: bool = False
-                      ) -> Union[AZWhitenessTestResult, AZWhitenessMultiTestResult]:
-    """Implementation of the AZ-whiteness test from paper: Daniele Zambon and
-    Cesare Alippi. "AZ-whiteness test: a test for uncorrelated noise on
-    spatio-temporal graphs.", arXiv preprint arXiv:2204.11135 (2022).
+                      ) -> Union[
+    AZWhitenessTestResult, AZWhitenessMultiTestResult]:
+    """Implementation of the AZ-whiteness test from `"AZ-whiteness test: a test
+    for uncorrelated noise on spatio-temporal graphs"
+    <https://arxiv.org/abs/2204.11135>`_ (Daniele Zambon and Cesare Alippi).
 
-    Parameters:
-     - `x`: graph signal, typically with pattern "T N F".
-     - `mask`: boolean mask of signal `x`, with same size of `x`; the mask is
-            `True` where the observations in `x` are valid and `False`
-            otherwise.
-     - `pattern`: string encoding the index pattern of `x`, typically "T N F"
-            representing time, nodes and node features dimensions, respectively.
-     - `edge_index`: indices of the spatial edges with shape (2, E); current
-            implementation supports only a static topology.
-     - `edge_weight`: positive weights of the spatial edges. It can be a
-            TensArray of shape (E,), or a scalar value (same weight for all
-            edges).
-     - `edge_weight_temporal`: positive scalar weight for all temporal edges;
-            if `None` or `"auto"` the weight is computed to balance the
-            contribution of the spatial and temporal components (see Zambon and
-            Alippi 2022).
-     - `lamb`: scalar factor in within 0.0 and 1.0 defining a convex combination
-            of the spatial and temporal components; if `lamb == 1.0` the test is
-            applied on the spatial topology only, for `lamb == 0.0` only the
-            serial correlation is considered.
-     - `remove_median`: whether to manually fulfill --- where possible --- the
-            assumption of null median or not.
-     - `multivariate`: whether to run a single test on a multivariate signal or
-            combine multiple scalar tests, one for each of the `F` features; it
-            applies only when `F>1`.
+
+    Args:
+        x (TensArray): graph signal, typically with pattern "t n f".
+            (default: :obj:`None`)
+        edge_index (TensArray): indices of the spatial edges with shape (2, E).
+            Current implementation supports only a static topology.
+        mask (TensArray, optional): boolean mask of signal :obj:`x`, with same
+            size of :obj:`x`. The mask is :obj:`True` where the observations in
+            :obj:`x` are valid and :obj:`False` otherwise.
+            (default: :obj:`None`)
+        pattern (str): string encoding the index pattern of `x`, typically
+            "t n f" representing time, nodes and node features dimensions,
+            respectively.
+            (default: :obj:`"t n f"`)
+        edge_weight (TensArray or float, optional): positive weights of the
+            spatial edges. It can be a :obj:`TensArray` of shape (E,), or a
+            scalar value (same weight for all edges).
+            (default: :obj:`None`)
+        edge_weight_temporal (float, optional): positive scalar weight for all
+            temporal edges. If :obj:`None` or :obj:`"auto"`, the weight is
+            computed to balance the contribution of the spatial and temporal
+            components (see `Zambon and Alippi 2022
+            <https://arxiv.org/abs/2204.11135>`_).
+            (default: :obj:`None`)
+        lamb (float, optional): scalar factor in within :math:`0.0` and
+            :math:`1.0` defining a convex combination of the spatial and
+            temporal components; if :obj:`lamb == 1.0` the test is applied on
+            the spatial topology only, for :obj:`lamb == 0.0` only the serial
+            correlation is considered.
+            (default: :obj:`0.5`)
+        multivariate (bool): whether to run a single test on a multivariate
+            signal or combine multiple scalar tests, one for each of the
+            :obj:`f` features. It applies only when :obj:`f > 1`.
+            (default: :obj:`False`)
+        remove_median (bool): whether to manually fulfill --- where possible ---
+            the assumption of null median or not.
+            (default: :obj:`False`)
+
+    Returns:
+        AZWhitenessTestResult or AZWhitenessMultiTestResult: The test statistics.
     """
 
     # retrieve pattern
     dims = pattern.strip().split(' ')
-    T_DIM, N_DIM, F_DIM = dims.index("T"), dims.index("N"), dims.index("F")
+    T_DIM, N_DIM, F_DIM = dims.index("t"), dims.index("n"), dims.index("f")
 
     # data to numpy.ndarray
     x = _to_numpy(x)
@@ -171,7 +191,7 @@ def _az_whiteness_test(x, mask, pattern,
 
     # retrieve pattern
     dims = pattern.strip().split(' ')
-    T_DIM, N_DIM, F_DIM = dims.index("T"), dims.index("N"), dims.index("F")
+    T_DIM, N_DIM, F_DIM = dims.index("t"), dims.index("n"), dims.index("f")
     T, N, F = x.shape[T_DIM], x.shape[N_DIM], x.shape[F_DIM]
 
     # --- Spatial edges and weight ---
@@ -188,7 +208,8 @@ def _az_whiteness_test(x, mask, pattern,
     assert edge_weight_spatial.shape[0] == edge_index_spatial.shape[
         1], "Dimension mismatch between edge_weight and edge_index."
     assert np.all(edge_weight_spatial > 0), "Edge weights are not all positive."
-    assert N == edge_index_spatial.max() + 1, "Is the input signal given with pattern (T, N, F)?"
+    assert N == edge_index_spatial.max() + 1, \
+        "Is the input signal given with pattern (T, N, F)?"
 
     # Make the graph undirected and without self-loops
     edge_index_spatial, edge_weight_spatial = _to_undirected_no_selfloops(
