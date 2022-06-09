@@ -25,6 +25,7 @@ It is built on several libraries of the Python scientific computing ecosystem, w
    modules/datasets
    modules/nn
    modules/inference_modules
+   modules/ops
 
 
 Indices and Tables
