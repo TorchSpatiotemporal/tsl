@@ -41,7 +41,8 @@ class DiffConv(MessagePassing):
         # Add backward matrices
         if add_backward:
             return (edge_index, normalized_ew), \
-                   DiffConv.compute_support_index(*transpose(edge_index, edge_weights),
+                   DiffConv.compute_support_index(transpose(edge_index),
+                                                  edge_weights=edge_weights,
                                                   num_nodes=num_nodes,
                                                   add_backward=False)
         # Normalize

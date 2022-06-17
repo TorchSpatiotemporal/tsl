@@ -45,9 +45,13 @@ class _GraphRNN(torch.nn.Module):
     Base class for GraphRNNs
     """
     _n_states = None
+    hidden_size: int
 
     def _init_states(self, x):
-        return torch.zeros(size=(self.n_layers, x.shape[0], x.shape[-2], x.shape[-1]), device=x.device)
+        assert 'hidden_size' in self.__dict__, \
+            f"Class {self.__class__.__name__} must have the attribute " \
+            f"`hidden_size`."
+        return torch.zeros(size=(self.n_layers, x.shape[0], x.shape[-2], self.hidden_size), device=x.device)
 
     def single_pass(self, x, h, *args, **kwargs):
         # x: [batch, nodes, channels]
