@@ -7,6 +7,7 @@ from torch import Tensor
 from torch_geometric.utils import dense_to_sparse, to_scipy_sparse_matrix, \
     from_scipy_sparse_matrix
 from torch_geometric.utils.num_nodes import maybe_num_nodes as pyg_num_nodes
+from torch_geometric.utils import erdos_renyi_graph
 from torch_sparse import SparseTensor
 
 from tsl.typing import TensArray, OptTensArray
@@ -211,3 +212,33 @@ def power_series(edge_index: TensArray, edge_weights: OptTensArray = None,
         coo = coo_matrix((edge_weights, tuple(edge_index)), (N, N))
         coo = (coo ** k).tocoo()
         return np.stack([coo.row, coo.col], 0).astype(np.int64), coo.data
+
+
+def get_dummy_edge_index(dummy, num_nodes, edge_prob=0.1, directed=True, device=None):
+    r"""
+    Create an edge index corresponding to a certain dummy connectivity (e.g., full graph).
+
+    Args:
+        dummy: The dummy connectivity, can be one of `identity` (`A`=`I`), `full` (`A = np.ones(N, N)`), `random` or
+            `none`.
+        num_nodes: Number of nodes.
+        edge_prob: Edge probability for the random graph.
+        directed: Whether to generate a directed/undirected graph.
+        device: Device for the created tensor.
+
+    Returns:
+
+    """
+    if dummy == 'identity':
+        nodes = torch.arange(num_nodes, device=device)
+        edge_index = torch.stack([nodes, nodes])
+    elif dummy == 'random':
+        edge_index = erdos_renyi_graph(num_nodes, edge_prob, directed=directed).to(device)
+    elif dummy == 'full':
+        nodes = torch.arange(num_nodes, device=device)
+        edge_index = torch.cartesian_prod(nodes, nodes).T
+    elif dummy == 'none':
+        edge_index = None
+    else:
+        raise NotImplementedError
+    return edge_index
