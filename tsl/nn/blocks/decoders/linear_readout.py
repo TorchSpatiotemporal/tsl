@@ -22,7 +22,7 @@ class LinearReadout(nn.Module):
 
         self.readout = nn.Sequential(
             nn.Linear(input_size, output_size * horizon),
-            Rearrange('b n (h * c) -> b h n c', c=output_size, h=horizon)
+            Rearrange('b n (h c) -> b h n c', c=output_size, h=horizon)
         )
 
     def forward(self, h):
