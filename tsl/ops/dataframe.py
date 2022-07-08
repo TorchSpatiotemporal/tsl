@@ -3,25 +3,35 @@ from typing import Union, Callable
 import numpy as np
 import pandas as pd
 
-from tsl.typing import Index
+from tsl.typing import Index, FrameArray
 
 
-def to_numpy(df):
-    if df.columns.nlevels == 1:
-        return df.to_numpy()
-    cols = [df.columns.unique(i) for i in range(df.columns.nlevels)]
-    cols = pd.MultiIndex.from_product(cols)
-    df = df.reindex(columns=cols)
-    return df.values.reshape((-1, *cols.levshape))
+def framearray_to_numpy(x: FrameArray) -> np.ndarray:
+    if isinstance(x, pd.DataFrame):
+        if x.columns.nlevels == 1:
+            return x.to_numpy()
+        cols = [x.columns.unique(i) for i in range(x.columns.nlevels)]
+        cols = pd.MultiIndex.from_product(cols)
+        x = x.reindex(columns=cols)
+        return x.values.reshape((-1, *cols.levshape))
+    return np.asarray(x)
 
 
-def aggregate(df: pd.DataFrame, index: Index, aggr_fn: Callable = np.sum,
-              axis: int = 1, level: int = 0):
+def framearray_shape(x: FrameArray) -> tuple:
+    if not isinstance(x, pd.DataFrame):
+        return np.asarray(x).shape
+    elif x.columns.nlevels > 1:
+        return (len(x),) + x.columns.levshape
+    return x.shape
+
+
+def aggregate(x: FrameArray, index: Index, aggr_fn: Callable = np.sum,
+              axis: int = 1, level: int = 0) -> FrameArray:
     """Aggregate rows/columns in (MultiIndexed) DataFrame according to a new
     index.
 
     Args:
-        df (pd.DataFrame): :class:`~pandas.DataFrame` to be aggregated.
+        x (pd.DataFrame): :class:`~pandas.DataFrame` to be aggregated.
         index (Index): A sequence of :obj:`cluster_id` with length equal to
             the index over which aggregation is performed. The :obj:`i`-th
             element of index at :obj:`axis` and :obj:`level` will be mapped to
@@ -34,20 +44,58 @@ def aggregate(df: pd.DataFrame, index: Index, aggr_fn: Callable = np.sum,
         a :class:`~pandas.MultiIndex`.
         (default :obj:`0`)
     """
+    to_numpy = False
+    if not isinstance(x, pd.DataFrame):
+        cols = pd.MultiIndex.from_product([np.arange(s) for s in x.shape[1:]])
+        x = x.reshape(x.shape[0], -1)
+        x = pd.DataFrame(x, columns=cols)
+        if axis > 1:
+            axis -= 1
+            level += 1
+        to_numpy = True
     if axis == 0:
-        df = df.groupby(index, axis=0).aggregate(np.min)
+        x = x.groupby(index, axis=0).aggregate(aggr_fn)
     elif axis == 1:
-        cols = [df.columns.unique(i).values for i in range(df.columns.nlevels)]
+        cols = [x.columns.unique(i).values for i in
+                range(x.columns.nlevels)]
         cols[level] = index
-        grouper = pd.MultiIndex.from_product(cols, names=df.columns.names)
-        df = df.groupby(grouper, axis=1).aggregate(aggr_fn)
-        df.columns = pd.MultiIndex.from_tuples(df.columns, names=grouper.names)
-    return df
+        grouper = pd.MultiIndex.from_product(cols, names=x.columns.names)
+        x = x.groupby(grouper, axis=1).aggregate(aggr_fn)
+        x.columns = pd.MultiIndex.from_tuples(x.columns,
+                                              names=grouper.names)
+    if to_numpy:
+        x = framearray_to_numpy(x)
+    return x
 
 
-def compute_mean(x: Union[pd.DataFrame, np.ndarray],
-                 index: pd.DatetimeIndex = None
-                 ) -> Union[pd.DataFrame, np.ndarray]:
+def reduce(x: FrameArray, index: Index,
+           axis: int = 0, level: int = 0) -> FrameArray:
+
+    if index is None:
+        return x
+    elif not isinstance(index, (pd.Index, slice)):
+        index: np.ndarray = np.asarray(index)
+
+    if isinstance(x, pd.DataFrame):
+        if axis == 0:
+            return x.loc[index]
+
+        n_levels = x.columns.nlevels
+        if n_levels > 1:
+            if index.dtype == np.bool:
+                index = x.columns.unique(level)[index]
+            index = tuple([index if i == level else slice(None)
+                          for i in range(n_levels)])
+        return x.loc[:, index]
+    else:
+        axis = axis + level
+        index = tuple([index if i == axis else slice(None)
+                       for i in range(x.ndim)])
+        return x[index]
+
+
+def compute_mean(x: FrameArray, index: pd.DatetimeIndex = None) \
+        -> FrameArray:
     """Compute the mean values for each row.
 
     The mean is first computed hourly over the week of the year. Further

@@ -1,23 +1,13 @@
 from copy import deepcopy
-from typing import Optional, Mapping, Union, Sequence, Dict, Tuple, Literal
+from typing import Optional, Mapping, Union, Literal
 
-import numpy as np
-import pandas as pd
-import torch
-from numpy import ndarray
-from pandas import Index
-from torch import Tensor
-
-from tsl import logger
 from . import checks
-from .dataset import Dataset
-from .mixin import TemporalFeaturesMixin, PandasParsingMixin
-from ...ops.dataframe import aggregate
-from ...typing import FrameArray, OptFrameArray, IndexSlice
-from ...utils.python_utils import ensure_list
+from .mixin import TemporalFeaturesMixin
+from .tabular_dataset import TabularDataset
+from ...typing import FrameArray, OptFrameArray
 
 
-class PandasDataset(Dataset, PandasParsingMixin, TemporalFeaturesMixin):
+class PandasDataset(TabularDataset, TemporalFeaturesMixin):
     r"""Create a tsl dataset from a :class:`pandas.DataFrame`.
 
     Args:
@@ -79,7 +69,7 @@ class PandasDataset(Dataset, PandasParsingMixin, TemporalFeaturesMixin):
     temporal_aggregation_options = {'sum', 'mean', 'min', 'max', 'nearest'}
     spatial_aggregation_options = {'sum', 'mean', 'min', 'max'}
 
-    def __init__(self, primary: pd.DataFrame,
+    def __init__(self, primary: FrameArray,
                  secondary: Optional[Mapping[str, FrameArray]] = None,
                  mask: OptFrameArray = None,
                  freq: Optional[str] = None,
@@ -90,29 +80,18 @@ class PandasDataset(Dataset, PandasParsingMixin, TemporalFeaturesMixin):
                  sort_index: bool = True,
                  name: str = None,
                  precision: Union[int, str] = 32):
-        super().__init__(name=name,
+        super().__init__(primary=primary,
+                         secondary=secondary,
+                         mask=mask,
                          similarity_score=similarity_score,
                          temporal_aggregation=temporal_aggregation,
                          spatial_aggregation=spatial_aggregation,
-                         default_splitting_method=default_splitting_method)
-        # Private data buffers
-        self.mask: Optional[pd.DataFrame] = None
-        self._secondary = dict()
+                         default_splitting_method=default_splitting_method,
+                         name=name,
+                         precision=precision)
 
-        # Set data precision before parsing objects
-        self.precision = precision
-
-        # set dataset's dataframe
-        self.df: pd.DataFrame = self._parse_primary(primary, initialize=True)
         if sort_index:
-            self.df.sort_index(inplace=True)
-
-        self.set_mask(mask)
-
-        # Store exogenous and attributes
-        if secondary is not None:
-            for name, value in secondary.items():
-                self.add_secondary(name, **self._value_to_kwargs(value))
+            self.sort()
 
         # Set dataset frequency
         if freq is not None:
@@ -121,206 +100,19 @@ class PandasDataset(Dataset, PandasParsingMixin, TemporalFeaturesMixin):
             self.resample_(freq=self.freq, aggr=self.temporal_aggregation)
         else:
             try:
-                freq = self.df.index.freq or self.df.index.inferred_freq
+                freq = self.primary.index.freq or self.primary.index.inferred_freq
             except AttributeError:
                 pass
             self.freq = None if freq is None else checks.to_pandas_freq(freq)
             self.index.freq = self.freq
 
-    def __getattr__(self, item):
-        if '_secondary' in self.__dict__ and item in self._secondary:
-            return self._secondary[item]['value']
-        raise AttributeError("'{}' object has no attribute '{}'"
-                             .format(self.__class__.__name__, item))
-
-    def __delattr__(self, item):
-        if item == 'mask':
-            self.set_mask(None)
-        elif item in self._secondary:
-            del self._secondary[item]
-        else:
-            super(PandasDataset, self).__delattr__(item)
-
-    # Dataset properties
-
-    @property
-    def length(self) -> int:
-        return self.df.values.shape[0]
-
-    @property
-    def n_nodes(self) -> int:
-        return len(self.nodes)
-
-    @property
-    def n_channels(self) -> int:
-        return len(self.channels)
-
-    @property
-    def index(self) -> pd.Index:
-        return self.df.index
-
-    @property
-    def nodes(self) -> pd.Index:
-        return self.df.columns.unique(0)
-
-    @property
-    def channels(self) -> pd.Index:
-        return self.df.columns.unique(1)
-
-    @property
-    def shape(self) -> tuple:
-        return self.length, self.n_nodes, self.n_channels
-
-    # Secondary properties
-
-    @property
-    def exogenous(self):
-        return {name: attr['value'] for name, attr in self._secondary.items()
-                if 't' in attr['pattern']}
-
-    @property
-    def attributes(self):
-        return {name: attr['value'] for name, attr in self._secondary.items()
-                if 't' not in attr['pattern']}
-
-    # flags
-
-    @property
-    def has_mask(self) -> bool:
-        return self.mask is not None
-
-    @property
-    def has_exogenous(self) -> bool:
-        return len(self.exogenous) > 0
-
-    @property
-    def has_attributes(self) -> bool:
-        return len(self.attributes) > 0
-
-    # Setters #################################################################
-
-    def set_primary(self, value: FrameArray):
-        r"""Set sequence of primary channels at :obj:`self.df`."""
-        self.df = self._parse_primary(value)
-
-    def set_mask(self, mask: OptFrameArray):
-        r"""Set mask of primary channels, i.e., a bool for each (node, time
-        step, channel) triplet denoting if corresponding value in primary
-        DataFrame is observed (1) or not (0)."""
-        if mask is not None:
-            mask = self._parse_primary(mask).astype('bool')
-        self.mask = mask
-
-    # Setter for secondary data
-
-    def add_secondary(self, name: str, value: FrameArray,
-                      pattern: Optional[str] = None):
-        r"""Add secondary data to the dataset. Examples of secondary data are
-        exogenous variables (in the form of multidimensional covariates) or
-        static attributes (e.g., graph/node metadata). Parameter :obj:`pattern`
-        specifies what each axis refers to:
-
-        - 't': temporal dimension;
-        - 'n': node dimension;
-        - 'c'/'f': channels/features dimension.
-
-        For instance, the pattern of a node-level covariate is 't n f', while a
-        pairwise metric between nodes has pattern 'n n'.
-
-        Args:
-            name (str): the name of the object. You can then access the added
-                object as :obj:`dataset.{name}`.
-            value (FrameArray): the object to be added.
-            pattern (str, optional): the pattern of the object. A pattern
-                specifies what each axis refers to:
-
-                - 't': temporal dimension;
-                - 'n': node dimension;
-                - 'c'/'f': channels/features dimension.
-
-                If :obj:`None`, the pattern is inferred from the shape.
-                (default :obj:`None`)
-        """
-        # name cannot be an attribute of self, but allow override
-        invalid_names = set(dir(self))
-        if name in invalid_names:
-            raise ValueError(f"Cannot add object with name '{name}', "
-                             f"{self.__class__.__name__} contains already an "
-                             f"attribute named '{name}'.")
-        value, pattern = self._parse_secondary(value, pattern)
-        self._secondary[name] = dict(value=value, pattern=pattern)
-
-    def add_exogenous(self, name: str, value: FrameArray,
-                      node_level: bool = True):
-        """Shortcut method to add dynamic secondary data."""
-        if name.startswith('global_'):
-            name = name[7:]
-            node_level = False
-        pattern = 't n f' if node_level else 't f'
-        self.add_secondary(name, value, pattern)
-
-    # Getters
-
-    def get_mask(self, dtype: Union[type, str, np.dtype] = None,
-                 as_numpy: bool = True):
-        mask = self.mask if self.has_mask else ~self.df.isna()
-        if dtype is not None:
-            assert dtype in ['bool', 'uint8', bool, np.bool, np.uint8]
-            mask = mask.astype(dtype)
-        if as_numpy:
-            mask = mask.values.reshape(self.shape)
-        return mask
-
-    def get_exogenous(self, channels: Union[Sequence, Dict] = None,
-                      nodes: Sequence = None,
-                      index: Sequence = None,
-                      as_numpy: bool = True):
-        if index is None:
-            index = self.index
-
-        if nodes is None:
-            nodes = self.nodes
-
-        # parse channels
-        if channels is None:
-            # defaults to all channels
-            channels = self.exogenous.keys()
-        elif isinstance(channels, str):
-            assert channels in self.exogenous, \
-                f"{channels} is not an exogenous group."
-            channels = [channels]
-        # expand exogenous
-        if not isinstance(channels, dict):
-            channels = {label: self.exogenous[label].columns.unique('channels')
-                        for label in channels}
-        else:
-            # analyze channels dict
-            for exo, chnls in channels.items():
-                exo_channels = self.exogenous[exo].columns.unique('channels')
-                # if value is None, default to all channels
-                if chnls is None:
-                    channels[exo] = exo_channels
-                else:
-                    chnls = ensure_list(chnls)
-                    # check that all passed channels are in exo
-                    wrong_channels = set(chnls).difference(exo_channels)
-                    if len(wrong_channels):
-                        raise KeyError(wrong_channels)
-
-        dfs = [self.exogenous[exo].loc[index, (nodes, chnls)]
-               for exo, chnls in channels.items()]
-
-        df = pd.concat(dfs, axis=1, keys=channels.keys(),
-                       names=['exogenous', 'nodes', 'channels'])
-        df = df.swaplevel(i='exogenous', j='nodes', axis=1)
-        # sort only nodes, keep other order as in the input variables
-        df = df.loc[:, nodes]
-
-        if as_numpy:
-            return df.values.reshape((len(index), len(nodes), -1))
-        return df
-
     # Aggregation methods
+
+    def sort(self):
+        self.primary.sort_index(inplace=True)
+        for name, attr in self._secondary.items():
+            if 't' in attr['pattern']:
+                attr['value'] = attr['value'].reindex(self.index)
 
     def resample_(self, freq=None, aggr: str = None,
                   keep: Literal["first", "last", False] = 'first',
@@ -338,7 +130,7 @@ class PandasDataset(Dataset, PandasParsingMixin, TemporalFeaturesMixin):
             mask = mask.mean() >= (1. - mask_tolerance)
             self.set_mask(mask)
 
-        self.df = self.df[valid_steps].resample(freq).apply(aggr)
+        self.primary = self.primary[valid_steps].resample(freq).apply(aggr)
 
         for name, attr in self._secondary.items():
             value, pattern = attr['value'], attr['pattern']
@@ -358,144 +150,8 @@ class PandasDataset(Dataset, PandasParsingMixin, TemporalFeaturesMixin):
                  mask_tolerance: float = 0.):
         return deepcopy(self).resample_(freq, aggr, keep, mask_tolerance)
 
-    def aggregate_(self, node_index: Optional[Union[Index, Mapping]] = None,
-                   aggr: str = None, mask_tolerance: float = 0.):
-
-        # get aggregation function among numpy functions
-        aggr = aggr if aggr is not None else self.spatial_aggregation
-        aggr_fn = getattr(np, aggr)
-
-        # node_index parsing: eventually must be an n_nodes-sized array where
-        # value at position i is the cluster id of i-th node
-        if node_index is None:
-            # if not provided, aggregate all nodes together, with cluster id 0
-            node_index = np.zeros(self.n_nodes)
-        # otherwise, node_index can be a mapping {cluster_id: [nodes]}
-        # the set of all nodes in mapping values must be equal to dataset nodes
-        elif isinstance(node_index, Mapping):
-            ids, groups = [], []
-            for group_id, group in node_index.items():
-                ids += [group_id] * len(group)
-                groups += list(group)
-            assert set(groups) == set(self.nodes)
-            # reorder node_index according to nodes order in dataset
-            ids, groups = np.array(ids), np.array(groups)
-            _, order = np.where(self.nodes[:, None] == groups)
-            node_index = ids[order]
-
-        assert len(node_index) == self.n_nodes
-
-        # aggregate mask (if node-wise) and threshold aggregated value
-        if self.has_mask:
-            mask = aggregate(self.mask, node_index, np.mean)
-            mask = mask >= (1. - mask_tolerance)
-            self.set_mask(mask)
-
-        # aggregate main dataframe
-        self.df = aggregate(self.df, node_index, aggr_fn)
-
-        # aggregate all node-level exogenous
-        for name, attr in self._secondary.items():
-            value, pattern = attr['value'], attr['pattern']
-            dims = pattern.strip().split(' ')
-            if dims[0] == 'n':
-                value = aggregate(value, node_index, aggr_fn, axis=0)
-            for lvl, dim in enumerate(dims[1:]):
-                if dim == 'n':
-                    value = aggregate(value, node_index, aggr_fn,
-                                      axis=1, level=lvl)
-            self._secondary[name]['value'] = value
-
-    def aggregate(self, node_index: Optional[Union[Index, Mapping]] = None,
-                  aggr: str = None, mask_tolerance: float = 0.):
-        return deepcopy(self).aggregate_(node_index, aggr, mask_tolerance)
-
-    def reduce_(self, step_index=None, node_index=None):
-
-        def index_to_mask(index, support):
-            if index is None:
-                return slice(None)
-            elif isinstance(index, pd.Index):
-                return index
-            index: np.ndarray = np.asarray(index)
-            if index.dtype == np.bool:
-                index = support[index]
-            return index
-
-        step_index = index_to_mask(step_index, self.index)
-        node_index = index_to_mask(node_index, self.nodes)
-        try:
-            self.df = self.df.loc[step_index, node_index]
-            if self.has_mask:
-                self.mask = self.mask.loc[step_index, node_index]
-
-            for name, attr in self._secondary.items():
-                value, pattern = attr['value'], attr['pattern']
-                dims = pattern.strip().split(' ')
-                if dims[0] == 't':
-                    value = value.loc[step_index]
-                elif dims[0] == 'n':
-                    value = value.loc[node_index]
-                for lvl, dim in enumerate(dims[1:]):
-                    cols = [slice(None)] * (len(dims) - 1)
-                    if dim == 't':
-                        cols[lvl] = step_index
-                        cols = tuple(cols) if len(cols) > 1 else cols[0]
-                        value = value.loc[:, cols]
-                    elif dim == 'n':
-                        cols[lvl] = node_index
-                        cols = tuple(cols) if len(cols) > 1 else cols[0]
-                        value = value.loc[:, cols]
-                self._secondary[name]['value'] = value
-        except Exception as e:
-            raise e
-        return self
-
-    def reduce(self, step_index=None, node_index=None):
-        return deepcopy(self).reduce_(step_index, node_index)
-
-    def cluster_(self,
-                 clustering_algo,
-                 clustering_kwarks,
-                 sim_type='correntropy',
-                 trainlen=None,
-                 kn=20,
-                 scale=1.):
-        sim = self.get_similarity(method=sim_type, k=kn, trainlen=trainlen)
-        algo = clustering_algo(**clustering_kwarks, affinity='precomputed')
-        idx = algo.fit_predict(sim)
-        _, counts = np.unique(idx, return_counts=True)
-        logger.info(('{} ' * len(counts)).format(*counts))
-        self.aggregate_(idx)
-        self.df /= scale
-        return self
-
     # Preprocessing
-
-    def fill_missing_(self, method):
-        # todo
-        raise NotImplementedError()
 
     def detrend(self, method):
         # todo
         raise NotImplementedError()
-
-    # Representations
-
-    def dataframe(self) -> pd.DataFrame:
-        df = self.df.reindex(index=self.index,
-                             columns=self._columns_multiindex(),
-                             copy=True)
-        return df
-
-    def numpy(self, return_idx=False) -> Union[ndarray, Tuple[ndarray, Index]]:
-        if return_idx:
-            return self.numpy(), self.index
-        return self.dataframe().values.reshape(self.shape)
-
-    def pytorch(self) -> Tensor:
-        data = self.numpy()
-        return torch.tensor(data)
-
-    def copy(self) -> 'PandasDataset':
-        return deepcopy(self)

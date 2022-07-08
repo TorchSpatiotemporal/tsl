@@ -8,7 +8,7 @@ from torch import Tensor
 from torch_sparse import SparseTensor
 
 import tsl
-from tsl.ops.dataframe import to_numpy
+from tsl.ops.dataframe import framearray_to_numpy
 
 
 class SynchMode(Enum):
@@ -61,7 +61,7 @@ def copy_to_tensor(obj):
     if isinstance(obj, torch.Tensor):
         obj = obj.clone().detach()
     elif isinstance(obj, pd.DataFrame):
-        obj = torch.as_tensor(to_numpy(obj))
+        obj = torch.as_tensor(framearray_to_numpy(obj))
     else:
         obj = torch.as_tensor(obj)
     obj = torch.atleast_1d(obj)

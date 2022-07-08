@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from . import checks
+from ...ops.dataframe import framearray_shape
 from ...typing import FrameArray, DataArray
 from ...utils.python_utils import ensure_list
 
@@ -16,7 +17,7 @@ def token_to_index_array(dataset, token, size):
         assert size == len(dataset.nodes)
         return dataset.nodes
     if token in ['c', 'f']:
-        return pd.RangeIndex(size)
+        return np.arange(size)
 
 
 def token_to_index_df(dataset, token, index):
@@ -31,52 +32,49 @@ def token_to_index_df(dataset, token, index):
         return index
 
 
-class PandasParsingMixin:
+class TabularParsingMixin:
 
-    def _parse_primary(self, obj: FrameArray, initialize: bool = False):
-        if not isinstance(obj, pd.DataFrame):
+    def _parse_primary(self, obj: FrameArray) -> FrameArray:
+        # if primary is DataFrame
+        if isinstance(obj, pd.DataFrame):
+            checks.to_nodes_channels_columns(obj)
+            obj = checks.convert_precision_df(obj, precision=self.precision)
+        # if primary is array-like
+        else:
             obj = np.asarray(obj)
+            # reshape to [time, nodes, features]
             while obj.ndim < 3:
                 obj = obj[..., None]
-            assert obj.ndim == 3
-            steps, nodes, channels = obj.shape
-            if initialize:
-                index = None
-                columns = self._columns_multiindex(nodes=pd.RangeIndex(nodes),
-                                                   channels=pd.RangeIndex(
-                                                       channels))
-            else:
-                index = self.index
-                columns = self._columns_multiindex()
-            obj = pd.DataFrame(obj.reshape(steps, -1),
-                               index=index, columns=columns)
-        else:
-            checks.to_nodes_channels_columns(obj)
-        obj = checks.cast_df(obj, precision=self.precision)
+            assert obj.ndim == 3, \
+                "Primary signal must be 3-dimensional with pattern 't n f'."
+            obj = checks.convert_precision_numpy(obj, precision=self.precision)
         return obj
 
-    def _parse_secondary(self, obj: FrameArray, pattern: Optional[str] = None):
-        shape = self._compute_shape(obj)
+    def _parse_secondary(self, obj: FrameArray, pattern: Optional[str] = None) \
+            -> Tuple[FrameArray, str]:
+        # compute object shape
+        shape = framearray_shape(obj)
+        # infer pattern if it is None
         if pattern is None:
             pattern = self._infer_pattern(shape)
+        # check that pattern and shape match
         pattern = checks.check_pattern(pattern)
         dims = pattern.strip().split(' ')
 
-        if not isinstance(obj, pd.DataFrame):
-            obj = np.asarray(obj)
-            index = token_to_index_array(self, dims[0], obj.shape[0])
-            columns = [token_to_index_array(self, d, s) for d, s in
-                       zip(dims[1:], obj.shape[1:])]
-            if len(columns) > 1:
-                columns = pd.MultiIndex.from_product(columns)
-            obj = pd.DataFrame(obj.reshape(obj.shape[0], -1),
-                               index=index, columns=columns)
-        else:
+        if isinstance(obj, pd.DataFrame):
+            assert self.is_primary_dataframe, \
+                "Cannot add DataFrame covariates if primary is ndarray."
             obj = obj.reindex(index=token_to_index_df(self, dims[0], obj.index))
             for lvl, tkn in enumerate(dims[1:]):
-                obj.reindex(columns=token_to_index_df(self, tkn,
-                                                      obj.columns.unique(lvl)),
-                            level=lvl)
+                columns = token_to_index_df(self, tkn, obj.columns.unique(lvl))
+                obj.reindex(columns=columns, level=lvl)
+            obj = checks.convert_precision_df(obj, precision=self.precision)
+        else:
+            obj = np.asarray(obj)
+            # check shape
+            for d, s in zip(dims, obj.shape):
+                token_to_index_array(self, d, s)
+            obj = checks.convert_precision_numpy(obj, precision=self.precision)
 
         return obj, pattern
 
@@ -85,13 +83,6 @@ class PandasParsingMixin:
         channels = channels if channels is not None else self.channels
         return pd.MultiIndex.from_product([nodes, channels],
                                           names=['nodes', 'channels'])
-
-    def _compute_shape(self, obj: FrameArray) -> tuple:
-        if not isinstance(obj, pd.DataFrame):
-            return np.asarray(obj).shape
-        elif obj.columns.nlevels > 1:
-            return (len(obj),) + obj.columns.levshape
-        return obj.shape
 
     def _infer_pattern(self, shape: tuple):
         out = []
