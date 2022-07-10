@@ -32,6 +32,8 @@ class SpatioTemporalDataModule(LightningDataModule):
             (default :obj:`32`)
         workers (int): Number of workers to use in DataLoaders.
             (default :obj:`0`)
+        pin_memory (bool): Whether to enable pinned GPU memory for the train dataloader.
+            (default :obj:`False`)
     """
 
     def __init__(self, dataset: SpatioTemporalDataset,
@@ -39,7 +41,8 @@ class SpatioTemporalDataModule(LightningDataModule):
                  mask_scaling: bool = True,
                  splitter: Optional[Splitter] = None,
                  batch_size: int = 32,
-                 workers: int = 0):
+                 workers: int = 0,
+                 pin_memory: bool = False):
         super(SpatioTemporalDataModule, self).__init__()
         self.torch_dataset = dataset
         # splitting
@@ -54,6 +57,7 @@ class SpatioTemporalDataModule(LightningDataModule):
         # data loaders
         self.batch_size = batch_size
         self.workers = workers
+        self.pin_memory = pin_memory
 
     def __getattr__(self, item):
         ds = self.__dict__.get('torch_dataset')
@@ -161,6 +165,7 @@ class SpatioTemporalDataModule(LightningDataModule):
                                  batch_size=batch_size or self.batch_size,
                                  shuffle=shuffle,
                                  num_workers=self.workers,
+                                 pin_memory=self.pin_memory,
                                  drop_last=True)
 
     def val_dataloader(self, shuffle=False, batch_size=None):
