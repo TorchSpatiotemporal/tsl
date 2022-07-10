@@ -1,6 +1,7 @@
 from functools import partial
 import inspect
 from copy import deepcopy
+from typing import Optional
 
 import torch
 from torchmetrics import Metric
@@ -44,6 +45,7 @@ class MaskedMetric(Metric):
                          is used for logging the aggregate value across different mini-batches.
         at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
+    full_state_update: bool = None
     def __init__(self,
                  metric_fn,
                  mask_nans=False,
