@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from tsl.data.datamodule.splitters import disjoint_months, Splitter
-from tsl.ops.dataframe import compute_mean
+from tsl.ops.framearray import temporal_mean
 from tsl.ops.similarities import gaussian_kernel
 from tsl.ops.similarities import geographical_distance
 from tsl.utils import download_url, extract_zip
@@ -112,8 +112,6 @@ class AirQuality(PandasDataset, MissingValuesMixin):
     url = "https://drive.switch.ch/index.php/s/W0fRqotjHxIndPj/download"
 
     similarity_options = {'distance'}
-    temporal_aggregation_options = {'mean', 'nearest'}
-    spatial_aggregation_options = {'mean'}
 
     def __init__(self, root: str = None,
                  impute_nans: bool = True,
@@ -131,13 +129,13 @@ class AirQuality(PandasDataset, MissingValuesMixin):
         else:
             self.masked_sensors = list(masked_sensors)
         df, mask, eval_mask, dist = self.load(impute_nans=impute_nans)
-        super().__init__(primary=df, mask=mask, freq=freq,
+        super().__init__(target=df, mask=mask, freq=freq,
                          similarity_score='distance',
                          temporal_aggregation='mean',
                          spatial_aggregation='mean',
                          default_splitting_method='air_quality',
                          name='AQI36' if self.small else 'AQI')
-        self.add_secondary('dist', dist, pattern='n n')
+        self.add_covariate('dist', dist, pattern='n n')
         self.set_eval_mask(eval_mask)
 
     @property
@@ -188,7 +186,7 @@ class AirQuality(PandasDataset, MissingValuesMixin):
             eval_mask[:, self.masked_sensors] = mask[:, self.masked_sensors]
         # eventually replace nans with weekly mean by hour
         if impute_nans:
-            df = df.fillna(compute_mean(df))
+            df = df.fillna(temporal_mean(df))
         return df, mask, eval_mask, dist
 
     def get_splitter(self, method: Optional[str] = None, **kwargs):

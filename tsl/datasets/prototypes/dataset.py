@@ -42,8 +42,6 @@ class Dataset(object):
     root: Optional[str] = None
 
     similarity_options: Optional[Set] = None
-    temporal_aggregation_options: Optional[Set] = None
-    spatial_aggregation_options: Optional[Set] = None
 
     def __init__(self, name: Optional[str] = None,
                  similarity_score: Optional[str] = None,
@@ -58,17 +56,8 @@ class Dataset(object):
                 raise ValueError("{} is not a valid similarity method."
                                  .format(similarity_score))
         self.similarity_score = similarity_score
-        # Set temporal aggregation method
-        if self.temporal_aggregation_options is not None:
-            if temporal_aggregation not in self.temporal_aggregation_options:
-                raise ValueError("{} is not a valid temporal aggregation "
-                                 "method.".format(temporal_aggregation))
+        # Set aggregation methods
         self.temporal_aggregation = temporal_aggregation
-        # Set spatial aggregation method
-        if self.spatial_aggregation_options is not None:
-            if spatial_aggregation not in self.spatial_aggregation_options:
-                raise ValueError("{} is not a valid spatial aggregation "
-                                 "method.".format(spatial_aggregation))
         self.spatial_aggregation = spatial_aggregation
         # Set splitting method
         self.default_splitting_method = default_splitting_method
@@ -232,8 +221,8 @@ class Dataset(object):
         raise NotImplementedError
 
     def load(self, *args, **kwargs):
-        """Loads raw dataset and preprocess data."""
-        raise NotImplementedError
+        """Loads raw dataset and preprocess data. Default to :obj:`load_raw`."""
+        return self.load_raw(*args, **kwargs)
 
     def clean_downloads(self):
         for file in self.raw_files_paths:

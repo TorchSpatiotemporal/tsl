@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 
 from . import checks
-from ...ops.dataframe import framearray_shape
+from ...ops.framearray import framearray_shape, framearray_to_numpy
+from ...ops.pattern import check_pattern
 from ...typing import FrameArray, DataArray
 from ...utils.python_utils import ensure_list
 
@@ -25,7 +26,7 @@ def token_to_index_df(dataset, token, index):
         return dataset.index
     if token == 'n':
         assert set(index).issubset(dataset.nodes), \
-            "You are trying to add a secondary dataframe with " \
+            "You are trying to add a covariate dataframe with " \
             "nodes that are not in the dataset."
         return dataset.nodes
     if token in ['c', 'f']:
@@ -34,23 +35,23 @@ def token_to_index_df(dataset, token, index):
 
 class TabularParsingMixin:
 
-    def _parse_primary(self, obj: FrameArray) -> FrameArray:
-        # if primary is DataFrame
+    def _parse_target(self, obj: FrameArray) -> FrameArray:
+        # if target is DataFrame
         if isinstance(obj, pd.DataFrame):
             checks.to_nodes_channels_columns(obj)
             obj = checks.convert_precision_df(obj, precision=self.precision)
-        # if primary is array-like
+        # if target is array-like
         else:
             obj = np.asarray(obj)
             # reshape to [time, nodes, features]
             while obj.ndim < 3:
                 obj = obj[..., None]
             assert obj.ndim == 3, \
-                "Primary signal must be 3-dimensional with pattern 't n f'."
+                "Target signal must be 3-dimensional with pattern 't n f'."
             obj = checks.convert_precision_numpy(obj, precision=self.precision)
         return obj
 
-    def _parse_secondary(self, obj: FrameArray, pattern: Optional[str] = None) \
+    def _parse_covariate(self, obj: FrameArray, pattern: Optional[str] = None) \
             -> Tuple[FrameArray, str]:
         # compute object shape
         shape = framearray_shape(obj)
@@ -58,12 +59,12 @@ class TabularParsingMixin:
         if pattern is None:
             pattern = self._infer_pattern(shape)
         # check that pattern and shape match
-        pattern = checks.check_pattern(pattern)
+        pattern = check_pattern(pattern)
         dims = pattern.strip().split(' ')
 
         if isinstance(obj, pd.DataFrame):
-            assert self.is_primary_dataframe, \
-                "Cannot add DataFrame covariates if primary is ndarray."
+            assert self.is_target_dataframe, \
+                "Cannot add DataFrame covariates if target is ndarray."
             obj = obj.reindex(index=token_to_index_df(self, dims[0], obj.index))
             for lvl, tkn in enumerate(dims[1:]):
                 columns = token_to_index_df(self, tkn, obj.columns.unique(lvl))
@@ -95,7 +96,7 @@ class TabularParsingMixin:
                 out.append('f')
         pattern = ' '.join(out)
         try:
-            pattern = checks.check_pattern(pattern)
+            pattern = check_pattern(pattern)
         except RuntimeError:
             raise RuntimeError(f"Cannot infer pattern from shape: {shape}.")
         return pattern
@@ -191,9 +192,10 @@ class TemporalFeaturesMixin:
 class MissingValuesMixin:
 
     def set_eval_mask(self, eval_mask: FrameArray):
-        eval_mask = self._parse_primary(eval_mask).astype(bool)
+        eval_mask = self._parse_target(eval_mask)
+        eval_mask = framearray_to_numpy(eval_mask).astype(bool)
         eval_mask = eval_mask & self.mask
-        self.add_secondary('eval_mask', eval_mask, 't n f')
+        self.add_covariate('eval_mask', eval_mask, 't n f')
 
     @property
     def training_mask(self):

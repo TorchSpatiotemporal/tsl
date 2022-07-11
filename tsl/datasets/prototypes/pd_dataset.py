@@ -11,7 +11,7 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
     r"""Create a tsl dataset from a :class:`pandas.DataFrame`.
 
     Args:
-        primary (pandas.Dataframe): DataFrame containing the data related to
+        target (pandas.Dataframe): DataFrame containing the data related to
             the main signals. The index is considered as the temporal dimension.
             The columns are identified as:
 
@@ -22,7 +22,7 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
               a :class:`~pandas.MultiIndex`). We assume nodes are at first
               level, channels at second.
 
-        secondary (dict, optional): named mapping of DataFrame (or numpy arrays)
+        covariates (dict, optional): named mapping of DataFrame (or numpy arrays)
             with secondary data. Examples of secondary data are exogenous
             variables (in the form of multidimensional covariates) or static
             attributes (e.g., metadata). You can specify what each axis refers
@@ -69,8 +69,8 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
     temporal_aggregation_options = {'sum', 'mean', 'min', 'max', 'nearest'}
     spatial_aggregation_options = {'sum', 'mean', 'min', 'max'}
 
-    def __init__(self, primary: FrameArray,
-                 secondary: Optional[Mapping[str, FrameArray]] = None,
+    def __init__(self, target: FrameArray,
+                 covariates: Optional[Mapping[str, FrameArray]] = None,
                  mask: OptFrameArray = None,
                  freq: Optional[str] = None,
                  similarity_score: Optional[str] = None,
@@ -80,8 +80,8 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
                  sort_index: bool = True,
                  name: str = None,
                  precision: Union[int, str] = 32):
-        super().__init__(primary=primary,
-                         secondary=secondary,
+        super().__init__(target=target,
+                         covariates=covariates,
                          mask=mask,
                          similarity_score=similarity_score,
                          temporal_aggregation=temporal_aggregation,
@@ -100,7 +100,7 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
             self.resample_(freq=self.freq, aggr=self.temporal_aggregation)
         else:
             try:
-                freq = self.primary.index.freq or self.primary.index.inferred_freq
+                freq = self.target.index.freq or self.target.index.inferred_freq
             except AttributeError:
                 pass
             self.freq = None if freq is None else checks.to_pandas_freq(freq)
@@ -109,8 +109,8 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
     # Aggregation methods
 
     def sort(self):
-        self.primary.sort_index(inplace=True)
-        for name, attr in self._secondary.items():
+        self.target.sort_index(inplace=True)
+        for name, attr in self._covariates.items():
             if 't' in attr['pattern']:
                 attr['value'] = attr['value'].reindex(self.index)
 
@@ -130,9 +130,9 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
             mask = mask.mean() >= (1. - mask_tolerance)
             self.set_mask(mask)
 
-        self.primary = self.primary[valid_steps].resample(freq).apply(aggr)
+        self.target = self.target[valid_steps].resample(freq).apply(aggr)
 
-        for name, attr in self._secondary.items():
+        for name, attr in self._covariates.items():
             value, pattern = attr['value'], attr['pattern']
             dims = pattern.strip().split(' ')
             if dims[0] == 't':
@@ -141,7 +141,7 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
                 if dim == 't':
                     value = value[valid_steps] \
                         .resample(freq, axis=1, level=lvl).apply(aggr)
-            self._secondary[name]['value'] = value
+            self._covariates[name]['value'] = value
 
         self.freq = freq
 

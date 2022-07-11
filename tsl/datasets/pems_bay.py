@@ -33,19 +33,17 @@ class PemsBay(PandasDataset):
     url = "https://drive.switch.ch/index.php/s/5NPcgGFAIJ4oFcT/download"
 
     similarity_options = {'distance', 'stcn'}
-    temporal_aggregation_options = {'mean', 'nearest'}
-    spatial_aggregation_options = None
 
     def __init__(self, root=None, freq=None):
         # Set root path
         self.root = root
         # load dataset
         df, dist, mask = self.load()
-        super().__init__(primary=df, mask=mask, freq=freq,
+        super().__init__(target=df, mask=mask, freq=freq,
                          similarity_score="distance",
                          temporal_aggregation="nearest",
                          name="PemsBay")
-        self.add_secondary('dist', dist, pattern='n n')
+        self.add_covariate('dist', dist, pattern='n n')
 
     @property
     def raw_file_names(self):

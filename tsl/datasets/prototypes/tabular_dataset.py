@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Optional, Mapping, Union, Sequence, Dict, Tuple, Literal
+from typing import Optional, Mapping, Union, Sequence, Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from tsl import logger
 from . import checks
 from .dataset import Dataset
 from .mixin import TabularParsingMixin
-from ...ops.dataframe import aggregate, framearray_to_numpy, reduce
+from ...ops.framearray import aggregate, framearray_to_numpy, reduce
 from ...typing import FrameArray, OptFrameArray
 from ...utils.python_utils import ensure_list
 
@@ -25,54 +25,46 @@ class TabularDataset(Dataset, TabularParsingMixin):
     :class:`~pandas.DataFrame` or :class:`~numpy.ndarray`.
 
     Args:
-        primary (pandas.Dataframe): DataFrame containing the data related to
-            the main signals. The index is considered as the temporal dimension.
-            The columns are identified as:
+        target (FrameArray): :class:`~pandas.DataFrame` or
+            :class:`numpy.ndarray` containing the data related to the target
+            signals. The first dimension (or the DataFrame index) is considered
+            as the temporal dimension. The second dimension represents nodes,
+            the last one denotes the number of channels. If the input array is
+            bi-dimensional (or the DataFrame's columns are not
+            a :class:`~pandas.MultiIndex`), the sequence is assumed to be
+            univariate (number of channels = 1). If DataFrame's columns are a
+            :class:`~pandas.MultiIndex` with two levels, we assume nodes are at
+            first level, channels at second.
 
-            + *nodes*: if there is only one level (we assume the number of
-              channels to be 1).
-
-            + *(nodes, channels)*: if there are two levels (i.e., if columns is
-              a :class:`~pandas.MultiIndex`). We assume nodes are at first
-              level, channels at second.
-
-        secondary (dict, optional): named mapping of DataFrame (or numpy arrays)
-            with secondary data. Examples of secondary data are exogenous
-            variables (in the form of multidimensional covariates) or static
-            attributes (e.g., metadata). You can specify what each axis refers
-            to by providing a :obj:`pattern` for each item in the mapping.
-            Every item can be:
+        covariates (dict, optional): named mapping of :class:`~pandas.DataFrame`
+            or :class:`numpy.ndarray` representing covariates. Examples of
+            covariates are exogenous signals (in the form of dynamic,
+            multidimensional data) or static attributes (e.g., graph/node
+            metadata). You can specify what each axis refers to by providing a
+            :obj:`pattern` for each item in the mapping. Every item can be:
 
             + a :class:`~pandas.DataFrame` or :class:`~numpy.ndarray`: in this
               case the pattern is inferred from the shape (if possible).
+            + a :class:`dict` with keys 'value' and 'pattern' indexing the
+              covariate object and the relative pattern, respectively.
 
-            TODO
             (default: :obj:`None`)
-        mask (pandas.Dataframe or numpy.ndarray, optional): Boolean mask
-            denoting if values in data are valid (:obj:`True`) or not
-            (:obj:`False`).
-            (default: :obj:`None`)
-        freq (str, optional): Force a sampling rate, eventually by resampling.
+        mask (FrameArray, optional): Boolean mask denoting if values in target
+            are valid (:obj:`True`) or not (:obj:`False`).
             (default: :obj:`None`)
         similarity_score (str): Default method to compute the similarity matrix
             with :obj:`compute_similarity`. It must be inside dataset's
             :obj:`similarity_options`.
             (default: :obj:`None`)
         temporal_aggregation (str): Default temporal aggregation method after
-            resampling. This method is used during instantiation to resample the
-            dataset. It must be inside dataset's
-            :obj:`temporal_aggregation_options`.
+            resampling.
             (default: :obj:`sum`)
         spatial_aggregation (str): Default spatial aggregation method for
             :obj:`aggregate`, i.e., how to aggregate multiple nodes together.
-            It must be inside dataset's :obj:`spatial_aggregation_options`.
             (default: :obj:`sum`)
         default_splitting_method (str, optional): Default splitting method for
             the dataset, i.e., how to split the dataset into train/val/test.
             (default: :obj:`temporal`)
-        sort_index (bool): whether to sort the dataset chronologically at
-            initialization.
-            (default: :obj:`True`)
         name (str, optional): Optional name of the dataset.
             (default: :obj:`class_name`)
         precision (int or str, optional): numerical precision for data: 16 (or
@@ -80,8 +72,8 @@ class TabularDataset(Dataset, TabularParsingMixin):
             (default: :obj:`32`)
     """
 
-    def __init__(self, primary: FrameArray,
-                 secondary: Optional[Mapping[str, FrameArray]] = None,
+    def __init__(self, target: FrameArray,
+                 covariates: Optional[Mapping[str, FrameArray]] = None,
                  mask: OptFrameArray = None,
                  similarity_score: Optional[str] = None,
                  temporal_aggregation: str = 'sum',
@@ -98,7 +90,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
         self.precision = precision
 
         # Set dataset's main signal
-        self.primary = self._parse_primary(primary)
+        self.target = self._parse_target(target)
 
         from .pd_dataset import PandasDataset
         if not isinstance(self, PandasDataset) \
@@ -110,117 +102,121 @@ class TabularDataset(Dataset, TabularParsingMixin):
         self.set_mask(mask)
 
         # Store exogenous and attributes
-        self._secondary = dict()
-        if secondary is not None:
-            for name, value in secondary.items():
-                self.add_secondary(name, **self._value_to_kwargs(value))
+        self._covariates = dict()
+        if covariates is not None:
+            for name, value in covariates.items():
+                self.add_covariate(name, **self._value_to_kwargs(value))
 
     def __getattr__(self, item):
-        if '_secondary' in self.__dict__ and item in self._secondary:
-            return self._secondary[item]['value']
+        if '_covariates' in self.__dict__ and item in self._covariates:
+            return self._covariates[item]['value']
         raise AttributeError("'{}' object has no attribute '{}'"
                              .format(self.__class__.__name__, item))
 
     def __delattr__(self, item):
         if item == 'mask':
             self.set_mask(None)
-        elif item in self._secondary:
-            del self._secondary[item]
+        elif item in self._covariates:
+            del self._covariates[item]
         else:
             super(TabularDataset, self).__delattr__(item)
 
     # Dataset properties
 
     @property
-    def is_primary_dataframe(self) -> bool:
-        return isinstance(self.primary, pd.DataFrame)
-
-    @property
     def length(self) -> int:
-        return self.primary.shape[0]
+        return self.target.shape[0]
 
     @property
     def n_nodes(self) -> int:
-        if self.is_primary_dataframe:
+        if self.is_target_dataframe:
             return len(self.nodes)
         return self.shape[1]
 
     @property
     def n_channels(self) -> int:
-        if self.is_primary_dataframe:
+        if self.is_target_dataframe:
             return len(self.channels)
         return self.shape[2]
 
     @property
     def index(self) -> Union[pd.Index, np.ndarray]:
-        if self.is_primary_dataframe:
-            return self.primary.index
+        if self.is_target_dataframe:
+            return self.target.index
         return np.arange(self.length)
 
     @property
     def nodes(self) -> Union[pd.Index, np.ndarray]:
-        if self.is_primary_dataframe:
-            return self.primary.columns.unique(0)
+        if self.is_target_dataframe:
+            return self.target.columns.unique(0)
         return np.arange(self.n_nodes)
 
     @property
     def channels(self) -> Union[pd.Index, np.ndarray]:
-        if self.is_primary_dataframe:
-            return self.primary.columns.unique(1)
+        if self.is_target_dataframe:
+            return self.target.columns.unique(1)
         return np.arange(self.n_channels)
 
     @property
     def shape(self) -> tuple:
         return self.length, self.n_nodes, self.n_channels
 
-    # Secondary properties
+    # Covariates properties
+
+    @property
+    def covariates(self):
+        return self._covariates
 
     @property
     def exogenous(self):
-        return {name: attr['value'] for name, attr in self._secondary.items()
+        return {name: attr['value'] for name, attr in self._covariates.items()
                 if 't' in attr['pattern']}
 
     @property
     def attributes(self):
-        return {name: attr['value'] for name, attr in self._secondary.items()
+        return {name: attr['value'] for name, attr in self._covariates.items()
                 if 't' not in attr['pattern']}
 
+    @property
+    def n_covariates(self):
+        return len(self._covariates)
+
     # flags
+
+    @property
+    def is_target_dataframe(self) -> bool:
+        return isinstance(self.target, pd.DataFrame)
 
     @property
     def has_mask(self) -> bool:
         return self.mask is not None
 
     @property
-    def has_exogenous(self) -> bool:
-        return len(self.exogenous) > 0
-
-    @property
-    def has_attributes(self) -> bool:
-        return len(self.attributes) > 0
+    def has_covariates(self) -> bool:
+        return self.n_covariates > 0
 
     # Setters #################################################################
 
-    def set_primary(self, value: FrameArray):
-        r"""Set sequence of primary channels at :obj:`self.primary`."""
-        self.primary = self._parse_primary(value)
+    def set_target(self, value: FrameArray):
+        r"""Set sequence of target channels at :obj:`self.target`."""
+        self.target = self._parse_target(value)
 
     def set_mask(self, mask: OptFrameArray):
-        r"""Set mask of primary channels, i.e., a bool for each (node, time
-        step, channel) triplet denoting if corresponding value in primary
-        DataFrame is observed (1) or not (0)."""
+        r"""Set mask of target channels, i.e., a bool for each (node, time
+        step, channel) triplet denoting if corresponding value in target is
+        observed (obj:`True`) or not (obj:`False`)."""
         if mask is not None:
-            mask = self._parse_primary(mask).astype('bool')
-            mask, _ = self._parse_secondary(mask, 't n f')
+            mask = self._parse_target(mask).astype('bool')
+            mask, _ = self._parse_covariate(mask, 't n f')
             mask = framearray_to_numpy(mask)
         self.mask = mask
 
-    # Setter for secondary data
+    # Setter for covariates
 
-    def add_secondary(self, name: str, value: FrameArray,
+    def add_covariate(self, name: str, value: FrameArray,
                       pattern: Optional[str] = None):
-        r"""Add secondary data to the dataset. Examples of secondary data are
-        exogenous variables (in the form of multidimensional covariates) or
+        r"""Add covariate to the dataset. Examples of covariate are
+        exogenous signals (in the form of dynamic multidimensional data) or
         static attributes (e.g., graph/node metadata). Parameter :obj:`pattern`
         specifies what each axis refers to:
 
@@ -251,17 +247,17 @@ class TabularDataset(Dataset, TabularParsingMixin):
             raise ValueError(f"Cannot add object with name '{name}', "
                              f"{self.__class__.__name__} contains already an "
                              f"attribute named '{name}'.")
-        value, pattern = self._parse_secondary(value, pattern)
-        self._secondary[name] = dict(value=value, pattern=pattern)
+        value, pattern = self._parse_covariate(value, pattern)
+        self._covariates[name] = dict(value=value, pattern=pattern)
 
     def add_exogenous(self, name: str, value: FrameArray,
                       node_level: bool = True):
-        """Shortcut method to add dynamic secondary data."""
+        """Shortcut method to add dynamic covariate data."""
         if name.startswith('global_'):
             name = name[7:]
             node_level = False
         pattern = 't n f' if node_level else 't f'
-        self.add_secondary(name, value, pattern)
+        self.add_covariate(name, value, pattern)
 
     # Getters
 
@@ -272,16 +268,16 @@ class TabularDataset(Dataset, TabularParsingMixin):
             assert dtype in ['bool', 'uint8', bool, np.bool, np.uint8]
             mask = mask.astype(dtype)
         if as_dataframe:
-            assert self.is_primary_dataframe
+            assert self.is_target_dataframe
             data = mask.reshape(self.length, -1)
             mask = pd.DataFrame(data, index=self.index,
                                 columns=self._columns_multiindex())
         return mask
 
-    def get_exogenous(self, channels: Union[Sequence, Dict] = None,
-                      nodes: Sequence = None,
-                      index: Sequence = None,
-                      as_numpy: bool = True):
+    def get_frame(self, channels: Union[Sequence, Dict] = None,
+                  nodes: Sequence = None,
+                  index: Sequence = None,
+                  as_numpy: bool = True):
         if index is None:
             index = self.index
 
@@ -358,7 +354,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
         assert len(node_index) == self.n_nodes
 
         # aggregate main dataframe
-        self.primary = aggregate(self.primary, node_index, aggr_fn)
+        self.target = aggregate(self.target, node_index, aggr_fn)
 
         # aggregate mask (if node-wise) and threshold aggregated value
         if self.has_mask:
@@ -367,7 +363,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
             self.set_mask(mask)
 
         # aggregate all node-level exogenous
-        for name, attr in self._secondary.items():
+        for name, attr in self._covariates.items():
             value, pattern = attr['value'], attr['pattern']
             dims = pattern.strip().split(' ')
             if dims[0] == 'n':
@@ -376,7 +372,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
                 if dim == 'n':
                     value = aggregate(value, node_index, aggr_fn,
                                       axis=1, level=lvl)
-            self._secondary[name]['value'] = value
+            self._covariates[name]['value'] = value
 
     def aggregate(self, node_index: Optional[Union[Index, Mapping]] = None,
                   aggr: str = None, mask_tolerance: float = 0.):
@@ -398,13 +394,13 @@ class TabularDataset(Dataset, TabularParsingMixin):
         time_index = index_to_mask(time_index, self.index)
         node_index = index_to_mask(node_index, self.nodes)
         try:
-            self.primary = reduce(self.primary, time_index, axis=0)
-            self.primary = reduce(self.primary, node_index, axis=1, level=0)
+            self.target = reduce(self.target, time_index, axis=0)
+            self.target = reduce(self.target, node_index, axis=1, level=0)
             if self.has_mask:
                 self.mask = reduce(self.mask, time_index, axis=0)
                 self.mask = reduce(self.mask, node_index, axis=1, level=0)
 
-            for name, attr in self._secondary.items():
+            for name, attr in self._covariates.items():
                 value, pattern = attr['value'], attr['pattern']
                 dims = pattern.strip().split(' ')
                 if dims[0] == 't':
@@ -416,7 +412,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
                         value = reduce(value, time_index, axis=1, level=lvl)
                     elif dim == 'n':
                         value = reduce(value, node_index, axis=1, level=lvl)
-                self._secondary[name]['value'] = value
+                self._covariates[name]['value'] = value
         except Exception as e:
             raise e
         return self
@@ -437,7 +433,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
         _, counts = np.unique(idx, return_counts=True)
         logger.info(('{} ' * len(counts)).format(*counts))
         self.aggregate_(idx)
-        self.primary /= scale
+        self.target /= scale
         return self
 
     # Preprocessing
@@ -449,20 +445,20 @@ class TabularDataset(Dataset, TabularParsingMixin):
     # Representations
 
     def dataframe(self) -> pd.DataFrame:
-        if self.is_primary_dataframe:
-            return self.primary.reindex(index=self.index,
-                                        columns=self._columns_multiindex(),
-                                        copy=True)
-        data = self.primary.reshape(self.length, -1)
+        if self.is_target_dataframe:
+            return self.target.reindex(index=self.index,
+                                       columns=self._columns_multiindex(),
+                                       copy=True)
+        data = self.target.reshape(self.length, -1)
         df = pd.DataFrame(data, columns=self._columns_multiindex())
         return df
 
     def numpy(self, return_idx=False) -> Union[ndarray, Tuple[ndarray, Index]]:
         if return_idx:
             return self.numpy(return_idx=False), self.index
-        if self.is_primary_dataframe:
+        if self.is_target_dataframe:
             return self.dataframe().values.reshape(self.shape)
-        return self.primary
+        return self.target
 
     def pytorch(self) -> Tensor:
         data = self.numpy()

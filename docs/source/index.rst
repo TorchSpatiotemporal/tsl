@@ -12,6 +12,7 @@ It is built on several libraries of the Python scientific computing ecosystem, w
    :maxdepth: 1
    :caption: Usage
 
+   notes/installation
    notes/data_format
 
 .. toctree::

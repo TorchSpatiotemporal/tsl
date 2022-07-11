@@ -15,7 +15,8 @@ class MetrLA(PandasDataset):
     months between March 2012 and June 2012.
 
     A benchmark dataset for traffic forecasting as described in
-    `"Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic Forecasting" <https://arxiv.org/abs/1707.01926>`_.
+    `"Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic
+    Forecasting" <https://arxiv.org/abs/1707.01926>`_.
 
     Dataset information:
         + Time steps: 34272
@@ -30,19 +31,17 @@ class MetrLA(PandasDataset):
     url = "https://drive.switch.ch/index.php/s/Z8cKHAVyiDqkzaG/download"
 
     similarity_options = {'distance'}
-    temporal_aggregation_options = {'mean', 'nearest'}
-    spatial_aggregation_options = None
 
     def __init__(self, root=None, impute_zeros=True, freq=None):
         # set root path
         self.root = root
         # load dataset
         df, dist, mask = self.load(impute_zeros=impute_zeros)
-        super().__init__(primary=df, mask=mask, freq=freq,
+        super().__init__(target=df, mask=mask, freq=freq,
                          similarity_score="distance",
                          temporal_aggregation="nearest",
                          name="MetrLA")
-        self.add_secondary('dist', dist, pattern='n n')
+        self.add_covariate('dist', dist, pattern='n n')
 
     @property
     def raw_file_names(self):

@@ -44,15 +44,13 @@ class Elergone(PandasDataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00321/LD2011_2014.txt.zip"
 
     similarity_options = {'correntropy', 'pearson'}
-    temporal_aggregation_options = {'sum'}
-    spatial_aggregation_options = {'sum'}
 
     def __init__(self,
                  root=None,
                  freq=None):
         self.root = root
         df, mask = self.load()
-        super().__init__(primary=df, mask=mask, freq=freq,
+        super().__init__(target=df, mask=mask, freq=freq,
                          similarity_score='correntropy',
                          temporal_aggregation='sum',
                          spatial_aggregation='sum',

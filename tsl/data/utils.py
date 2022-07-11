@@ -8,7 +8,7 @@ from torch import Tensor
 from torch_sparse import SparseTensor
 
 import tsl
-from tsl.ops.dataframe import framearray_to_numpy
+from tsl.ops.framearray import framearray_to_numpy
 
 
 class SynchMode(Enum):

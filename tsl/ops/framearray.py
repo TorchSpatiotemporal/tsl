@@ -1,4 +1,4 @@
-from typing import Union, Callable
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -70,7 +70,6 @@ def aggregate(x: FrameArray, index: Index, aggr_fn: Callable = np.sum,
 
 def reduce(x: FrameArray, index: Index,
            axis: int = 0, level: int = 0) -> FrameArray:
-
     if index is None:
         return x
     elif not isinstance(index, (pd.Index, slice)):
@@ -85,7 +84,7 @@ def reduce(x: FrameArray, index: Index,
             if index.dtype == np.bool:
                 index = x.columns.unique(level)[index]
             index = tuple([index if i == level else slice(None)
-                          for i in range(n_levels)])
+                           for i in range(n_levels)])
         return x.loc[:, index]
     else:
         axis = axis + level
@@ -94,7 +93,7 @@ def reduce(x: FrameArray, index: Index,
         return x[index]
 
 
-def compute_mean(x: FrameArray, index: pd.DatetimeIndex = None) \
+def temporal_mean(x: FrameArray, index: pd.DatetimeIndex = None) \
         -> FrameArray:
     """Compute the mean values for each row.
 

@@ -44,7 +44,7 @@ intersphinx_mapping = {
 }
 
 html_theme_options = {
-    "sidebar_hide_name": True,
+    "sidebar_hide_name": False,
     "light_css_variables": {
         "color-brand-primary": "#ee4c2c",
         "color-brand-content": "#ee4c2c",
@@ -69,8 +69,8 @@ rst_context = {'tsl': tsl}
 add_module_names = False
 
 # OpenGraph metadata
-ogp_site_url = "https://torch-spatiotemporal.readthedocs.io/"
-ogp_image = ogp_site_url + "en/latest/_static/tsl_logo.svg"
+ogp_site_url = "https://torch-spatiotemporal.readthedocs.io/en/latest/"
+ogp_image = ogp_site_url + "_static/tsl_logo.svg"
 
 def setup(app):
     def skip(app, what, name, obj, skip, options):

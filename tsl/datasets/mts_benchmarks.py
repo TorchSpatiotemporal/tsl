@@ -26,7 +26,7 @@ class _MTSBenchmarkDataset(PandasDataset):
                  freq=None):
         self.root = root
         df, mask = self.load()
-        super().__init__(primary=df, mask=mask, freq=freq,
+        super().__init__(target=df, mask=mask, freq=freq,
                          similarity_score=self.default_similarity_score,
                          temporal_aggregation=self.default_temporal_aggregation,
                          spatial_aggregation=self.default_spatial_aggregation,
@@ -88,8 +88,6 @@ class ElectricityBenchmark(_MTSBenchmarkDataset):
     url = 'https://github.com/TorchSpatiotemporal/multivariate-time-series-data/blob/master/electricity/electricity.txt.gz?raw=true'
 
     similarity_options = None
-    temporal_aggregation_options = {'sum'}
-    spatial_aggregation_options = {'sum'}
 
     default_similarity_score = None
     default_temporal_aggregation = 'sum'
@@ -119,8 +117,6 @@ class TrafficBenchmark(_MTSBenchmarkDataset):
     url = 'https://github.com/TorchSpatiotemporal/multivariate-time-series-data/blob/master/traffic/traffic.txt.gz?raw=true'
 
     similarity_options = None
-    temporal_aggregation_options = {'mean'}
-    spatial_aggregation_options = {'mean'}
 
     default_similarity_score = None
     default_temporal_aggregation = 'mean'
@@ -152,8 +148,6 @@ class SolarBenchmark(_MTSBenchmarkDataset):
     url = 'https://github.com/TorchSpatiotemporal/multivariate-time-series-data/blob/master/solar-energy/solar_AL.txt.gz?raw=true'
 
     similarity_options = None
-    temporal_aggregation_options = {'mean'}
-    spatial_aggregation_options = {'sum'}
 
     default_similarity_score = None
     default_temporal_aggregation = 'mean'
@@ -183,8 +177,6 @@ class ExchangeBenchmark(_MTSBenchmarkDataset):
     url = 'https://github.com/TorchSpatiotemporal/multivariate-time-series-data/blob/master/exchange_rate/exchange_rate.txt.gz?raw=true'
 
     similarity_options = None
-    temporal_aggregation_options = {'mean'}
-    spatial_aggregation_options = None
 
     default_similarity_score = None
     default_temporal_aggregation = 'mean'

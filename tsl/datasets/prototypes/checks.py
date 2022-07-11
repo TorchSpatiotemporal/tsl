@@ -5,8 +5,6 @@ import numpy as np
 import pandas as pd
 import pandas.tseries.frequencies as pd_freq
 
-PATTERN_MATCH = re.compile('^(t?){2}(n?){2}[cf]*$')
-
 
 def to_nodes_channels_columns(df: pd.DataFrame,
                               inplace: bool = True) -> pd.DataFrame:
@@ -80,16 +78,6 @@ def convert_precision_numpy(arr: np.ndarray,
     if arr.dtype.name.startswith('int'):
         return arr.astype(f'int{precision}')
     return arr
-
-
-def check_pattern(pattern: str) -> str:
-    pattern_squeezed = pattern.replace(' ', '')
-    # check 'c'/'f' follows 'n', 'n' follows 't'
-    # allow for duplicate 'n' or 't' dims (e.g., 'n n', 't t n f')
-    # allow for limitless 'c'/'f' dims (e.g., 't n f f')
-    if not PATTERN_MATCH.match(pattern_squeezed):
-        raise RuntimeError(f'Pattern "{pattern}" not allowed.')
-    return ' '.join(pattern_squeezed)
 
 
 def to_pandas_freq(freq):
