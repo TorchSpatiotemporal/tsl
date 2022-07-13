@@ -46,6 +46,7 @@ class _GraphRNN(torch.nn.Module):
     """
     _n_states = None
     hidden_size: int
+    _cat_states_layers = False
 
     def _init_states(self, x):
         assert 'hidden_size' in self.__dict__, \
@@ -74,10 +75,16 @@ class _GraphRNN(torch.nn.Module):
         out = []
         for step in range(steps):
             h = self.single_pass(x[:, step], h, *args, **kwargs)
+            if not isinstance(h, torch.Tensor):
+                h_out, _ = h
+            else:
+                h_out = h
             # append hidden state of the last layer
-            h_out = h[-1]
-            if not isinstance(h_out, torch.Tensor):
-                h_out = h_out[0]
+            if self._cat_states_layers:
+                h_out = rearrange(h_out, 'l b n f -> b n (l f)')
+            else:
+                h_out = h_out[-1]
+
             out.append(h_out)
         out = torch.stack(out)
         # out: [steps, batch, nodes, channels]
