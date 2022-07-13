@@ -84,16 +84,15 @@ class GatedGraphNetworkModel(nn.Module):
             Rearrange('b n (h f) -> b h n f', h=horizon, f=output_size)
         )
 
-
     def forward(self, x, edge_index=None, u=None, **kwargs):
         """"""
         # x: [batches steps nodes features]
         x = utils.maybe_cat_exog(x, u)
 
         if self.full_graph or edge_index is None:
-            edges = torch.arange(x.size(-2), device=x.device)
-            edge_index = torch.combinations(edges, 2).T
-            edge_index = torch.cat([edge_index, edge_index[[1, 0]]], 1)
+            num_nodes = x.size(-2)
+            nodes = torch.arange(num_nodes, device=x.device)
+            edge_index = torch.cartesian_prod(nodes, nodes).T
 
         # flat time dimension
         x = rearrange(x[:, -self.input_window_size:], 'b s n f -> b n (s f)')
