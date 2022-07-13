@@ -6,6 +6,7 @@ from torch import Tensor
 from torch.utils.data.dataloader import default_collate
 
 from .data import Data
+from .preprocessing import ScalerModule
 
 
 def _collate_scaler_modules(batch: List[Mapping[str, Any]]):
@@ -13,13 +14,15 @@ def _collate_scaler_modules(batch: List[Mapping[str, Any]]):
     for k, v in transform.items():
         # scaler params are supposed to be the same for all elements in
         # minibatch, just add a fake, 1-sized, batch dimension
+        scaler = ScalerModule()
         if v.bias is not None:
-            transform[k].bias = transform[k].bias[None]
+            scaler.bias = transform[k].bias[None]
         if v.scale is not None:
-            transform[k].scale = transform[k].scale[None]
+            scaler.scale = transform[k].scale[None]
         if v.trend is not None:
             trend = torch.stack([b[k].trend for b in batch], 0)
-            transform[k].trend = trend
+            scaler.trend = trend
+        transform[k] = scaler
     return transform
 
 
