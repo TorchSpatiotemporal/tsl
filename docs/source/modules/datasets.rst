@@ -34,14 +34,14 @@ parent class for every dataset in tsl. The more complete class
 multivariate time series datasets that can be expressed by
 :class:`pandas.DataFrame`.
 
+.. currentmodule:: tsl.datasets.prototypes.
+
 .. autosummary::
    :nosignatures:
-   {% for cls in tsl.datasets.prototype_classes %}
+   {% for cls in tsl.datasets.prototypes.classes %}
      {{ cls }}
    {% endfor %}
 
-.. autoclass:: Dataset
-    :inherited-members:
-
-.. autoclass:: PandasDataset
+.. automodule:: tsl.datasets.prototypes
+    :members: {% for cls in tsl.datasets.prototypes.classes %}{{ cls }}, {% endfor %}
     :inherited-members:

@@ -16,10 +16,13 @@ def to_nodes_channels_columns(df: pd.DataFrame,
                                              names=['nodes', 'channels'])
         df.columns = columns
     elif df.columns.nlevels == 2:
-        df.columns.names = ['nodes', 'channels']
-        # make tabular
-        df = df.reindex(columns=df.columns.unique(0), level=0)
-        df = df.reindex(columns=df.columns.unique(1), level=1)
+        # # make tabular
+        cols = [df.columns.unique(i) for i in range(2)]
+        cols = pd.MultiIndex.from_product(cols, names=['nodes', 'channels'])
+        if not df.columns.equals(cols):
+            df = df.reindex(columns=cols)
+        else:
+            df.columns.names = ['nodes', 'channels']
     else:
         raise ValueError("Input dataframe must have either 1 ('nodes') "
                          "or 2 ('nodes', 'channels') column levels.")
