@@ -1,16 +1,13 @@
+from types import ModuleType
 from typing import Optional, Tuple, Union
 
 import numpy as np
 import torch
+import torch_sparse
 from scipy.sparse import coo_matrix
 from torch import Tensor
-from torch_geometric.utils import dense_to_sparse, to_scipy_sparse_matrix, \
-    from_scipy_sparse_matrix
-from torch_geometric.utils.num_nodes import maybe_num_nodes as pyg_num_nodes
-from torch_geometric.utils import erdos_renyi_graph
 from torch_sparse import SparseTensor
-
-from tsl.typing import TensArray, OptTensArray
+from tsl.typing import TensArray, OptTensArray, SparseTensArray
 
 
 def maybe_num_nodes(edge_index, num_nodes=None):
@@ -18,36 +15,39 @@ def maybe_num_nodes(edge_index, num_nodes=None):
         return num_nodes
     elif isinstance(edge_index, np.ndarray):
         return int(edge_index.max()) + 1 if edge_index.size > 0 else 0
+    elif isinstance(edge_index, Tensor):
+        return int(edge_index.max()) + 1 if edge_index.numel() > 0 else 0
     else:
-        return pyg_num_nodes(edge_index, num_nodes)
+        return max(edge_index.size(0), edge_index.size(1))
+
+
+def infer_backend(obj, backend: ModuleType = None):
+    if backend is not None:
+        return backend
+    elif isinstance(obj, Tensor):
+        return torch
+    elif isinstance(obj, np.ndarray):
+        return np
+    elif isinstance(obj, SparseTensor):
+        return torch_sparse
+    raise RuntimeError(f"Cannot infer valid backed from {type(obj)}.")
 
 
 def convert_torch_connectivity(connectivity: Union[Tensor, SparseTensor],
                                target_layout: str,
                                input_layout: Optional[str] = None,
                                num_nodes: Optional[int] = None):
-    formats = ['dense', 'sparse', 'edge_index']
-    assert (input_layout is None or input_layout in formats) \
-           and target_layout in formats
-    weights = None
+    formats = [None, 'dense', 'sparse', 'edge_index']
+    assert input_layout in formats and target_layout in formats[1:]
 
-    if input_layout == 'dense':
-        assert isinstance(connectivity, Tensor) \
-               and connectivity.size(0) == connectivity.size(1)
-    elif input_layout == 'sparse':
-        assert isinstance(connectivity, SparseTensor)
-    elif input_layout == 'edge_index':
-        if isinstance(connectivity, (list, tuple)):
-            connectivity, weights = connectivity
-        assert isinstance(connectivity, Tensor) \
-               and connectivity.size(0) == 2 and connectivity.ndim == 2
-        connectivity = (connectivity, weights)
+    edge_attr = None
 
-    elif input_layout is None:
+    # infer input_layout from data
+    if input_layout is None:
         if isinstance(connectivity, SparseTensor):
             input_layout = 'sparse'
         elif isinstance(connectivity, (list, tuple)):
-            connectivity, weights = connectivity
+            connectivity, edge_attr = connectivity
         if isinstance(connectivity, Tensor):
             if connectivity.size(0) == connectivity.size(1):
                 if connectivity.size(0) == 2 and connectivity.ndim == 2:
@@ -56,18 +56,32 @@ def convert_torch_connectivity(connectivity: Union[Tensor, SparseTensor],
                 input_layout = 'dense'
             elif connectivity.size(0) == 2 and connectivity.ndim == 2:
                 input_layout = 'edge_index'
-                connectivity = (connectivity, weights)
-
+                connectivity = (connectivity, edge_attr)
+    # if input_layout is still None, it cannot be inferred
     if input_layout is None:
         raise RuntimeError("Cannot infer input_format from connectivity.")
+
+    # check input_layout matches data
+    if input_layout == 'dense':
+        assert isinstance(connectivity, Tensor) \
+               and connectivity.size(-2) == connectivity.size(-1)
+    elif input_layout == 'sparse':
+        assert isinstance(connectivity, SparseTensor) \
+               and connectivity.dim() == 2
+    elif input_layout == 'edge_index':
+        if isinstance(connectivity, (list, tuple)):
+            connectivity, edge_attr = connectivity
+        assert isinstance(connectivity, Tensor) \
+               and connectivity.size(0) == 2 and connectivity.ndim == 2
+        connectivity = (connectivity, edge_attr)
 
     if input_layout == target_layout:
         return connectivity
 
     # edge index -> sparse tensor
     if input_layout == 'edge_index' and target_layout == 'sparse':
-        edge_index, edge_weights = connectivity
-        return SparseTensor.from_edge_index(edge_index, edge_weights,
+        edge_index, edge_attr = connectivity
+        return SparseTensor.from_edge_index(edge_index, edge_attr,
                                             (num_nodes, num_nodes)).t()
     # edge index -> dense tensor
     if input_layout == 'edge_index' and target_layout == 'dense':
@@ -84,32 +98,51 @@ def convert_torch_connectivity(connectivity: Union[Tensor, SparseTensor],
         return connectivity.to_dense()
     # sparse tensor -> edge index
     if input_layout == 'sparse' and target_layout == 'edge_index':
-        row, col, edge_weight = connectivity.t().coo()
+        row, col, edge_attr = connectivity.t().coo()
         edge_index = torch.stack([row, col], dim=0)
-        return edge_index, edge_weight
+        return edge_index, edge_attr
 
 
-def adj_to_edge_index(adj: TensArray) -> Tuple[TensArray, TensArray]:
+def adj_to_edge_index(adj: TensArray, backend: ModuleType = None) \
+        -> Tuple[TensArray, TensArray]:
     """Convert adjacency matrix from dense layout to (:obj:`edge_index`,
     :obj:`edge_weight`) tuple. The input adjacency matrix is transposed before
     conversion.
 
     Args:
-        adj: dense adjacency matrix as torch.Tensor or np.ndarray.
+        adj (TensArray): dense adjacency matrix as :class:`~torch.Tensor` or
+            :class:`~numpy.ndarray`.
+        backend (ModuleType, optional): backend matching :obj:`adj` type (either
+            :mod:`numpy` or :mod:`torch`), if :obj:`None` it is inferred from
+            :obj:`adj` type.
+            (default :obj:`None`)
 
     Returns:
         tuple: (:obj:`edge_index`, :obj:`edge_weight`) tuple of same type of
-            :obj:`adj` (torch.Tensor or np.ndarray).
-
+            :obj:`adj` (:class:`~torch.Tensor` or :class:`~numpy.ndarray`).
     """
-    adj = adj.T
-    if isinstance(adj, Tensor):
-        return dense_to_sparse(adj)
+    backend = infer_backend(adj, backend)
+
+    assert backend in [torch, np]
+    assert 2 <= adj.ndim <= 3
+    assert adj.shape[-1] == adj.shape[-2]
+
+    if backend is torch:
+        adj = torch.transpose(adj, -2, -1)
+        index = adj.nonzero(as_tuple=True)
     else:
-        idxs = np.nonzero(adj)
-        edge_index = np.stack(idxs)
-        edge_weights = adj[idxs]
-        return edge_index, edge_weights
+        adj = np.swapaxes(adj, -2, -1)  # transpose
+        index = adj.nonzero()
+
+    edge_attr = adj[index]
+
+    if len(index) == 3:
+        batch = index[0] * adj.shape[-1]
+        index = (batch + index[1], batch + index[2])
+
+    edge_index = backend.stack(index, 0)
+
+    return edge_index, edge_attr
 
 
 def edge_index_to_adj(edge_index: TensArray,
@@ -130,8 +163,10 @@ def edge_index_to_adj(edge_index: TensArray,
     return adj.T
 
 
-def transpose(edge_index: TensArray, edge_weights: OptTensArray = None) \
+def transpose(edge_index: SparseTensArray, edge_weights: OptTensArray = None) \
         -> Union[TensArray, Tuple[TensArray, TensArray]]:
+    if isinstance(edge_index, SparseTensor):
+        return edge_index.t()
     if edge_weights is not None:
         return edge_index[[1, 0]], edge_weights
     return edge_index[[1, 0]]
@@ -162,9 +197,9 @@ def weighted_degree(index: TensArray, weights: OptTensArray = None,
     return out
 
 
-def normalize(edge_index: TensArray, edge_weights: OptTensArray = None,
+def normalize(edge_index: SparseTensArray, edge_weights: OptTensArray = None,
               dim: int = 0, num_nodes: Optional[int] = None) \
-        -> Tuple[TensArray, TensArray]:
+        -> Tuple[SparseTensArray, OptTensArray]:
     r"""Normalize edge weights across dimension :obj:`dim`.
 
     .. math::
@@ -177,13 +212,17 @@ def normalize(edge_index: TensArray, edge_weights: OptTensArray = None,
         num_nodes (int, optional): The number of nodes, *i.e.*
             :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
     """
+    backend = infer_backend(edge_index)
+
+    if backend is torch_sparse:
+        assert edge_weights is None
+        deg = edge_index.sum(dim=dim).to(torch.float)
+        deg_inv = deg.pow(-1.0)
+        deg_inv[deg_inv == float('inf')] = 0
+        edge_index = deg_inv.view(-1, 1) * edge_index
+        return edge_index, None
+
     index = edge_index[dim]
-    if edge_weights is None:
-        if isinstance(edge_index, Tensor):
-            edge_weights = torch.ones(edge_index.size(1), dtype=torch.int,
-                                      device=edge_index.device)
-        else:
-            edge_weights = np.ones(edge_index.shape[1], dtype=np.int)
     degree = weighted_degree(index, edge_weights, num_nodes=num_nodes)
     return edge_index, edge_weights / degree[index]
 
@@ -203,6 +242,8 @@ def power_series(edge_index: TensArray, edge_weights: OptTensArray = None,
     """
     N = maybe_num_nodes(edge_index, num_nodes)
     if isinstance(edge_index, Tensor):
+        from torch_geometric.utils import to_scipy_sparse_matrix, \
+            from_scipy_sparse_matrix
         coo = to_scipy_sparse_matrix(edge_index, edge_weights, N)
         coo = coo ** k
         return from_scipy_sparse_matrix(coo)
@@ -214,26 +255,31 @@ def power_series(edge_index: TensArray, edge_weights: OptTensArray = None,
         return np.stack([coo.row, coo.col], 0).astype(np.int64), coo.data
 
 
-def get_dummy_edge_index(dummy, num_nodes, edge_prob=0.1, directed=True, device=None):
-    r"""
-    Create an edge index corresponding to a certain dummy connectivity (e.g., full graph).
+def get_dummy_edge_index(dummy: str, num_nodes: int,
+                         edge_prob: float = 0.1, directed: bool = True,
+                         device=None):
+    r"""Create an edge index corresponding to a certain dummy connectivity
+    (e.g., full graph).
 
     Args:
-        dummy: The dummy connectivity, can be one of `identity` (`A`=`I`), `full` (`A = np.ones(N, N)`), `random` or
-            `none`.
-        num_nodes: Number of nodes.
-        edge_prob: Edge probability for the random graph.
-        directed: Whether to generate a directed/undirected graph.
-        device: Device for the created tensor.
-
-    Returns:
-
+        dummy (str): The dummy connectivity, can be one of :obj:`"identity"`
+            (`A`=`I`), :obj:`"full"` (`A = np.ones(N, N)`), :obj:`"random"` or
+            `:obj:`"none"` (returns :obj:`None`).
+        num_nodes (int): Number of nodes in the graph.
+        edge_prob (float): Edge probability for the random graph.
+            (default :obj:`0.1`)
+        directed (bool): Whether to generate a directed/undirected graph.
+            (default :obj:`True`)
+        device (optional): Device for the created tensor.
+            (default :obj:`None`)
     """
     if dummy == 'identity':
         nodes = torch.arange(num_nodes, device=device)
         edge_index = torch.stack([nodes, nodes])
     elif dummy == 'random':
-        edge_index = erdos_renyi_graph(num_nodes, edge_prob, directed=directed).to(device)
+        from torch_geometric.utils import erdos_renyi_graph
+        edge_index = erdos_renyi_graph(num_nodes, edge_prob,
+                                       directed=directed).to(device)
     elif dummy == 'full':
         nodes = torch.arange(num_nodes, device=device)
         edge_index = torch.cartesian_prod(nodes, nodes).T

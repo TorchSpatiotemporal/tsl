@@ -1,5 +1,6 @@
 from typing import Optional
 
+import torch
 from einops import rearrange
 from torch import nn
 from torch.nn import functional as F
@@ -36,6 +37,8 @@ def get_functional_activation(activation: Optional[str] = None):
     activation = activation.lower()
     if activation == 'linear':
         return _identity
+    if activation in ['tanh', 'sigmoid']:
+        return getattr(torch, activation)
     if activation in _torch_activations_dict:
         return getattr(F, activation)
     raise ValueError(f"Activation '{activation}' not valid.")
@@ -54,7 +57,8 @@ def maybe_cat_exog(x, u, dim=-1):
     r"""
     Concatenate `x` and `u` if `u` is not `None`.
 
-    We assume `x` to be a 4-dimensional tensor, if `u` has only 3 dimensions we assume it to be a global exog variable.
+    We assume `x` to be a 4-dimensional tensor, if `u` has only 3 dimensions we
+    assume it to be a global exog variable.
 
     Args:
         x: Input 4-d tensor.
