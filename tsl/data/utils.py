@@ -138,8 +138,8 @@ def broadcast(x, pattern: str,
                      for i in range(x.ndim)]
             x = x.expand(shape)
             left_dims.insert(pos, rght_dim)
-        elif rght_dim == 's' and step_index is not None:
+        elif rght_dim == 's' and step_index is not None and x.size(pos) > 1:
             x = x.index_select(pos, step_index)
-        elif rght_dim == 'n' and node_index is not None:
+        elif rght_dim == 'n' and node_index is not None and x.size(pos) > 1:
             x = x.index_select(pos, node_index)
     return x
