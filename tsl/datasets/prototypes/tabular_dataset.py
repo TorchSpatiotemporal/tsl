@@ -94,7 +94,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
 
         from .pd_dataset import PandasDataset
         if not isinstance(self, PandasDataset) \
-                and checks.is_datetime_like_index(self.index):
+                and casting.is_datetime_like_index(self.index):
             logger.warn("It seems you have timestamped data. You may "
                         "consider to use DateTimeDataset instead.")
 

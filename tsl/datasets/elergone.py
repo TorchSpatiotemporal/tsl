@@ -120,7 +120,7 @@ class Elergone(PandasDataset):
 
         x = np.asarray(train_df) * mask[..., -1]
         if method == 'correntropy':
-            period = checks.to_pandas_freq('1D').nanos // self.freq.nanos
+            period = casting.to_pandas_freq('1D').nanos // self.freq.nanos
             x = (x - x.mean()) / x.std()
             sim = sims.correntropy(x, period=period, mask=mask, gamma=gamma)
         else:
