@@ -1,9 +1,12 @@
-from tsl.utils import parser_utils
-import tsl
 import os
 import warnings
-import numpy as np
 
+import numpy as np
+from test_tube import HyperOptArgumentParser as ArgParser
+
+import tsl
+from tsl.utils import parser_utils
+from tsl.utils.python_utils import ensure_list
 
 class TslExperiment:
     r"""
@@ -16,7 +19,7 @@ class TslExperiment:
         debug: Whether to run the experiment in debug mode.
         config_path: Path to configuration files, if not specified the default will be used.
     """
-    def __init__(self, run_fn, parser: parser_utils.ArgParser, debug=False, config_path=None):
+    def __init__(self, run_fn, parser: ArgParser, debug=False, config_path=None):
         self.run_fn = run_fn
         self.parser = parser
         self.debug = debug
@@ -37,6 +40,10 @@ class TslExperiment:
             if hasattr(self.parser, 'parsed_args'):
                 self.parser.parsed_args.update(experiment_config)
         return hparams
+
+    def make_run_dir(self):
+        """Create directory to store run logs and artifacts."""
+        raise NotImplementedError
 
     def run(self):
         hparams = self.parser.parse_args()
@@ -64,7 +71,13 @@ class TslExperiment:
             except RuntimeError as err:
                 print(f'Trial n. {i} failed due to a Runtime error: {err}')
 
-    def run_search_parallel(self, n, workers):
+    def run_search_parallel(self, n, workers, gpus=None):
         hparams = self.parser.parse_args()
         hparams = self._check_config(hparams)
-        hparams.optimize_parallel_cpu(self.run_fn, nb_trials=n, nb_workers=workers)
+        if gpus is None:
+            hparams.optimize_parallel_cpu(self.run_fn, nb_trials=n,
+                                          nb_workers=workers)
+        else:
+            gpus = ensure_list(gpus)
+            hparams.optimize_parallel_gpu(self.run_fn, max_nb_trials=n,
+                                          gpu_ids=gpus)

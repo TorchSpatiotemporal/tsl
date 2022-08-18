@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Tuple, List, Union
 
 import numpy as np
@@ -85,11 +86,25 @@ class Scaler:
         """
         return dict(bias=self.bias, scale=self.scale)
 
-    def torch(self):
-        for name, param in self.params().items():
+    def torch(self, inplace=True):
+        scaler = self
+        if not inplace:
+            scaler = deepcopy(self)
+        for name, param in scaler.params().items():
             param = torch.atleast_1d(torch.as_tensor(param))
-            setattr(self, name, param)
-        return self
+            setattr(scaler, name, param)
+        return scaler
+
+    def numpy(self, inplace=True):
+        r"""Transform all tensors to numpy arrays."""
+        scaler = self
+        if not inplace:
+            scaler = deepcopy(self)
+        for name, param in scaler.params().items():
+            if isinstance(param, Tensor):
+                param = param.detach().cpu().numpy()
+            setattr(scaler, name, param)
+        return scaler
 
     @fit_wrapper
     def fit(self, x: TensArray, *args, **kwargs):
@@ -335,6 +350,7 @@ class ScalerModule(Module):
         if len(tensors) == 0:
             return None
         # get dtype and device of first tensor
+        # todo check this, error when first tensor has no scaler
         dtype, device = tensors[0].dtype, tensors[0].device
         # for each scaler (also the ones with no tensor to be concatenated)
         # retrieve the tensor (or create one if not present) and the broadcast

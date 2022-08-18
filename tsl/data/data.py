@@ -184,9 +184,9 @@ class Data(PyGData):
     def has_mask(self):
         return self.get('mask') is not None
 
-    @property
-    def edge_weight(self) -> Any:
-        return self.get('edge_weight')
+    # @property
+    # def edge_weight(self) -> Any:
+    #     return self.get('edge_weight')
 
     def numpy(self, *args: List[str]):
         r"""Transform all tensors to numpy arrays, either for all

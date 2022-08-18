@@ -40,6 +40,7 @@ class TslNeptuneLogger(NeptuneLogger):
     def log_metric(self, metric_name: str,
                    metric_value: Union[Tensor, float, str],
                    step: Optional[int] = None):
+        # todo log metric series at once
         self.run[f'logs/{metric_name}'].log(metric_value, step)
 
     def log_artifact(self, filename: str, artifact_name: Optional[str] = None,

@@ -12,7 +12,7 @@ Connectivity
 DataFrame
 ---------
 
-.. automodule:: tsl.ops.dataframe
+.. automodule:: tsl.ops.framearray
    :members:
 
 Imputation

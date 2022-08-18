@@ -51,6 +51,8 @@ def static_graph_collate(batch: List[Data], cls: Optional[type] = None) -> Data:
         out[k], pattern = _collate([b[k] for b in batch], k, pattern)
         if pattern is not None:
             out.pattern[k] = pattern
+
+    out.__dict__['batch_size'] = len(batch)
     return out
 
 

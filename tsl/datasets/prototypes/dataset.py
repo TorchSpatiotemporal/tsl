@@ -19,10 +19,7 @@ from torch import TensorType
 import tsl
 from tsl import logger, config
 from ...data.datamodule import splitters, Splitter
-from ...ops.similarities import top_k
-from tsl.ops.connectivity import adj_to_edge_index
 from ...typing import ScipySparseMatrix
-from ...utils import preprocessing
 from ...utils.io import save_pickle, load_pickle
 from ...utils.python_utils import ensure_list, files_exist, hash_dict
 
@@ -42,8 +39,6 @@ class Dataset(object):
     root: Optional[str] = None
 
     similarity_options: Optional[Set] = None
-    temporal_aggregation_options: Optional[Set] = None
-    spatial_aggregation_options: Optional[Set] = None
 
     def __init__(self, name: Optional[str] = None,
                  similarity_score: Optional[str] = None,
@@ -58,17 +53,8 @@ class Dataset(object):
                 raise ValueError("{} is not a valid similarity method."
                                  .format(similarity_score))
         self.similarity_score = similarity_score
-        # Set temporal aggregation method
-        if self.temporal_aggregation_options is not None:
-            if temporal_aggregation not in self.temporal_aggregation_options:
-                raise ValueError("{} is not a valid temporal aggregation "
-                                 "method.".format(temporal_aggregation))
+        # Set aggregation methods
         self.temporal_aggregation = temporal_aggregation
-        # Set spatial aggregation method
-        if self.spatial_aggregation_options is not None:
-            if spatial_aggregation not in self.spatial_aggregation_options:
-                raise ValueError("{} is not a valid spatial aggregation "
-                                 "method.".format(spatial_aggregation))
         self.spatial_aggregation = spatial_aggregation
         # Set splitting method
         self.default_splitting_method = default_splitting_method
@@ -232,8 +218,8 @@ class Dataset(object):
         raise NotImplementedError
 
     def load(self, *args, **kwargs):
-        """Loads raw dataset and preprocess data."""
-        raise NotImplementedError
+        """Loads raw dataset and preprocess data. Default to :obj:`load_raw`."""
+        return self.load_raw(*args, **kwargs)
 
     def clean_downloads(self):
         for file in self.raw_files_paths:
@@ -360,17 +346,18 @@ class Dataset(object):
 
     def get_connectivity(self, method: Optional[str] = None,
                          threshold: Optional[float] = None,
-                         knn: Optional[int] = None, include_self: bool = True,
+                         knn: Optional[int] = None,
+                         binary_weights: bool = False,
+                         include_self: bool = True,
                          force_symmetric: bool = False,
                          normalize_axis: Optional[int] = None,
                          layout: str = 'edge_index',
                          **kwargs) -> Union[ndarray, Tuple, ScipySparseMatrix]:
-        r"""Returns the weighted adjacency matrix :math:`\mathbf{W} \in
-        \mathbb{R}^{N \\times N}`, where :math:`N=`:obj:`self.n_nodes`. The
-        element :math:`w_{i,j} \in \mathbf{W}` is 0 if there not exists an edge
-        connecting node :math:`i` to node :math:`j`. If `sparse`, returns edge
-        index :math:`\mathcal{E}` and edge weights :math:`\mathbf{w} \in
-        \mathbb{R}^{|\mathcal{E}|}` (default: :obj:`True`).
+        r"""Returns the weighted adjacency matrix :math:`\mathbf{A} \in
+        \mathbb{R}^{N \times N}`, where :math:`N=`:obj:`self.n_nodes`. The
+        element :math:`a_{i,j} \in \mathbf{A}` is 0 if there not exists an edge
+        connecting node :math:`i` to node :math:`j`. The return type depends on
+        the specified :obj:`layout` (default: :obj:`edge_index`).
 
         Args:
             method (str, optional): Method for the similarity computation. If
@@ -386,17 +373,23 @@ class Dataset(object):
             force_symmetric (bool): Force adjacency matrix to be symmetric by
                 taking the maximum value between the two directions for each
                 edge. (default: :obj:`False`)
-            normalize_axis (int, optional): Divide edge weight :math:`w_{i, j}`
-                by :math:`\sum_k w_{i, k}`, if :obj:`normalize_axis=0` or
-                :math:`\sum_k w_{k, j}`, if :obj:`normalize_axis=1`. :obj:`None`
+            normalize_axis (int, optional): Divide edge weight :math:`a_{i, j}`
+                by :math:`\sum_k a_{i, k}`, if :obj:`normalize_axis=0` or
+                :math:`\sum_k a_{k, j}`, if :obj:`normalize_axis=1`. :obj:`None`
                 for no normalization.
                 (default: :obj:`None`)
             layout (str): Convert matrix to a dense/sparse format. Available
                 options are:
-                  - dense: keep matrix dense
-                  - edge_index: convert to (edge_index, edge_weight) tuple
-                  - coo, csr, csc: convert to specified scipy sparse matrix
-                (default: 'dense')
+
+                - :obj:`dense`: keep matrix dense :math:`\mathbf{A} \in
+                  \mathbb{R}^{N \times N}`.
+                - :obj:`edge_index`: convert to (edge_index, edge_weight) tuple,
+                  where edge_index has shape :math:`[2, E]` and edge_weight has
+                  shape :math:`[E]`, being :math:`E` the number of edges.
+                - :obj:`coo`/:obj:`csr`/:obj:`csc`: convert to specified scipy
+                  sparse matrix type.
+
+                (default: 'edge_index')
             **kwargs (optional): Additional optional keyword arguments for
                 similarity computation.
 
@@ -415,10 +408,14 @@ class Dataset(object):
             adj = np.eye(self.n_nodes)
         else:
             adj = self.get_similarity(method, **kwargs)
+        if knn is not None:
+            from tsl.ops.similarities import top_k
+            adj = top_k(adj, knn, include_self=include_self,
+                        keep_values=not binary_weights)
+        elif binary_weights:
+            adj = (adj > 0).astype(adj.dtype)
         if threshold is not None:
             adj[adj < threshold] = 0
-        if knn is not None:
-            adj = top_k(adj, knn, include_self=include_self)
         if not include_self:
             np.fill_diagonal(adj, 0)
         if force_symmetric:
@@ -428,6 +425,7 @@ class Dataset(object):
         if layout == 'dense':
             return adj
         elif layout == 'edge_index':
+            from tsl.ops.connectivity import adj_to_edge_index
             return adj_to_edge_index(adj)
         elif layout == 'coo':
             return coo_matrix(adj)
@@ -456,9 +454,7 @@ class Dataset(object):
         Args:
             node_index: Sequence of grouped node ids.
         """
-        return preprocessing.aggregate(self.dataframe(),
-                                       node_index,
-                                       self.spatial_aggregation)
+        raise NotImplementedError
 
     # Getters for SpatioTemporalDataset
 

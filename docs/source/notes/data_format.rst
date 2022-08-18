@@ -1,23 +1,24 @@
 Data format
 ===========
 
-TSL is meant to deal with spatio-temporal data. Therefore, common input examples
-are data streams coming from sensor networks. In principle, such data can be
-naturally casted into 3 dimensions:
+TSL is meant to deal with discrete-time, spatio-temporal data. Therefore, common input examples
+are data streams coming from sensor networks. In principle, data of this kind can be
+represented by 3-dimensional tensors, with:
 
-#. The **Step** dimension, accounting for the temporal evolution of the signal within a node (i.e., a sensor).
-#. The **Node** dimension, accounting for the observations measured at the different nodes in the network.
-#. The **Channel** dimension, allowing for multiple, heterogeneous measurements.
+#. The **Time** (:math:`T`) dimension, accounting for the temporal evolution of the signal within a node (i.e., a sensor).
+#. The **Node** (:math:`N`) dimension, accounting for simultaneous observations measured at the different nodes in the network in a discrete time step.
+#. The **Features** (:math:`F`) or **Channels** dimension, allowing for multiple (heterogeneous) measurements at the same spatio-temporal point.
 
 As a real-life example, you may think of an air quality monitoring system, in
-which hundreds stations are displaced in a wide geographic area, with every
-station measuring common pollution parameters, like [:obj:`PM2.5`, :obj:`PM10`, :obj:`CO2`].
+which :math:`N` air quality monitoring stations are displaced in a geographic area, with every
+station measuring :math:`F` different pollution parameters (like :math:`\text{PM}2.5, \text{PM}10, \text{CO}_2`).
+In this example, the sizes of the node and features dimensions are :math:`N` and :math:`F`, respectively.
 
-"S N C" Convention
+The "T N F" Convention
 ------------------
 
-In TSL, we order multi-dimensional data by following the "Step, Node, Channel"
-("S N C") convention. Considering the previous example, we represent measurements
+In TSL, tabular data of this form are represented by following the [Time, Node, Features]
+(T N F) convention. Considering the previous example, we represent measurements
 acquired by 400 air quality monitoring stations in a day (with a sampling interval
 of one hour) as a tensor :math:`\mathbf{X}` with dimensions :math:`\left(24, 400, 3 \right)`.
 

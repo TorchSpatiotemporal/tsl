@@ -55,7 +55,8 @@ class DataParsingMixin:
     def _parse_adj(self, connectivity: Union[SparseTensArray, Tuple[DataArray]],
                    target_layout: Optional[str] = None
                    ) -> Tuple[Optional[Adj], Optional[Tensor]]:
-        # format in [sparse, edge_index, None], where None means keep as input
+        # target_layout in [dense, sparse, edge_index, None]
+        # where None means keep as input
         if connectivity is None:
             return None, None
 
@@ -66,7 +67,7 @@ class DataParsingMixin:
         elif isinstance(connectivity, (list, tuple)):
             connectivity = recursive_apply(connectivity, utils.copy_to_tensor)
         # from scipy sparse matrix
-        elif isinstance(connectivity, ScipySparseMatrix):
+        elif isinstance(connectivity, ScipySparseMatrix.__args__):
             connectivity = SparseTensor.from_scipy(connectivity)
         elif not isinstance(connectivity, SparseTensor):
             raise TypeError("`connectivity` must be a dense matrix or in "

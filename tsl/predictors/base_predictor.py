@@ -243,7 +243,7 @@ class Predictor(pl.LightningModule):
     def training_step(self, batch, batch_idx):
 
         y = y_loss = batch.y
-        mask = batch.mask
+        mask = batch.get('mask')
 
         # Compute predictions and compute loss
         y_hat_loss = self.predict_batch(batch, preprocess=False,
@@ -267,7 +267,7 @@ class Predictor(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
 
         y = y_loss = batch.y
-        mask = batch.mask
+        mask = batch.get('mask')
 
         # Compute predictions
         y_hat_loss = self.predict_batch(batch, preprocess=False,
@@ -293,7 +293,7 @@ class Predictor(pl.LightningModule):
         # Compute outputs and rescale
         y_hat = self.predict_batch(batch, preprocess=False, postprocess=True)
 
-        y, mask = batch.y, batch.mask
+        y, mask = batch.y, batch.get('mask')
         test_loss = self.loss_fn(y_hat, y, mask)
 
         # Logging

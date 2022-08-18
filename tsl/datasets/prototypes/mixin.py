@@ -1,84 +1,103 @@
+from typing import Union, Optional, List, Tuple, Mapping
+
 import numpy as np
 import pandas as pd
-
-from tsl.ops.dataframe import to_numpy
-from . import checks
-from ...typing import FrameArray
+from . import casting
+from ...ops.framearray import framearray_shape, framearray_to_numpy
+from ...ops.pattern import check_pattern
+from ...typing import FrameArray, DataArray
 from ...utils.python_utils import ensure_list
 
 
-class PandasParsingMixin:
+class TabularParsingMixin:
 
-    def _parse_dataframe(self, df: pd.DataFrame, node_level: bool = True):
-        assert checks.is_datetime_like_index(df.index)
-        if node_level:
-            df = checks.to_nodes_channels_columns(df)
+    def _parse_target(self, obj: FrameArray) -> FrameArray:
+        # if target is DataFrame
+        if isinstance(obj, pd.DataFrame):
+            casting.to_nodes_channels_columns(obj)
+            obj = casting.convert_precision_df(obj, precision=self.precision)
+        # if target is array-like
         else:
-            df = checks.to_channels_columns(df)
-        df = checks.cast_df(df, precision=self.precision)
-        return df
+            obj = np.asarray(obj)
+            # reshape to [time, nodes, features]
+            while obj.ndim < 3:
+                obj = obj[..., None]
+            assert obj.ndim == 3, \
+                "Target signal must be 3-dimensional with pattern 't n f'."
+            obj = casting.convert_precision_numpy(obj, precision=self.precision)
+        return obj
 
-    def _to_indexed_df(self, array: np.ndarray):
-        if array.ndim == 1:
-            array = array[..., None]
-        # check shape equivalence
-        time, channels = array.shape
-        if time != self.length:
-            raise ValueError("Cannot match temporal dimensions {} and {}"
-                             .format(time, self.length))
-        return pd.DataFrame(array, self.index)
+    def _parse_covariate(self, obj: FrameArray, pattern: Optional[str] = None) \
+            -> Tuple[FrameArray, str]:
+        # compute object shape
+        shape = framearray_shape(obj)
+        # infer pattern if it is None
+        if pattern is None:
+            pattern = self._infer_pattern(shape)
+        # check that pattern and shape match
+        pattern = check_pattern(pattern)
+        dims = pattern.strip().split(' ')
 
-    def _to_primary_df_schema(self, array: np.ndarray):
-        array = np.asarray(array)
-        while array.ndim < 3:
-            array = array[..., None]
-        # check shape equivalence
-        time, nodes, channels = array.shape
-        if time != self.length:
-            raise ValueError("Cannot match temporal dimensions {} and {}"
-                             .format(time, self.length))
-        if nodes != self.n_nodes:
-            raise ValueError("Cannot match nodes dimensions {} and {}"
-                             .format(nodes, self.n_nodes))
-        array = array.reshape(time, nodes * channels)
-        columns = self.columns(channels=pd.RangeIndex(channels))
-        return pd.DataFrame(array, self.index, columns)
-
-    def _synch_with_primary(self, df: pd.DataFrame):
-        assert hasattr(self, 'df'), \
-            "Cannot call this method before setting primary dataframe."
-        if df.columns.nlevels == 2:
-            nodes = set(df.columns.unique(0))
-            channels = list(df.columns.unique(1))
-            assert nodes.issubset(self.nodes), \
-                "You are trying to add an exogenous dataframe with nodes that" \
-                " are not in the dataset."
-            columns = self.columns(channels=channels)
-            df = df.reindex(index=self.index, columns=columns)
-        elif df.columns.nlevels == 1:
-            df = df.reindex(index=self.index)
+        if isinstance(obj, pd.DataFrame):
+            assert self.is_target_dataframe, \
+                "Cannot add DataFrame covariates if target is ndarray."
+            obj = obj.reindex(index=casting.token_to_index_df(
+                self, dims[0], obj.index))
+            for lvl, tkn in enumerate(dims[1:]):
+                columns = casting.token_to_index_df(
+                    self, tkn, obj.columns.unique(lvl))
+                obj.reindex(columns=columns, level=lvl)
+            obj = casting.convert_precision_df(obj, precision=self.precision)
         else:
-            raise ValueError("Input dataframe must have either 1 ('nodes' or "
-                             "'channels') or 2 ('nodes', 'channels') column "
-                             "levels.")
-        return df
+            obj = np.asarray(obj)
+            # check shape
+            for d, s in zip(dims, obj.shape):
+                casting.token_to_index_array(self, d, s)
+            obj = casting.convert_precision_numpy(obj, precision=self.precision)
 
-    def _check_name(self, name: str, check_type: str):
-        assert check_type in ['exogenous', 'attribute']
-        invalid_names = set(dir(self))
-        if check_type == 'exogenous':
-            invalid_names.update(self._attributes)
+        return obj, pattern
+
+    def _columns_multiindex(self, nodes=None, channels=None):
+        nodes = nodes if nodes is not None else self.nodes
+        channels = channels if channels is not None else self.channels
+        return pd.MultiIndex.from_product([nodes, channels],
+                                          names=['nodes', 'channels'])
+
+    def _infer_pattern(self, shape: tuple):
+        out = []
+        for dim in shape:
+            if dim == self.length:
+                out.append('t')
+            elif dim == self.n_nodes:
+                out.append('n')
+            else:
+                out.append('f')
+        pattern = ' '.join(out)
+        try:
+            pattern = check_pattern(pattern)
+        except RuntimeError:
+            raise RuntimeError(f"Cannot infer pattern from shape: {shape}.")
+        return pattern
+
+    def _value_to_kwargs(self, value: Union[DataArray, List, Tuple, Mapping]):
+        keys = ['value', 'pattern']
+        if isinstance(value, DataArray.__args__):
+            return dict(value=value)
+        if isinstance(value, (list, tuple)):
+            return dict(zip(keys, value))
+        elif isinstance(value, Mapping):
+            assert set(value.keys()).issubset(keys)
+            return value
         else:
-            invalid_names.update(self._exogenous)
-        if name in invalid_names:
-            raise ValueError(f"Cannot set {check_type} with name '{name}', "
-                             f"{self.__class__.__name__} contains already an "
-                             f"attribute named '{name}'.")
+            raise TypeError('Invalid type for value "{}"'.format(type(value)))
 
 
 class TemporalFeaturesMixin:
 
     def datetime_encoded(self, units):
+        if not casting.is_datetime_like_index(self.index):
+            raise NotImplementedError("This method can be used only with "
+                                      "datetime-like index.")
         units = ensure_list(units)
         mapping = {un: pd.to_timedelta('1' + un).delta
                    for un in ['day', 'hour', 'minute', 'second',
@@ -96,6 +115,9 @@ class TemporalFeaturesMixin:
         return pd.DataFrame(datetime, index=self.index, dtype=np.float32)
 
     def datetime_onehot(self, units):
+        if not casting.is_datetime_like_index(self.index):
+            raise NotImplementedError("This method can be used only with "
+                                      "datetime-like index.")
         units = ensure_list(units)
         datetime = dict()
         for unit in units:
@@ -120,6 +142,9 @@ class TemporalFeaturesMixin:
             pandas.DataFrame: DataFrame with one column ("holiday") as one-hot
                 encoding (1 if the timestamp is in a holiday, 0 otherwise).
         """
+        if not casting.is_datetime_like_index(self.index):
+            raise NotImplementedError("This method can be used only with "
+                                      "datetime-like index.")
         try:
             import holidays
         except ModuleNotFoundError:
@@ -143,19 +168,15 @@ class TemporalFeaturesMixin:
 
 
 class MissingValuesMixin:
-    eval_mask: np.ndarray
 
     def set_eval_mask(self, eval_mask: FrameArray):
-        if isinstance(eval_mask, pd.DataFrame):
-            eval_mask = to_numpy(self._parse_dataframe(eval_mask))
-        if eval_mask.ndim == 2:
-            eval_mask = eval_mask[..., None]
-        assert eval_mask.shape == self.shape
-        eval_mask = eval_mask.astype(self.mask.dtype) & self.mask
-        self.eval_mask = eval_mask
+        eval_mask = self._parse_target(eval_mask)
+        eval_mask = framearray_to_numpy(eval_mask).astype(bool)
+        eval_mask = eval_mask & self.mask
+        self.add_covariate('eval_mask', eval_mask, 't n f')
 
     @property
     def training_mask(self):
         if hasattr(self, 'eval_mask') and self.eval_mask is not None:
-            return self.mask & (1 - self.eval_mask)
+            return self.mask & ~self.eval_mask
         return self.mask

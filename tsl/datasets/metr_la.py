@@ -10,30 +10,38 @@ from ..utils import download_url, extract_zip
 
 
 class MetrLA(PandasDataset):
-    """A benchmark dataset for traffic forecasting as described in
-    `"Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic Forecasting" <https://arxiv.org/abs/1707.01926>`_
+    r"""Traffic readings collected from 207 loop detectors on
+    highways in Los Angeles County, aggregated in 5 minutes intervals over four
+    months between March 2012 and June 2012.
 
-    The dataset contains traffic readings collected from 207 loop detectors on
-    highways in Los Angeles County, aggregated in 5 minute intervals for four
-    months between March 2012 to June 2012."""
+    A benchmark dataset for traffic forecasting as described in
+    `"Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic
+    Forecasting" <https://arxiv.org/abs/1707.01926>`_.
+
+    Dataset information:
+        + Time steps: 34272
+        + Nodes: 207
+        + Channels: 1
+        + Sampling rate: 5 minutes
+        + Missing values: 8.11%
+
+    Static attributes:
+        + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
+    """
     url = "https://drive.switch.ch/index.php/s/Z8cKHAVyiDqkzaG/download"
 
     similarity_options = {'distance'}
-    temporal_aggregation_options = {'mean', 'nearest'}
-    spatial_aggregation_options = None
 
     def __init__(self, root=None, impute_zeros=True, freq=None):
         # set root path
         self.root = root
         # load dataset
         df, dist, mask = self.load(impute_zeros=impute_zeros)
-        super().__init__(dataframe=df,
-                         mask=mask,
-                         attributes=dict(dist=dist),
-                         freq=freq,
+        super().__init__(target=df, mask=mask, freq=freq,
                          similarity_score="distance",
                          temporal_aggregation="nearest",
                          name="MetrLA")
+        self.add_covariate('dist', dist, pattern='n n')
 
     @property
     def raw_file_names(self):

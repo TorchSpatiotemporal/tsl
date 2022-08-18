@@ -211,15 +211,31 @@ class TemporalSplitter(Splitter):
 class AtTimeStepSplitter(Splitter):
 
     def __init__(self, first_val_ts: Union[Tuple, datetime] = None,
-                 first_test_ts: Union[Tuple, datetime] = None):
+                 first_test_ts: Union[Tuple, datetime] = None,
+                 last_val_ts: Union[Tuple, datetime] = None,
+                 last_test_ts: Union[Tuple, datetime] = None,
+                 drop_following_steps: bool = True):
         super(AtTimeStepSplitter, self).__init__()
         self.first_val_ts = first_val_ts
         self.first_test_ts = first_test_ts
+        self.last_val_ts = last_val_ts
+        self.last_test_ts = last_test_ts
+        self.drop_following_steps = drop_following_steps
 
     def fit(self, dataset: SpatioTemporalDataset):
-        train_idx, test_idx = split_at_ts(dataset, ts=self.first_test_ts)
-        train_idx, val_idx = split_at_ts(dataset, ts=self.first_val_ts,
-                                         mask=test_idx)
+        test_idx = indices_between(dataset,
+                                   first_ts=self.first_test_ts,
+                                   last_ts=self.last_test_ts)
+        val_idx = indices_between(dataset,
+                                  first_ts=self.first_val_ts,
+                                  last_ts=self.last_val_ts)
+        if self.drop_following_steps:
+            val_idx = val_idx[val_idx < test_idx.min()]
+            train_idx = np.arange(test_idx.min())
+        else:
+            val_idx = np.setdiff1d(val_idx, test_idx)
+            train_idx = np.setdiff1d(np.arange(len(dataset)), test_idx)
+        train_idx = np.setdiff1d(train_idx, val_idx)
         return self.set_indices(train_idx, val_idx, test_idx)
 
     @staticmethod
@@ -252,9 +268,10 @@ def indices_between(dataset: SpatioTemporalDataset,
     first_day_loc, last_day_loc = dataset.index.slice_locs(first_ts, last_ts)
     first_sample_loc = first_day_loc - dataset.horizon_offset
     last_sample_loc = last_day_loc - dataset.horizon_offset - 1
-    indices_from_sample = np.where((first_sample_loc <= dataset.indices) & (
-            dataset.indices < last_sample_loc))[0]
-    return indices_from_sample
+    indices_after = first_sample_loc <= dataset.indices
+    indices_before = dataset.indices < last_sample_loc
+    indices = np.nonzero(indices_after & indices_before).ravel()
+    return indices
 
 
 def split_at_ts(dataset, ts, mask=None):

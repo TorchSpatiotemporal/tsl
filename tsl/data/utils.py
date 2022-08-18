@@ -8,7 +8,7 @@ from torch import Tensor
 from torch_sparse import SparseTensor
 
 import tsl
-from tsl.ops.dataframe import to_numpy
+from tsl.ops.framearray import framearray_to_numpy
 
 
 class SynchMode(Enum):
@@ -61,7 +61,7 @@ def copy_to_tensor(obj):
     if isinstance(obj, torch.Tensor):
         obj = obj.clone().detach()
     elif isinstance(obj, pd.DataFrame):
-        obj = torch.as_tensor(to_numpy(obj))
+        obj = torch.as_tensor(framearray_to_numpy(obj))
     else:
         obj = torch.as_tensor(obj)
     obj = torch.atleast_1d(obj)
@@ -138,8 +138,8 @@ def broadcast(x, pattern: str,
                      for i in range(x.ndim)]
             x = x.expand(shape)
             left_dims.insert(pos, rght_dim)
-        elif rght_dim == 's' and step_index is not None:
+        elif rght_dim == 's' and step_index is not None and x.size(pos) > 1:
             x = x.index_select(pos, step_index)
-        elif rght_dim == 'n' and node_index is not None:
+        elif rght_dim == 'n' and node_index is not None and x.size(pos) > 1:
             x = x.index_select(pos, node_index)
     return x

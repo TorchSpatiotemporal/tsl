@@ -6,23 +6,36 @@ import os
 
 import tsl
 from tsl.utils import download_url, extract_zip
-from tsl.datasets.prototypes import checks
+from tsl.datasets.prototypes import casting
 from tsl.datasets.prototypes import PandasDataset
 from tsl.ops import similarities as sims
 
 
 class Elergone(PandasDataset):
-    """
-    Dataset of load profiles from https://archive.ics.uci.edu/ml/datasets/ElectricityLoadDiagrams20112014.
+    """Load profiles of 370 points collected every 15 minutes from 2011 to 2014.
+
+    Raw data at https://archive.ics.uci.edu/ml/datasets/ElectricityLoadDiagrams20112014.
+    The :obj:`load` method loads the values in kWh, computes the mask for the
+    zero values and pads the missing steps.
 
     From the original description:
-    Values in the original dataframe are in kW of each 15 min. To convert values in kWh values must be divided by 4.
-    Each column represent one client. Some clients were created after 2011. In these cases consumption were considered zero.
-    All time labels report to Portuguese hour. However all days present 96 measures (24*4).
-    Every year in March time change day (which has only 23 hours) the values between 1:00 am and 2:00 am are zero for all points.
-    Every year in October time change day (which has 25 hours) the values between 1:00 am and 2:00 am aggregate the consumption of two hours.
 
-    The load method loads the values in kWh, computes the mask for the zero values and pads the missing steps.
+        Values in the original dataframe are in kW of each 15 min. To convert
+        values in kWh values must be divided by 4. Each column represent one
+        client. Some clients were created after 2011. In these cases
+        consumption were considered zero. All time labels report to Portuguese
+        hour. However, all days present 96 measures (24*4). Every year in March
+        time change day (which has only 23 hours) the values between 1:00 am
+        and 2:00 am are zero for all points. Every year in October time change
+        day (which has 25 hours) the values between 1:00 am and 2:00 am
+        aggregate the consumption of two hours.
+
+    Dataset size:
+        + Time steps: 140256
+        + Nodes: 370
+        + Channels: 1
+        + Sampling rate: 15 minutes
+        + Missing values: 20.15%
 
     Args:
         root: Root folder for data download.
@@ -31,17 +44,13 @@ class Elergone(PandasDataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00321/LD2011_2014.txt.zip"
 
     similarity_options = {'correntropy', 'pearson'}
-    temporal_aggregation_options = {'sum'}
-    spatial_aggregation_options = {'sum'}
 
     def __init__(self,
                  root=None,
                  freq=None):
         self.root = root
         df, mask = self.load()
-        super().__init__(dataframe=df,
-                         mask=mask,
-                         freq=freq,
+        super().__init__(target=df, mask=mask, freq=freq,
                          similarity_score='correntropy',
                          temporal_aggregation='sum',
                          spatial_aggregation='sum',

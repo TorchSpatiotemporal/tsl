@@ -1,8 +1,5 @@
 import os
-from typing import (
-    Any,
-    Sequence, List
-)
+from typing import Any, Sequence, List
 
 
 def ensure_list(value: Any) -> List:
@@ -14,6 +11,7 @@ def ensure_list(value: Any) -> List:
 
 
 def files_exist(files: Sequence[str]) -> bool:
+    files = ensure_list(files)
     return len(files) != 0 and all([os.path.exists(f) for f in files])
 
 

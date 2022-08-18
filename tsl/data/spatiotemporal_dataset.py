@@ -183,6 +183,15 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     def __len__(self):
         return len(self._indices)
 
+    def __getattr__(self, item):
+        if 'input_map' in self.__dict__ and item in self.input_map:
+            itm = self.input_map[item]
+            return self.get_tensors(keys=itm.keys, cat_dim=itm.cat_dim,
+                                    preprocess=False)[0]
+        else:
+            raise AttributeError(f"'{self.__class__.__name__}' object has no "
+                                 f"attribute '{item}'")
+
     def __setattr__(self, key, value):
         super(SpatioTemporalDataset, self).__setattr__(key, value)
         if key in _WINDOWING_KEYS and all([hasattr(self, attr)
@@ -729,12 +738,13 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                 keep after reduction.
                 (default: :obj:`None`)
         """
+        # TODO fix slicing and indexing
         if step_index is None:
             step_index = slice(None)
         if node_index is None:
             node_index = slice(None)
         try:
-            if self.edge_index is not None:
+            if self.edge_index is not None and node_index != slice(None):
                 node_index = torch.arange(self.n_nodes)[node_index]
                 node_subgraph = subgraph(node_index, self.edge_index,
                                          self.edge_weight,
@@ -800,6 +810,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         self._indices = indices
 
     def expand_indices(self, indices=None, unique=False, merge=False):
+        # todo fix to account also for lags
         indices = np.arange(len(self._indices)) if indices is None else indices
         hrz_end = self.horizon_offset + self.horizon
 
