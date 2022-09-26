@@ -14,7 +14,6 @@ import numpy as np
 from numpy import ndarray
 from pandas import DataFrame, Series
 from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
-from torch import TensorType
 
 import tsl
 from tsl import logger, config
@@ -258,12 +257,6 @@ class Dataset(object):
         structure."""
         raise NotImplementedError
 
-    def pytorch(self) -> Union[TensorType, List[TensorType]]:
-        """Returns a pytorch representation of the dataset in the form of a
-        :class:`~torch.Tensor`. May be a list of Tensors if the dataset has a
-        dynamic structure."""
-        raise NotImplementedError
-
     # IO
 
     def save_pickle(self, filename: str) -> None:
@@ -364,12 +357,16 @@ class Dataset(object):
                 :obj:`None`, defaults to dataset-specific default method.
                 (default: :obj:`None`)
             threshold (float, optional): If not :obj:`None`, set to 0 the values
-                below the threshold. (default: :obj:`None`)
+                below the threshold.
+                (default: :obj:`None`)
             knn (int, optional): If not :obj:`None`, keep only :math:`k=`
                 :obj:`knn` nearest incoming neighbors.
                 (default: :obj:`None`)
+            binary_weights (bool): If :obj:`True`, the positive weights of the
+                adjacency matrix are set to 1.
+                (default: :obj:`False`)
             include_self (bool): If :obj:`False`, self-loops are never taken
-                into account. (default: :obj:`False`)
+                into account. (default: :obj:`True`)
             force_symmetric (bool): Force adjacency matrix to be symmetric by
                 taking the maximum value between the two directions for each
                 edge. (default: :obj:`False`)
@@ -389,7 +386,7 @@ class Dataset(object):
                 - :obj:`coo`/:obj:`csr`/:obj:`csc`: convert to specified scipy
                   sparse matrix type.
 
-                (default: 'edge_index')
+                (default: :obj:`edge_index`)
             **kwargs (optional): Additional optional keyword arguments for
                 similarity computation.
 

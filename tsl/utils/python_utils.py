@@ -1,5 +1,5 @@
 import os
-from typing import Any, Sequence, List
+from typing import Any, Sequence, List, Union
 
 
 def ensure_list(value: Any) -> List:
@@ -37,3 +37,14 @@ def set_property(obj, name, prop_function):
     new_class = type(class_name, (obj.__class__,),
                      {name: property(prop_function)})
     obj.__class__ = new_class
+
+
+def precision_stoi(precision: Union[int, str]) -> int:
+    """Return precision as int if expressed as a string. Allowed strings are
+    :obj:`half`=16, :obj:`full`=32, :obj:`double`=64."""
+    if isinstance(precision, str):
+        precision = dict(half=16, full=32, double=64).get(precision)
+    assert precision in [16, 32, 64], \
+        "precision must be one of 16 (or 'half'), 32 (or 'full') or 64 " \
+        f"(or 'double'). Default is 32, invalid input '{precision}'."
+    return precision

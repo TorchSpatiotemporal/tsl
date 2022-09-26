@@ -9,14 +9,13 @@ from tsl.typing import (TensArray, TemporalIndex)
 
 class ImputationDataset(SpatioTemporalDataset):
 
-    def __init__(self, data: TensArray,
+    def __init__(self, target: TensArray,
                  index: Optional[TemporalIndex] = None,
                  training_mask: Optional[TensArray] = None,
                  eval_mask: Optional[TensArray] = None,
                  connectivity: Optional[
                      Union[TensArray, Tuple[TensArray]]] = None,
-                 exogenous: Optional[Mapping[str, TensArray]] = None,
-                 attributes: Optional[Mapping[str, TensArray]] = None,
+                 covariates: Optional[Mapping[str, TensArray]] = None,
                  input_map: Optional[Union[Mapping, BatchMap]] = None,
                  trend: Optional[TensArray] = None,
                  scalers: Optional[Mapping[str, Scaler]] = None,
@@ -27,19 +26,18 @@ class ImputationDataset(SpatioTemporalDataset):
                  precision: Union[int, str] = 32,
                  name: Optional[str] = None):
         if training_mask is None:
-            training_mask = np.isnan(data)
-        if exogenous is None:
-            exogenous = dict()
+            training_mask = np.isnan(target)
+        if covariates is None:
+            covariates = dict()
         if eval_mask is not None:
-            exogenous['eval_mask'] = eval_mask
+            covariates['eval_mask'] = eval_mask
         if input_map is not None:
             input_map['eval_mask'] = BatchMapItem('eval_mask', preprocess=False)
-        super(ImputationDataset, self).__init__(data,
+        super(ImputationDataset, self).__init__(target,
                                                 index=index,
                                                 mask=training_mask,
                                                 connectivity=connectivity,
-                                                exogenous=exogenous,
-                                                attributes=attributes,
+                                                covariates=covariates,
                                                 input_map=input_map,
                                                 trend=trend,
                                                 scalers=scalers,

@@ -13,7 +13,7 @@ It is built on several libraries of the Python scientific computing ecosystem, w
    :caption: Usage
 
    notes/quickstart
-   notes/data_format
+   notes/spatiotemporal_data_representation
 
 .. toctree::
    :glob:

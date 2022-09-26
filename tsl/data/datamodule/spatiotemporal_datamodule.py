@@ -156,7 +156,7 @@ class SpatioTemporalDataModule(LightningDataModule):
                     train_mask = self.torch_dataset.mask[self.train_slice]
             scaler = scaler.fit(train, mask=train_mask, keepdims=True)
             tsl.logger.info('Scaler for {}: {}'.format(k, scaler))
-            self.torch_dataset.set_scaler(k, scaler)
+            self.torch_dataset.add_scaler(k, scaler)
 
     def train_dataloader(self, shuffle=True, batch_size=None):
         if self.trainset is None:

@@ -1,5 +1,11 @@
-Data format
-===========
+Spatiotemporal Data Representation
+==================================
+
+Understanding patterns
+----------------------
+
+The `TNF` Convention
+----------------------
 
 TSL is meant to deal with discrete-time, spatio-temporal data. Therefore, common input examples
 are data streams coming from sensor networks. In principle, data of this kind can be
@@ -13,9 +19,6 @@ As a real-life example, you may think of an air quality monitoring system, in
 which :math:`N` air quality monitoring stations are displaced in a geographic area, with every
 station measuring :math:`F` different pollution parameters (like :math:`\text{PM}2.5, \text{PM}10, \text{CO}_2`).
 In this example, the sizes of the node and features dimensions are :math:`N` and :math:`F`, respectively.
-
-The "T N F" Convention
-------------------
 
 In TSL, tabular data of this form are represented by following the [Time, Node, Features]
 (T N F) convention. Considering the previous example, we represent measurements

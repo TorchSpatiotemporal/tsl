@@ -1,9 +1,6 @@
 Layers
 ======
 
-.. contents:: Contents
-    :local:
-
 
 Graph Convolutions
 ------------------

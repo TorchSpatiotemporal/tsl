@@ -22,17 +22,18 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
               a :class:`~pandas.MultiIndex`). We assume nodes are at first
               level, channels at second.
 
-        covariates (dict, optional): named mapping of DataFrame (or numpy arrays)
-            with secondary data. Examples of secondary data are exogenous
-            variables (in the form of multidimensional covariates) or static
-            attributes (e.g., metadata). You can specify what each axis refers
-            to by providing a :obj:`pattern` for each item in the mapping.
-            Every item can be:
+        covariates (dict, optional): named mapping of :class:`~pandas.DataFrame`
+            or :class:`numpy.ndarray` representing covariates. Examples of
+            covariates are exogenous signals (in the form of dynamic,
+            multidimensional data) or static attributes (e.g., graph/node
+            metadata). You can specify what each axis refers to by providing a
+            :obj:`pattern` for each item in the mapping. Every item can be:
 
             + a :class:`~pandas.DataFrame` or :class:`~numpy.ndarray`: in this
               case the pattern is inferred from the shape (if possible).
+            + a :class:`dict` with keys 'value' and 'pattern' indexing the
+              covariate object and the relative pattern, respectively.
 
-            TODO
             (default: :obj:`None`)
         mask (pandas.Dataframe or numpy.ndarray, optional): Boolean mask
             denoting if values in data are valid (:obj:`True`) or not
@@ -59,6 +60,9 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
         sort_index (bool): whether to sort the dataset chronologically at
             initialization.
             (default: :obj:`True`)
+        force_synchronization (bool): Synchronize all time-varying covariates
+            with target.
+            (default: :obj:`True`)
         name (str, optional): Optional name of the dataset.
             (default: :obj:`class_name`)
         precision (int or str, optional): numerical precision for data: 16 (or
@@ -66,27 +70,27 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
             (default: :obj:`32`)
     """
     similarity_options = {'correntropy'}
-    temporal_aggregation_options = {'sum', 'mean', 'min', 'max', 'nearest'}
-    spatial_aggregation_options = {'sum', 'mean', 'min', 'max'}
 
     def __init__(self, target: FrameArray,
-                 covariates: Optional[Mapping[str, FrameArray]] = None,
                  mask: OptFrameArray = None,
+                 covariates: Optional[Mapping[str, FrameArray]] = None,
                  freq: Optional[str] = None,
                  similarity_score: Optional[str] = None,
                  temporal_aggregation: str = 'sum',
                  spatial_aggregation: str = 'sum',
                  default_splitting_method: Optional[str] = 'temporal',
                  sort_index: bool = True,
+                 force_synchronization: bool = True,
                  name: str = None,
                  precision: Union[int, str] = 32):
         super().__init__(target=target,
-                         covariates=covariates,
                          mask=mask,
+                         covariates=covariates,
                          similarity_score=similarity_score,
                          temporal_aggregation=temporal_aggregation,
                          spatial_aggregation=spatial_aggregation,
                          default_splitting_method=default_splitting_method,
+                         force_synchronization=force_synchronization,
                          name=name,
                          precision=precision)
 
@@ -110,9 +114,10 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
 
     def sort(self):
         self.target.sort_index(inplace=True)
-        for name, attr in self._covariates.items():
-            if 't' in attr['pattern']:
-                attr['value'] = attr['value'].reindex(self.index)
+        if self.force_synchronization:
+            for name, attr in self._covariates.items():
+                if 't' in attr['pattern']:
+                    attr['value'] = attr['value'].reindex(self.index)
 
     def resample_(self, freq=None, aggr: str = None,
                   keep: Literal["first", "last", False] = 'first',
@@ -124,7 +129,7 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
         valid_steps = ~self.index.duplicated(keep=keep)
 
         # get mask as DataFrame before resampling
-        mask =  self.get_mask(as_dataframe=True) if self.has_mask else None
+        mask = self.get_mask(as_dataframe=True) if self.has_mask else None
 
         _target = self.target[valid_steps].resample(freq).apply(aggr)
         self.set_target(_target)
@@ -157,5 +162,4 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
     # Preprocessing
 
     def detrend(self, method):
-        # todo
         raise NotImplementedError()

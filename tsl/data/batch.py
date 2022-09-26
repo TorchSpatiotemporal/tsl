@@ -1,7 +1,6 @@
 from typing import Callable
 from typing import (Optional, Any, Union, List, Mapping)
 
-import torch
 from torch import Tensor
 from torch.utils.data.dataloader import default_collate
 
@@ -14,15 +13,9 @@ def _collate_scaler_modules(batch: List[Mapping[str, Any]]):
     for k, v in transform.items():
         # scaler params are supposed to be the same for all elements in
         # minibatch, just add a fake, 1-sized, batch dimension
-        scaler = ScalerModule()
-        if v.bias is not None:
-            scaler.bias = transform[k].bias[None]
-        if v.scale is not None:
-            scaler.scale = transform[k].scale[None]
-        if v.trend is not None:
-            trend = torch.stack([b[k].trend for b in batch], 0)
-            scaler.trend = trend
-        transform[k] = scaler
+        transform[k] = ScalerModule(bias=transform[k].bias[None],
+                                    scale=transform[k].scale[None])
+        transform[k].pattern = 'b ' + transform[k].pattern
     return transform
 
 

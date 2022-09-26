@@ -1,20 +1,21 @@
+from contextlib import contextmanager
 from copy import deepcopy
-from typing import Optional, Mapping, Union, Sequence, Dict, Tuple
+from typing import Optional, Mapping, Union, Dict, Tuple, List
 
 import numpy as np
 import pandas as pd
-import torch
 from numpy import ndarray
 from pandas import Index
-from torch import Tensor
 
 from tsl import logger
-from tsl.ops.framearray import aggregate, framearray_to_numpy, reduce
-from tsl.typing import FrameArray, OptFrameArray
+from tsl.ops.framearray import aggregate, framearray_to_numpy, reduce, fill_nan
+from tsl.typing import FrameArray, OptFrameArray, FillOptions, Scalar, \
+    TemporalIndex
 from tsl.utils.python_utils import ensure_list
 from . import casting
 from .dataset import Dataset
 from .mixin import TabularParsingMixin
+from ...ops.pattern import outer_pattern, broadcast
 
 
 class TabularDataset(Dataset, TabularParsingMixin):
@@ -65,6 +66,9 @@ class TabularDataset(Dataset, TabularParsingMixin):
         default_splitting_method (str, optional): Default splitting method for
             the dataset, i.e., how to split the dataset into train/val/test.
             (default: :obj:`temporal`)
+        force_synchronization (bool): Synchronize all time-varying covariates
+            with target.
+            (default: :obj:`True`)
         name (str, optional): Optional name of the dataset.
             (default: :obj:`class_name`)
         precision (int or str, optional): numerical precision for data: 16 (or
@@ -73,12 +77,13 @@ class TabularDataset(Dataset, TabularParsingMixin):
     """
 
     def __init__(self, target: FrameArray,
-                 covariates: Optional[Mapping[str, FrameArray]] = None,
                  mask: OptFrameArray = None,
+                 covariates: Optional[Mapping[str, FrameArray]] = None,
                  similarity_score: Optional[str] = None,
                  temporal_aggregation: str = 'sum',
                  spatial_aggregation: str = 'sum',
                  default_splitting_method: Optional[str] = 'temporal',
+                 force_synchronization: bool = True,
                  name: str = None,
                  precision: Union[int, str] = 32):
         super().__init__(name=name,
@@ -88,6 +93,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
                          default_splitting_method=default_splitting_method)
         # Set data precision before parsing objects
         self.precision = precision
+        self.force_synchronization = force_synchronization
 
         # Set dataset's main signal
         self.target = self._parse_target(target)
@@ -101,7 +107,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
         self.mask: Optional[np.ndarray] = None
         self.set_mask(mask)
 
-        # Store exogenous and attributes
+        # Store covariates (e.g., exogenous and attributes)
         self._covariates = dict()
         if covariates is not None:
             for name, value in covariates.items():
@@ -121,26 +127,33 @@ class TabularDataset(Dataset, TabularParsingMixin):
         else:
             super(TabularDataset, self).__delattr__(item)
 
-    # Dataset properties
+    # Dataset properties ######################################################
 
     @property
     def length(self) -> int:
+        """Number of time steps in the dataset."""
         return self.target.shape[0]
 
     @property
     def n_nodes(self) -> int:
+        """Number of nodes in the dataset."""
         if self.is_target_dataframe:
             return len(self.nodes)
         return self.shape[1]
 
     @property
     def n_channels(self) -> int:
+        """Number of channels in dataset's target."""
         if self.is_target_dataframe:
             return len(self.channels)
         return self.shape[2]
 
     @property
-    def index(self) -> Union[pd.Index, np.ndarray]:
+    def shape(self) -> tuple:
+        return self.length, self.n_nodes, self.n_channels
+
+    @property
+    def index(self) -> Union[pd.Index, TemporalIndex, np.ndarray]:
         if self.is_target_dataframe:
             return self.target.index
         return np.arange(self.length)
@@ -158,27 +171,45 @@ class TabularDataset(Dataset, TabularParsingMixin):
         return np.arange(self.n_channels)
 
     @property
-    def shape(self) -> tuple:
-        return self.length, self.n_nodes, self.n_channels
+    def patterns(self) -> dict:
+        """Shows the dimension of the data in the dataset in a more informative
+        way.
+
+        The pattern mapping can be useful to glimpse on how data are arranged.
+        The convention we use is the following:
+
+          * 't' stands for “number of time steps”
+          * 'n' stands for “number of nodes”
+          * 'f' stands for “number of features” (per node)
+        """
+        patterns = {'target': 't n f'}
+        if self.mask is not None:
+            patterns['mask'] = 't n f'
+        patterns.update({name: attr['pattern']
+                        for name, attr in self._covariates.items()})
+        return patterns
 
     # Covariates properties
 
     @property
-    def covariates(self):
-        return self._covariates
+    def covariates(self) -> dict:
+        return {name: attr['value'] for name, attr in self._covariates.items()}
 
     @property
     def exogenous(self):
+        """Time-varying covariates of the dataset's target."""
         return {name: attr['value'] for name, attr in self._covariates.items()
                 if 't' in attr['pattern']}
 
     @property
     def attributes(self):
+        """Static features related to the dataset."""
         return {name: attr['value'] for name, attr in self._covariates.items()
                 if 't' not in attr['pattern']}
 
     @property
-    def n_covariates(self):
+    def n_covariates(self) -> int:
+        """Number of covariates in the dataset."""
         return len(self._covariates)
 
     # flags
@@ -203,15 +234,21 @@ class TabularDataset(Dataset, TabularParsingMixin):
 
     def set_mask(self, mask: OptFrameArray):
         r"""Set mask of target channels, i.e., a bool for each (node, time
-        step, channel) triplet denoting if corresponding value in target is
+        step, feature) triplet denoting if corresponding value in target is
         observed (obj:`True`) or not (obj:`False`)."""
         if mask is not None:
             mask = self._parse_target(mask).astype('bool')
-            mask, _ = self._parse_covariate(mask, 't n f')
+            with self.synchronize(True):
+                mask, _ = self._parse_covariate(mask, 't n f')
             mask = framearray_to_numpy(mask)
+            # check mask features are broadcastable to target's features
+            if mask.shape[-1] not in [1, self.n_channels]:
+                raise RuntimeError(f"Mask features ({mask.shape[-1]}) cannot "
+                                   "be broadcasted to target's number of "
+                                   f"features {self.n_channels}.")
         self.mask = mask
 
-    # Setter for covariates
+    # Setters for covariates
 
     def add_covariate(self, name: str, value: FrameArray,
                       pattern: Optional[str] = None):
@@ -252,14 +289,14 @@ class TabularDataset(Dataset, TabularParsingMixin):
 
     def add_exogenous(self, name: str, value: FrameArray,
                       node_level: bool = True):
-        """Shortcut method to add dynamic covariate data."""
+        """Shortcut method to add a time-varying covariate."""
         if name.startswith('global_'):
             name = name[7:]
             node_level = False
         pattern = 't n f' if node_level else 't f'
         self.add_covariate(name, value, pattern)
 
-    # Getters
+    # Getters #################################################################
 
     def get_mask(self, dtype: Union[type, str, np.dtype] = None,
                  as_dataframe: bool = False) -> FrameArray:
@@ -274,57 +311,107 @@ class TabularDataset(Dataset, TabularParsingMixin):
                                 columns=self._columns_multiindex())
         return mask
 
-    def get_frame(self, channels: Union[Sequence, Dict] = None,
-                  nodes: Sequence = None,
-                  index: Sequence = None,
-                  as_numpy: bool = True):
-        if index is None:
-            index = self.index
+    def expand_frame(self, key: str, pattern: str,
+                     time_index: Union[List, np.ndarray] = None,
+                     node_index: Union[List, np.ndarray] = None,
+                     channel_index: Union[List, np.ndarray] = None) \
+            -> np.ndarray:
+        obj = getattr(self, key)
+        x = framearray_to_numpy(obj)
+        in_pattern = self.patterns[key]
+        if channel_index is not None:
+            assert in_pattern.count('f') == 1, \
+                "Can select channels only in frames with just one " \
+                "channel dimension."
+            dim = in_pattern.strip().split(' ').index('f')
+            if isinstance(obj, pd.DataFrame):
+                axis = 'columns' if dim > 0 else 'index'
+                level = dim - 1 if dim > 0 else 0
+                channels = getattr(obj, axis).unique(level)
+                channel_indexer = channels.get_indexer(channel_index)
+                if any(channel_indexer < 0):
+                    unmatch = channel_index[channel_indexer < 0]
+                    raise KeyError(f"Channels {unmatch} not in {key}.")
+                channel_index = channel_indexer
+            x = x.take(channel_index, dim)
+        pattern = in_pattern + ' -> ' + pattern
+        x = broadcast(x, pattern, t=self.length, n=self.n_nodes,
+                      time_index=time_index, node_index=node_index)
+        return x
 
-        if nodes is None:
-            nodes = self.nodes
+    def get_frame(self, channels: Union[str, List,
+                                        Dict[str, Union[
+                                            str, int, List, None]]] = None,
+                  node_index: Union[List, np.ndarray] = None,
+                  time_index: Union[List, np.ndarray] = None,
+                  cat_dim: Optional[int] = None,
+                  return_pattern: bool = True):
 
         # parse channels
         if channels is None:
-            # defaults to all channels
-            channels = self.exogenous.keys()
+            # defaults to all data
+            channels = list(self.patterns.keys())
         elif isinstance(channels, str):
-            assert channels in self.exogenous, \
-                f"{channels} is not an exogenous group."
             channels = [channels]
-        # expand exogenous
+
+        # build a channel index for each queried key
         if not isinstance(channels, dict):
-            channels = {label: self.exogenous[label].columns.unique('channels')
-                        for label in channels}
+            channels = {key: None for key in channels}
         else:
-            # analyze channels dict
-            for exo, chnls in channels.items():
-                exo_channels = self.exogenous[exo].columns.unique('channels')
-                # if value is None, default to all channels
-                if chnls is None:
-                    channels[exo] = exo_channels
-                else:
-                    chnls = ensure_list(chnls)
-                    # check that all passed channels are in exo
-                    wrong_channels = set(chnls).difference(exo_channels)
-                    if len(wrong_channels):
-                        raise KeyError(wrong_channels)
+            channels = {key: ensure_list(chn) for key, chn in channels.items()}
 
-        dfs = [self.exogenous[exo].loc[index, (nodes, chnls)]
-               for exo, chnls in channels.items()]
+        time_index = self._get_time_index(time_index)
+        node_index = self._get_node_index(node_index)
 
-        # todo remove 'exogenous' level
-        df = pd.concat(dfs, axis=1, keys=channels.keys(),
-                       names=['exogenous', 'nodes', 'channels'])
-        df = df.swaplevel(i='exogenous', j='nodes', axis=1)
-        # sort only nodes, keep other order as in the input variables
-        df = df.loc[:, nodes]
+        pattern = outer_pattern([self.patterns[key] for key in channels])
+        frames = [self.expand_frame(key, pattern, time_index, node_index,
+                                    channel_index=channel_index)
+                  for key, channel_index in channels.items()]
 
-        if as_numpy:
-            return df.values.reshape((len(index), len(nodes), -1))
-        return df
+        if cat_dim is not None:
+            frames = np.concatenate(frames, axis=cat_dim)
 
-    # Aggregation methods
+        if return_pattern:
+            return frames, pattern
+        return frames
+
+    # Private getters #########################################################
+
+    def _get_time_index(self, time_index=None, layout='index'):
+        if time_index is None:
+            return None
+        if isinstance(time_index, pd.Index):
+            assert self.is_target_dataframe
+            time_indexer = self.index.get_indexer(time_index)
+            if any(time_indexer < 0):
+                unmatch = time_index[time_indexer < 0]
+                raise KeyError(f"Indices {unmatch} not in index.")
+            time_index = time_indexer
+        time_index = np.asarray(time_index)
+        if layout == 'mask':
+            mask = np.zeros_like(self.index, dtype=bool)
+            mask[time_index] = True
+            return mask
+        return time_index
+
+    def _get_node_index(self, node_index=None, layout='index'):
+        if node_index is None:
+            return None
+        if isinstance(node_index, pd.Index):
+            assert self.is_target_dataframe
+            node_indexer = self.nodes.get_indexer(node_index)
+            if any(node_indexer < 0):
+                unmatch = node_index[node_indexer < 0]
+                raise KeyError(f"Indices {unmatch} not in nodes.")
+            node_index = node_indexer
+        node_index = np.asarray(node_index)
+        if layout == 'mask':
+            mask = np.zeros_like(self.nodes, dtype=bool)
+            mask[node_index] = True
+            return mask
+        return node_index
+
+    # Aggregation methods #####################################################
 
     def aggregate_(self, node_index: Optional[Union[Index, Mapping]] = None,
                    aggr: str = None, mask_tolerance: float = 0.):
@@ -350,6 +437,8 @@ class TabularDataset(Dataset, TabularParsingMixin):
             ids, groups = np.array(ids), np.array(groups)
             _, order = np.where(self.nodes[:, None] == groups)
             node_index = ids[order]
+        else:
+            node_index = np.asarray(node_index)
 
         assert len(node_index) == self.n_nodes
 
@@ -381,18 +470,8 @@ class TabularDataset(Dataset, TabularParsingMixin):
         return ds
 
     def reduce_(self, time_index=None, node_index=None):
-
-        def index_to_mask(index, support):
-            if index is None:
-                return None
-            index: np.ndarray = np.asarray(index)
-            if index.dtype != np.bool:
-                index = np.in1d(support, index)
-            assert index.any()
-            return index
-
-        time_index = index_to_mask(time_index, self.index)
-        node_index = index_to_mask(node_index, self.nodes)
+        time_index = self._get_time_index(time_index, layout='mask')
+        node_index = self._get_node_index(node_index, layout='mask')
         try:
             self.target = reduce(self.target, time_index, axis=0)
             self.target = reduce(self.target, node_index, axis=1, level=0)
@@ -420,35 +499,26 @@ class TabularDataset(Dataset, TabularParsingMixin):
     def reduce(self, time_index=None, node_index=None):
         return deepcopy(self).reduce_(time_index, node_index)
 
-    def cluster_(self,
-                 clustering_algo,
-                 clustering_kwarks,
-                 sim_type='correntropy',
-                 trainlen=None,
-                 kn=20,
-                 scale=1.):
-        sim = self.get_similarity(method=sim_type, k=kn, trainlen=trainlen)
-        algo = clustering_algo(**clustering_kwarks, affinity='precomputed')
-        idx = algo.fit_predict(sim)
-        _, counts = np.unique(idx, return_counts=True)
-        logger.info(('{} ' * len(counts)).format(*counts))
-        self.aggregate_(idx)
-        self.target /= scale
-        return self
+    @contextmanager
+    def synchronize(self, flag=True):
+        try:
+            is_synch = self.force_synchronization
+            self.force_synchronization = flag
+            yield self
+        finally:
+            self.force_synchronization = is_synch
 
     # Preprocessing
 
-    def fill_missing_(self, method):
-        # todo
-        raise NotImplementedError()
+    def fill_nan_(self, value: Optional[Union[Scalar, FrameArray]] = None,
+                  method: FillOptions = None, axis: int = 0):
+        self.target = fill_nan(self.target, value, method, axis)
 
     # Representations
 
     def dataframe(self) -> pd.DataFrame:
         if self.is_target_dataframe:
-            return self.target.reindex(index=self.index,
-                                       columns=self._columns_multiindex(),
-                                       copy=True)
+            return self.target.copy()
         data = self.target.reshape(self.length, -1)
         df = pd.DataFrame(data, columns=self._columns_multiindex())
         return df
@@ -459,10 +529,6 @@ class TabularDataset(Dataset, TabularParsingMixin):
         if self.is_target_dataframe:
             return self.dataframe().values.reshape(self.shape)
         return self.target
-
-    def pytorch(self) -> Tensor:
-        data = self.numpy()
-        return torch.tensor(data)
 
     def copy(self) -> 'TabularDataset':
         return deepcopy(self)

@@ -145,7 +145,7 @@ def run_experiment(args):
 
     # encode time of the day and use it as exogenous variable.
     exog_vars = dataset.datetime_encoded('day').values
-    exog_vars = {'global_u': exog_vars}
+    exog_vars = {'u': exog_vars}
 
     adj = dataset.get_connectivity(method='distance', threshold=0.1,
                                    layout='edge_index')
@@ -156,12 +156,12 @@ def run_experiment(args):
                                           horizon=args.horizon,
                                           window=args.window,
                                           stride=args.stride,
-                                          exogenous=exog_vars)
+                                          covariates=exog_vars)
 
     dm_conf = parser_utils.filter_args(args, SpatioTemporalDataModule, return_dict=True)
     dm = SpatioTemporalDataModule(
         dataset=torch_dataset,
-        scalers={'data': StandardScaler(axis=(0, 1))},
+        scalers={'target': StandardScaler(axis=(0, 1))},
         splitter=dataset.get_splitter(val_len=args.val_len,
                                       test_len=args.test_len),
         **dm_conf
@@ -175,7 +175,7 @@ def run_experiment(args):
                                     input_size=torch_dataset.n_channels,
                                     output_size=torch_dataset.n_channels,
                                     horizon=torch_dataset.horizon,
-                                    exog_size=torch_dataset.input_map.u.n_channels)
+                                    exog_size=torch_dataset.input_map.u.shape[-1])
 
     model_kwargs = parser_utils.filter_args(args={**vars(args), **additional_model_hparams},
                                             target_cls=model_cls,
@@ -261,8 +261,7 @@ def run_experiment(args):
     # testing                              #
     ########################################
 
-    predictor.load_state_dict(
-       torch.load(checkpoint_callback.best_model_path, lambda storage, loc: storage)['state_dict'])
+    predictor.load_model(checkpoint_callback.best_model_path)
 
     predictor.freeze()
     trainer.test(predictor, datamodule=dm)

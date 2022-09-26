@@ -2,10 +2,12 @@ from typing import Union, Optional, List, Tuple, Mapping
 
 import numpy as np
 import pandas as pd
+from pandas import Index
+
 from . import casting
 from ...ops.framearray import framearray_shape, framearray_to_numpy
-from ...ops.pattern import check_pattern
-from ...typing import FrameArray, DataArray
+from ...ops.pattern import check_pattern, infer_pattern
+from ...typing import FrameArray
 from ...utils.python_utils import ensure_list
 
 
@@ -31,31 +33,50 @@ class TabularParsingMixin:
             -> Tuple[FrameArray, str]:
         # compute object shape
         shape = framearray_shape(obj)
-        # infer pattern if it is None
+
+        # infer pattern if it is None, otherwise sanity check
         if pattern is None:
-            pattern = self._infer_pattern(shape)
+            pattern = infer_pattern(shape, t=self.length, n=self.n_nodes)
+        else:
+            pattern = check_pattern(pattern, ndim=len(shape))
+
         # check that pattern and shape match
-        pattern = check_pattern(pattern)
         dims = pattern.strip().split(' ')
 
         if isinstance(obj, pd.DataFrame):
             assert self.is_target_dataframe, \
                 "Cannot add DataFrame covariates if target is ndarray."
-            obj = obj.reindex(index=casting.token_to_index_df(
-                self, dims[0], obj.index))
+            index = self._token_to_index(dims[0], obj.index)
+            obj = obj.reindex(index=index)
             for lvl, tkn in enumerate(dims[1:]):
-                columns = casting.token_to_index_df(
-                    self, tkn, obj.columns.unique(lvl))
+                columns = self._token_to_index(tkn, obj.columns.unique(lvl))
                 obj.reindex(columns=columns, level=lvl)
             obj = casting.convert_precision_df(obj, precision=self.precision)
         else:
             obj = np.asarray(obj)
             # check shape
             for d, s in zip(dims, obj.shape):
-                casting.token_to_index_array(self, d, s)
+                self._token_to_index(d, s)
             obj = casting.convert_precision_numpy(obj, precision=self.precision)
 
         return obj, pattern
+
+    def _token_to_index(self, token, index_or_size: Union[int, Index]):
+        no_index = isinstance(index_or_size, int)
+        if token == 't':
+            if no_index:
+                assert index_or_size == len(self.index)
+            return self.index if self.force_synchronization else index_or_size
+        if token == 'n':
+            if no_index:
+                assert index_or_size == len(self.nodes)
+            else:
+                assert set(index_or_size).issubset(self.nodes), \
+                    "You are trying to add a covariate dataframe with " \
+                    "nodes that are not in the dataset."
+            return self.nodes
+        if token in ['c', 'f'] and not no_index:
+            return index_or_size
 
     def _columns_multiindex(self, nodes=None, channels=None):
         nodes = nodes if nodes is not None else self.nodes
@@ -63,25 +84,9 @@ class TabularParsingMixin:
         return pd.MultiIndex.from_product([nodes, channels],
                                           names=['nodes', 'channels'])
 
-    def _infer_pattern(self, shape: tuple):
-        out = []
-        for dim in shape:
-            if dim == self.length:
-                out.append('t')
-            elif dim == self.n_nodes:
-                out.append('n')
-            else:
-                out.append('f')
-        pattern = ' '.join(out)
-        try:
-            pattern = check_pattern(pattern)
-        except RuntimeError:
-            raise RuntimeError(f"Cannot infer pattern from shape: {shape}.")
-        return pattern
-
-    def _value_to_kwargs(self, value: Union[DataArray, List, Tuple, Mapping]):
+    def _value_to_kwargs(self, value: Union[FrameArray, List, Tuple, Mapping]):
         keys = ['value', 'pattern']
-        if isinstance(value, DataArray.__args__):
+        if isinstance(value, (pd.DataFrame, np.ndarray)):
             return dict(value=value)
         if isinstance(value, (list, tuple)):
             return dict(zip(keys, value))
@@ -92,43 +97,54 @@ class TabularParsingMixin:
             raise TypeError('Invalid type for value "{}"'.format(type(value)))
 
 
+_PANDAS_UNITS = dict(week=pd.to_timedelta('1W').delta,
+                     year=365.2425 * 24 * 60 * 60 * 10 ** 9,
+                     **{un: pd.to_timedelta('1' + un).delta
+                        for un in ['day', 'hour', 'minute', 'second',
+                                   'millisecond', 'microsecond',
+                                   'nanosecond']})
+
+
 class TemporalFeaturesMixin:
 
-    def datetime_encoded(self, units):
+    def __check_temporal_index(self):
         if not casting.is_datetime_like_index(self.index):
             raise NotImplementedError("This method can be used only with "
                                       "datetime-like index.")
+
+    def datetime_encoded(self, units: Union[str, List]) -> pd.DataFrame:
+        r"""Transform dataset's temporal index into covariates using sinusoidal
+        transformations. Each temporal unit is used as period to compute the
+        operations, obtaining two feature (:math:`\sin` and :math:`\cos`) for
+        each unit."""
+        self.__check_temporal_index()
         units = ensure_list(units)
-        mapping = {un: pd.to_timedelta('1' + un).delta
-                   for un in ['day', 'hour', 'minute', 'second',
-                              'millisecond', 'microsecond', 'nanosecond']}
-        mapping['week'] = pd.to_timedelta('1W').delta
-        mapping['year'] = 365.2425 * 24 * 60 * 60 * 10 ** 9
         index_nano = self.index.view(np.int64)
         datetime = dict()
         for unit in units:
-            if unit not in mapping:
-                raise ValueError()
-            nano_sec = index_nano * (2 * np.pi / mapping[unit])
+            if unit not in _PANDAS_UNITS:
+                raise RuntimeError(f"'{unit}' is not a valid datetime unit.")
+            nano_sec = index_nano * (2 * np.pi / _PANDAS_UNITS[unit])
             datetime[unit + '_sin'] = np.sin(nano_sec)
             datetime[unit + '_cos'] = np.cos(nano_sec)
         return pd.DataFrame(datetime, index=self.index, dtype=np.float32)
 
-    def datetime_onehot(self, units):
-        if not casting.is_datetime_like_index(self.index):
-            raise NotImplementedError("This method can be used only with "
-                                      "datetime-like index.")
+    def datetime_onehot(self, units: Union[str, List]) -> pd.DataFrame:
+        r"""Transform dataset's temporal index into one-hot-encodings for each
+        temporal unit specified. Internally, this function calls
+        :func:`pandas.get_dummies`."""
+        self.__check_temporal_index()
         units = ensure_list(units)
         datetime = dict()
         for unit in units:
-            if hasattr(self.index.__dict__, unit):
-                raise ValueError()
+            if unit not in _PANDAS_UNITS:
+                raise RuntimeError(f"'{unit}' is not a valid datetime unit.")
             datetime[unit] = getattr(self.index, unit)
         dummies = pd.get_dummies(pd.DataFrame(datetime, index=self.index),
                                  columns=units)
         return dummies
 
-    def holidays_onehot(self, country, subdiv=None):
+    def holidays_onehot(self, country, subdiv=None) -> pd.DataFrame:
         """Returns a DataFrame to indicate if dataset timestamps is holiday.
         See https://python-holidays.readthedocs.io/en/latest/
 
@@ -142,9 +158,7 @@ class TemporalFeaturesMixin:
             pandas.DataFrame: DataFrame with one column ("holiday") as one-hot
                 encoding (1 if the timestamp is in a holiday, 0 otherwise).
         """
-        if not casting.is_datetime_like_index(self.index):
-            raise NotImplementedError("This method can be used only with "
-                                      "datetime-like index.")
+        self.__check_temporal_index()
         try:
             import holidays
         except ModuleNotFoundError:

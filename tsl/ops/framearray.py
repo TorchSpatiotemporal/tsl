@@ -1,9 +1,9 @@
-from typing import Callable
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pandas as pd
 
-from tsl.typing import Index, FrameArray
+from tsl.typing import Index, FrameArray, Scalar, FillOptions
 
 
 def framearray_to_numpy(x: FrameArray) -> np.ndarray:
@@ -12,9 +12,23 @@ def framearray_to_numpy(x: FrameArray) -> np.ndarray:
             return x.to_numpy()
         cols = [x.columns.unique(i) for i in range(x.columns.nlevels)]
         cols = pd.MultiIndex.from_product(cols)
-        x = x.reindex(columns=cols)
+        if not x.columns.equals(cols):
+            x = x.reindex(columns=cols)
         return x.values.reshape((-1, *cols.levshape))
     return np.asarray(x)
+
+
+def framearray_to_dataframe(x: FrameArray, index=None, columns=None) \
+        -> pd.DataFrame:
+    if isinstance(x, pd.DataFrame):
+        return x
+    x = np.asarray(x)
+    h, *w = x.shape
+    x = x.reshape((h, -1))
+    if columns is None and len(w) > 1:
+        columns = pd.MultiIndex.from_product([range(size) for size in w])
+    x = pd.DataFrame(x, index, columns)
+    return x
 
 
 def framearray_shape(x: FrameArray) -> tuple:
@@ -46,12 +60,9 @@ def aggregate(x: FrameArray, index: Index, aggr_fn: Callable = np.sum,
     """
     to_numpy = False
     if not isinstance(x, pd.DataFrame):
-        cols = pd.MultiIndex.from_product([np.arange(s) for s in x.shape[1:]])
-        x = x.reshape(x.shape[0], -1)
-        x = pd.DataFrame(x, columns=cols)
+        x = framearray_to_dataframe(x)
         if axis > 1:
-            axis -= 1
-            level += 1
+            axis, level = 1, axis - 1
         to_numpy = True
     if axis == 0:
         x = x.groupby(index, axis=0).aggregate(aggr_fn)
@@ -91,6 +102,24 @@ def reduce(x: FrameArray, index: Index,
         index = tuple([index if i == axis else slice(None)
                        for i in range(x.ndim)])
         return x[index]
+
+
+def fill_nan(x: FrameArray, value: Optional[Union[Scalar, FrameArray]] = None,
+             method: FillOptions = None, axis: int = 0) -> FrameArray:
+    assert axis in [0, 1]
+    to_numpy = False
+    if not isinstance(x, pd.DataFrame):
+        x = framearray_to_dataframe(x)
+        to_numpy = True
+    if method == 'mean':
+        x = x.fillna(value=x.mean(axis=axis), axis=axis, inplace=False)
+    elif method == 'linear':
+        x = x.interpolate("linear", axis=axis, inplace=False)
+    else:
+        x = x.fillna(value=value, method=method, axis=axis, inplace=False)
+    if to_numpy:
+        x = framearray_to_numpy(x)
+    return x
 
 
 def temporal_mean(x: FrameArray, index: pd.DatetimeIndex = None) \
