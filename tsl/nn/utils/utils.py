@@ -5,7 +5,7 @@ from einops import rearrange
 from torch import nn
 from torch.nn import functional as F
 
-from ..ops import expand_then_cat
+from ..functional import expand_then_cat
 
 _torch_activations_dict = {
     'elu': 'ELU',

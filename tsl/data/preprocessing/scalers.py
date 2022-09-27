@@ -371,16 +371,14 @@ class ScalerModule(Module):
                                "pattern.")
         # move to new object
         scaler = ScalerModule(self)
-        # if time-unvarying scaler, just apply unsqueezing indexing
-        new_axes = None
-        if self.t == 1 and time_index is not None:
-            if time_index.ndim > 1:
-                new_axes = torch.zeros([1] * time_index.ndim,
-                                         dtype=torch.long)
-                scaler.pattern = 'b ' * (time_index.ndim - 1) + scaler.pattern
         # shortcut for when scaler is time-unvarying and node_index is None
         if time_index is None and node_index is None:
             return scaler
+        # if time-unvarying scaler, just apply unsqueezing indexing
+        new_axes = None
+        if time_index is not None and time_index.ndim > 1:
+            new_axes = torch.zeros([1] * time_index.ndim, dtype=torch.long)
+            scaler.pattern = 'b ' * (time_index.ndim - 1) + scaler.pattern
         # slice params
         scaler.bias = take(scaler.bias, self.pattern,
                            time_index if self.bias.size(0) > 1 else new_axes,

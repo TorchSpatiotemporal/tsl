@@ -1,6 +1,8 @@
 from collections import namedtuple
-import scipy.stats
+
 import numpy as np
+import scipy.stats
+
 from tsl.typing import TensArray, OptTensArray, Optional, Union, Tuple
 
 
@@ -89,10 +91,10 @@ def az_whiteness_test(x: TensArray,
                       remove_median: bool = False
                       ) -> Union[
     AZWhitenessTestResult, AZWhitenessMultiTestResult]:
-    """Implementation of the AZ-whiteness test from `"AZ-whiteness test: a test
-    for uncorrelated noise on spatio-temporal graphs"
-    <https://arxiv.org/abs/2204.11135>`_ (Daniele Zambon and Cesare Alippi).
-
+    """Implementation of the AZ-whiteness test from the paper `"AZ-whiteness
+    test: a test for uncorrelated noise on spatio-temporal graphs"
+    <https://arxiv.org/abs/2204.11135>`_ (D. Zambon and C. Alippi,
+    NeurIPS 2022).
 
     Args:
         x (TensArray): graph signal, typically with pattern "t n f".
@@ -114,7 +116,7 @@ def az_whiteness_test(x: TensArray,
         edge_weight_temporal (float, optional): positive scalar weight for all
             temporal edges. If :obj:`None` or :obj:`"auto"`, the weight is
             computed to balance the contribution of the spatial and temporal
-            components (see `Zambon and Alippi 2022
+            components (see `Zambon and Alippi, 2022
             <https://arxiv.org/abs/2204.11135>`_).
             (default: :obj:`None`)
         lamb (float, optional): scalar factor in within :math:`0.0` and

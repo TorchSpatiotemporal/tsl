@@ -1,10 +1,9 @@
 from typing import Union, Tuple, List
 
-import torch
 from torch import nn, Tensor
-import numpy as np
 
 from ..functional import expand_then_cat
+
 
 class Lambda(nn.Module):
 
@@ -31,6 +30,7 @@ class Select(nn.Module):
     """
     Select one element along a dimension.
     """
+
     def __init__(self, dim, index):
         super(Select, self).__init__()
         self.dim = dim

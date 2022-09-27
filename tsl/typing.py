@@ -1,4 +1,4 @@
-from typing import Union, Tuple, List, Optional, Literal
+from typing import Union, Tuple, List, Optional, Literal, Type
 
 from numpy import ndarray
 from pandas import DatetimeIndex, PeriodIndex, TimedeltaIndex, DataFrame
@@ -28,3 +28,5 @@ IndexSlice = Union[slice, Index]
 
 FillOptions = Optional[Literal["backfill", "bfill", "ffill", "pad",
                                "mean", "linear"]]
+
+ModelReturnOptions = Union[Type[Tensor], Type[dict], Type[list]]

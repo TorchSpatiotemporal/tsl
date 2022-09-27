@@ -1,8 +1,9 @@
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, Any
 
 import numpy as np
 import pandas as pd
 
+import tsl
 from tsl.typing import Index, FrameArray, Scalar, FillOptions
 
 
@@ -134,9 +135,9 @@ def temporal_mean(x: FrameArray, index: pd.DatetimeIndex = None) \
 
     Args:
         x (np.array | pd.Dataframe): Array-like with missing values.
-        index (pd.DatetimeIndex | pd.PeriodIndex | pd.TimedeltaIndex, optional):
-            Temporal index if x is not a :obj:'~pandas.Dataframe' with a
-            temporal index. Must have same length as :obj:`x`.
+        index (pd.DatetimeIndex, optional): Temporal index if x is not a
+            :obj:'~pandas.Dataframe' with a temporal index. Must have same
+            length as :obj:`x`.
             (default :obj:`None`)
     """
     if index is not None:
@@ -172,3 +173,70 @@ def temporal_mean(x: FrameArray, index: pd.DatetimeIndex = None) \
     if isinstance(x, np.ndarray):
         df_mean = df_mean.values.reshape(shape)
     return df_mean
+
+
+def get_trend(df, period='week', train_len=None, valid_mask=None):
+    """Perform detrending on a time series by subtrating from each value of the
+    input dataframe the average value computed over the training dataset for
+    each hour/weekday.
+
+    Args:
+        df: dataframe
+        period: period of the trend ('day', 'week', 'month')
+        train_len: train length
+
+    Returns:
+        tuple: the detrended dataset and the trend values
+    """
+    df = df.copy()
+    if train_len is not None:
+        df[train_len:] = np.nan
+    if valid_mask is not None:
+        df[~valid_mask] = np.nan
+    idx = [df.index.hour, df.index.minute]
+    if period == 'week':
+        idx = [df.index.weekday, ] + idx
+    elif period == 'month':
+        idx = [df.index.month, df.index.weekday] + idx
+    elif period != 'day':
+        raise NotImplementedError("Period must be in ('day', 'week', 'month')")
+
+    means = df.groupby(idx).transform(np.nanmean)
+    return df - means, means
+
+
+def normalize(x: FrameArray, by: Any = None,
+              axis: int = 0, level: int = 0):
+    r"""Normalize input :class:`~numpy.ndarray` or :class:`~pandas.DataFrame`
+    using mean and standard deviation. If :obj:`x` is a
+    :class:`~pandas.DataFrame`, normalization can be done on a specific
+    group.
+
+    Args:
+        x (FrameArray): the FrameArray to be normalized.
+        by: the conditions used to determine the groups for the
+            :meth:`~pandas.DataFrame.groupby`.
+            (default :obj:`None`)
+        axis (int): axis for the function to be applied on.
+            (default 0)
+        level (int): level of axis for the function to be applied on (for
+            MultiIndexed DataFrames).
+            (default 0)
+
+    Returns:
+        FrameArray: the normalized FrameArray
+    """
+    if isinstance(x, pd.DataFrame):
+        if by is not None:
+            groups = x.groupby(by)
+            mean = groups.transform(np.nanmean)
+            std = groups.transform(np.nanstd)
+            x = x[mean.columns]
+        else:
+            mean = x.mean(axis=axis, level=level, skipna=True)
+            std = x.std(axis=axis, level=level, skipna=True)
+    else:
+        x = np.asarray(x)
+        mean = x.mean(axis=axis, keepdims=True)
+        std = x.std(axis=axis, keepdims=True)
+    return (x - mean) / (std + tsl.epsilon)

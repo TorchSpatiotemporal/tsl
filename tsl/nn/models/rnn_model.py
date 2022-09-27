@@ -1,17 +1,16 @@
-from torch import nn
+from typing import Optional
+
 from einops import rearrange
-
-from tsl.utils.parser_utils import ArgParser
-
-from tsl.nn.blocks.encoders import ConditionalBlock
-from tsl.nn.blocks.encoders.rnn import RNN
+from torch import nn, Tensor
 
 from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
+from tsl.nn.blocks.encoders import ConditionalBlock
+from tsl.nn.blocks.encoders.rnn import RNN
+from tsl.nn.models.base_model import BaseModel
 
 
-class RNNModel(nn.Module):
-    r"""
-    Simple RNN for multi-step forecasting.
+class RNNModel(BaseModel):
+    r"""Simple RNN for multistep forecasting.
 
     Args:
         input_size (int): Size of the input.
@@ -24,25 +23,27 @@ class RNNModel(nn.Module):
         rec_dropout (float, optional): Dropout probability in the RNN encoder.
         ff_dropout (float, optional): Dropout probability int the GCN decoder.
         horizon (int): Forecasting horizon.
-        cell_type (str, optional): Type of cell that should be use (options: [`gru`, `lstm`]). (default: `gru`)
+        cell_type (str, optional): Type of cell that should be use
+            (options: [:obj:`gru`, :obj:`lstm`]).
+            (default: :obj:`gru`)
         activation (str, optional): Activation function.
+            (default: :obj:`relu`)
     """
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 output_size,
-                 ff_size,
-                 exog_size,
-                 rec_layers,
-                 ff_layers,
-                 rec_dropout,
-                 ff_dropout,
-                 horizon,
-                 cell_type='gru',
-                 activation='relu'):
+
+    def __init__(self, input_size: int, output_size: int,
+                 horizon: int,
+                 exog_size: Optional[int] = None,
+                 hidden_size: int = 32,
+                 ff_size: int = 64,
+                 rec_layers: int = 1,
+                 ff_layers: int = 1,
+                 rec_dropout: float = 0.,
+                 ff_dropout: float = 0.,
+                 cell_type: str = 'gru',
+                 activation: str = 'relu'):
         super(RNNModel, self).__init__()
 
-        if exog_size > 0:
+        if exog_size is not None:
             self.input_encoder = ConditionalBlock(input_size=input_size,
                                                   exog_size=exog_size,
                                                   output_size=hidden_size,
@@ -69,13 +70,12 @@ class RNNModel(nn.Module):
             dropout=ff_dropout
         )
 
-    def forward(self, x, u=None, **kwargs):
-        """"""
+    def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         # x: [batches steps nodes features]
         # u: [batches steps (nodes) features]
         if u is not None:
             if u.dim() == 3:
-                u = rearrange(u, 'b s f -> b s 1 f')
+                u = rearrange(u, 'b t f -> b t 1 f')
             x = self.input_encoder(x, u)
         else:
             x = self.input_encoder(x)
@@ -84,21 +84,10 @@ class RNNModel(nn.Module):
 
         return self.readout(x)
 
-    @staticmethod
-    def add_model_specific_args(parser: ArgParser):
-        parser.opt_list('--hidden-size', type=int, default=32, tunable=True, options=[16, 32, 64, 128, 256])
-        parser.opt_list('--ff-size', type=int, default=64, tunable=True, options=[32, 64, 128, 256, 512, 1024])
-        parser.opt_list('--rec-layers', type=int, default=1, tunable=True, options=[1, 2, 3])
-        parser.opt_list('--ff-layers', type=int, default=1, tunable=True, options=[1, 2, 3])
-        parser.opt_list('--rec-dropout', type=float, default=0., tunable=True, options=[0., 0.1, 0.2])
-        parser.opt_list('--ff-dropout', type=float, default=0., tunable=True, options=[0., 0.1, 0.25, 0.5])
-        parser.opt_list('--cell-type', type=str, default='gru', tunable=True, options=['gru', 'lstm'])
-        return parser
-
 
 class FCRNNModel(RNNModel):
-    r"""
-    A simple fully connected RNN for multi-step forecasting that simply flattens data along the spatial diemnesion.
+    r"""A simple fully connected RNN for multistep forecasting that simply
+    flattens data along the spatial dimension.
 
     Args:
         input_size (int): Size of the input.
@@ -111,44 +100,44 @@ class FCRNNModel(RNNModel):
         rec_dropout (float, optional): Dropout probability in the RNN encoder.
         ff_dropout (float, optional): Dropout probability int the GCN decoder.
         horizon (int): Forecasting horizon.
-        cell_type (str, optional): Type of cell that should be use (options: [`gru`, `lstm`]). (default: `gru`)
+        cell_type (str, optional): Type of cell that should be use
+            (options: [:obj:`gru`, :obj:`lstm`]).
+            (default: :obj:`gru`)
         activation (str, optional): Activation function.
+            (default: :obj:`relu`)
     """
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 output_size,
-                 ff_size,
-                 exog_size,
-                 rec_layers,
-                 ff_layers,
-                 rec_dropout,
-                 ff_dropout,
-                 horizon,
-                 n_nodes,
-                 cell_type='gru',
-                 activation='relu'):
+
+    def __init__(self, input_size: int, output_size: int,
+                 horizon: int, n_nodes: int,
+                 exog_size: Optional[int] = None,
+                 hidden_size: int = 32,
+                 ff_size: int = 64,
+                 rec_layers: int = 1,
+                 ff_layers: int = 1,
+                 rec_dropout: float = 0.,
+                 ff_dropout: float = 0.,
+                 cell_type: str = 'gru',
+                 activation: str = 'relu'):
         super(FCRNNModel, self).__init__(input_size=input_size * n_nodes,
-                                         hidden_size=hidden_size,
                                          output_size=output_size * n_nodes,
-                                         ff_size=ff_size,
+                                         horizon=horizon,
                                          exog_size=exog_size,
+                                         hidden_size=hidden_size,
+                                         ff_size=ff_size,
                                          rec_layers=rec_layers,
                                          ff_layers=ff_layers,
                                          rec_dropout=rec_dropout,
                                          ff_dropout=ff_dropout,
-                                         horizon=horizon,
                                          cell_type=cell_type,
                                          activation=activation)
 
-    def forward(self, x, u=None, **kwargs):
-        """"""
+    def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         # x: [batches, steps, nodes, features]
         # u: [batches, steps, (nodes), features]
         b, _, n, _ = x.size()
-        x = rearrange(x, 'b s n f -> b s 1 (n f)')
+        x = rearrange(x, 'b t n f -> b t 1 (n f)')
         if u is not None and u.dim() == 4:
-            u = rearrange(u, 'b s n f -> b s 1 (n f)')
-        x = super(FCRNNModel, self).forward(x, u, **kwargs)
+            u = rearrange(u, 'b t n f -> b t 1 (n f)')
+        x = super(FCRNNModel, self).forward(x, u)
         # [b, h, 1, (n f)]
         return rearrange(x, 'b h 1 (n f) -> b h n f', n=n)

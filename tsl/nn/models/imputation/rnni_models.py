@@ -3,37 +3,38 @@ from typing import Optional
 import torch
 from einops import rearrange
 from einops.layers.torch import Rearrange
-from torch import nn
+from torch import nn, Tensor
 
 from tsl.nn.functional import reverse_tensor
-from tsl.utils.parser_utils import str_to_bool
+from tsl.nn.models.base_model import BaseModel
 
 
-class RNNImputerModel(nn.Module):
+class RNNImputerModel(BaseModel):
     r"""Fill the blanks with a GRU 1-step-ahead predictor."""
 
-    def __init__(self, input_size, hidden_size, exog_size=0,
-                 cell='gru',
-                 concat_mask=True,
+    def __init__(self, input_size: int, hidden_size: int = 64,
+                 exog_size: Optional[int] = None,
+                 cell: str = 'gru',
+                 concat_mask: bool = True,
+                 fully_connected: bool = False,
                  n_nodes: Optional[int] = None,
-                 process_nodes_independently=False,
-                 detach_input=False,
-                 state_init='zero'):
+                 detach_input: bool = False,
+                 state_init: str = 'zero'):
         super(RNNImputerModel, self).__init__()
 
-        if process_nodes_independently:
-            self._to_pattern = '(b n) s c'
+        if fully_connected:
+            self._to_pattern = '(b n) t f'
         else:
             assert n_nodes is not None
             input_size = input_size * n_nodes
-            self._to_pattern = 'b s (n c)'
+            self._to_pattern = 'b t (n f)'
 
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.exog_size = exog_size
 
         self.concat_mask = concat_mask
-        self.process_nodes_independently = process_nodes_independently
+        self.fully_connected = fully_connected
         self.detach_input = detach_input
         self.state_init = state_init
 
@@ -46,12 +47,12 @@ class RNNImputerModel(nn.Module):
 
         if concat_mask:
             input_size = 2 * input_size
-        input_size = input_size + exog_size
+        input_size = input_size + (exog_size or 0)
         self.rnn_cell = cell(input_size=input_size, hidden_size=hidden_size)
 
         self.readout = nn.Linear(hidden_size, self.input_size)
 
-    def init_hidden_state(self, x):
+    def init_hidden_state(self, x: Tensor):
         if self.state_init == 'zero':
             return torch.zeros((x.size(0), self.hidden_size), device=x.device,
                                dtype=x.dtype)
@@ -59,7 +60,8 @@ class RNNImputerModel(nn.Module):
             return torch.randn(x.size(0), self.hidden_size, device=x.device,
                                dtype=x.dtype)
 
-    def _preprocess_input(self, x, x_hat, m, u):
+    def _preprocess_input(self, x: Tensor, x_hat: Tensor, m: Tensor,
+                          u: Optional[Tensor] = None):
         if self.detach_input:
             x_p = torch.where(m, x, x_hat.detach())
         else:
@@ -71,7 +73,9 @@ class RNNImputerModel(nn.Module):
             x_p = torch.cat([x_p, m], -1)
         return x_p
 
-    def forward(self, x, mask, u=None, return_hidden=False):
+    def forward(self, x: Tensor, mask: Tensor,
+                u: Optional[Tensor] = None,
+                return_hidden: bool = False) -> list:
         # x: [batches, steps, nodes, features]
         steps, nodes = x.size(1), x.size(2)
 
@@ -100,44 +104,30 @@ class RNNImputerModel(nn.Module):
         if not return_hidden:
             return x_hat
 
-        if self.process_nodes_independently:
+        if self.fully_connected:
             h = rearrange(h, f'{self._to_pattern} -> b s n c', n=nodes)
-        return x_hat, h
-
-    @staticmethod
-    def add_model_specific_args(parser):
-        parser.add_argument('--input-size', type=int)
-        parser.add_argument('--hidden-size', type=int)
-        parser.add_argument('--exog-size', type=int, default=0)
-        parser.add_argument('--cell', type=str, default='gru')
-        parser.add_argument('--concat-mask', type=str_to_bool, nargs='?',
-                            const=True, default=True)
-        parser.add_argument('--detach-input', type=str_to_bool, nargs='?',
-                            const=True, default=False)
-        parser.add_argument('--process-nodes-independently', type=str_to_bool,
-                            nargs='?', const=True, default=False)
-        parser.add_argument('--state-init', type=str, default='zero')
-        return parser
+        return [x_hat, h]
 
 
 class BiRNNImputerModel(nn.Module):
     r"""Fill the blanks with a bidirectional GRU 1-step-ahead predictor."""
 
-    def __init__(self, input_size, hidden_size, exog_size=0,
-                 cell='gru',
-                 concat_mask=True,
+    def __init__(self, input_size: int, hidden_size: int = 64,
+                 exog_size: Optional[int] = None,
+                 cell: str = 'gru',
+                 dropout=0.,
+                 concat_mask: bool = True,
+                 fully_connected: bool = False,
                  n_nodes: Optional[int] = None,
-                 process_nodes_independently=False,
-                 detach_input=False,
-                 state_init='zero',
-                 dropout=0.):
+                 detach_input: bool = False,
+                 state_init: str = 'zero'):
         super(BiRNNImputerModel, self).__init__()
         self.fwd_rnn = RNNImputerModel(input_size, hidden_size,
                                        exog_size=exog_size,
                                        cell=cell,
                                        concat_mask=concat_mask,
                                        n_nodes=n_nodes,
-                                       process_nodes_independently=process_nodes_independently,
+                                       fully_connected=fully_connected,
                                        detach_input=detach_input,
                                        state_init=state_init)
         self.bwd_rnn = RNNImputerModel(input_size, hidden_size,
@@ -145,12 +135,12 @@ class BiRNNImputerModel(nn.Module):
                                        cell=cell,
                                        concat_mask=concat_mask,
                                        n_nodes=n_nodes,
-                                       process_nodes_independently=process_nodes_independently,
+                                       fully_connected=fully_connected,
                                        detach_input=detach_input,
                                        state_init=state_init)
         self.dropout = nn.Dropout(dropout)
 
-        if process_nodes_independently:
+        if fully_connected:
             self.read_out = nn.Linear(2 * hidden_size, input_size)
         else:
             assert n_nodes is not None
@@ -159,7 +149,9 @@ class BiRNNImputerModel(nn.Module):
                 Rearrange('b s (n h) -> b s n h', n=n_nodes)
             )
 
-    def forward(self, x, mask, u=None, return_hidden=False):
+    def forward(self, x: Tensor, mask: Tensor,
+                u: Optional[Tensor] = None,
+                return_hidden: bool = False) -> list:
         # x: [batches, steps, nodes, features]
         x_hat_fwd, h_fwd = self.fwd_rnn(x, mask, u=u, return_hidden=True)
         u_rev = reverse_tensor(u, 1) if u is not None else None
@@ -172,11 +164,5 @@ class BiRNNImputerModel(nn.Module):
         h = self.dropout(torch.cat([h_fwd, h_bwd], -1))
         x_hat = self.read_out(h)
         if return_hidden:
-            return x_hat, (x_hat_fwd, x_hat_bwd), h
-        return x_hat, (x_hat_fwd, x_hat_bwd)
-
-    @staticmethod
-    def add_model_specific_args(parser):
-        RNNImputerModel.add_model_specific_args(parser)
-        parser.add_argument('--dropout', type=float, default=0.)
-        return parser
+            return [x_hat, (x_hat_fwd, x_hat_bwd), h]
+        return [x_hat, (x_hat_fwd, x_hat_bwd)]

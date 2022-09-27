@@ -9,10 +9,12 @@ from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
 
 
 class DCRNNModel(nn.Module):
-    r"""
-    Diffusion ConvolutionalRecurrent Neural Network with a nonlinear readout.
+    r"""The Diffusion Convolutional Recurrent Neural Network from the paper
+    `"Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic
+    Forecasting" <https://arxiv.org/abs/1707.01926>`_ (Li et al., ICLR 2018).
 
-    From Li et al., "Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic Forecasting", ICLR 2018.
+    Differently from the original implementation, the recurrent decoder is
+    substituted with a fixed-length nonlinear readout.
 
     Args:
         input_size (int): Size of the input.

@@ -157,8 +157,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             self.set_target_map(target_map)
 
         # Store preprocessing options
-        # A scaler is a module that transforms data with a linear operation
         self.scalers: dict = dict()
+        self.trend: Optional[Tensor] = None
+
+        # A scaler is a module that transforms data with a linear operation
         self._batch_scalers: dict = dict()
         if scalers is not None:
             for k, v in scalers.items():
@@ -166,7 +168,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
         # Target's trend (i.e., 't n f' tensor to be removed when target
         # is preprocessed)
-        self.trend: Optional[Tensor] = None
         # handle trend as bias in target scaler, so cache actual one (if any)
         # to restore after trend update/deletion
         self.__target_bias: Optional[Tensor] = None

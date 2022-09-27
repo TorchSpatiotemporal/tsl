@@ -1,21 +1,21 @@
-from torch import nn
-
-from tsl.nn.blocks.encoders.tcn import TemporalConvNet
-from tsl.nn.blocks.encoders import ConditionalBlock
-from tsl.nn.layers.norm import Norm
-
-from tsl.utils.parser_utils import str_to_bool, ArgParser
-from tsl.nn.utils.utils import get_layer_activation
-from tsl.nn.ops.ops import Lambda
+from typing import Optional
 
 from einops import rearrange
 from einops.layers.torch import Rearrange
+from torch import nn, Tensor
+
+from tsl.nn.blocks.encoders import ConditionalBlock
+from tsl.nn.blocks.encoders.tcn import TemporalConvNet
+from tsl.nn.layers.norm import Norm
+from tsl.nn.models.base_model import BaseModel
+from tsl.nn.ops.ops import Lambda
+from tsl.nn.utils.utils import get_layer_activation
 
 
-class TCNModel(nn.Module):
-    r"""
-    A simple Causal Dilated Temporal Convolutional Network for multi-step forecasting.
-    Learned temporal embeddings are pooled together using dynamics weights.
+class TCNModel(BaseModel):
+    r"""A simple Causal Dilated Temporal Convolutional Network for
+    multistep forecasting. Learned temporal embeddings are pooled together
+    using dynamics weights.
 
     Args:
         input_size (int): Input size.
@@ -30,27 +30,30 @@ class TCNModel(nn.Module):
         resnet (bool, optional): Whether to use residual connections.
         dilation (int): Dilation coefficient of the convolutional kernel.
         activation (str, optional): Activation function. (default: `relu`)
-        n_convs_layer (int, optional): Number of temporal convolutions in each layer. (default: 2)
+        n_convs_layer (int, optional): Number of temporal convolutions in each
+            layer. (default: 2)
         norm (str, optional): Normalization strategy.
-        gated (bool, optional): Whether to used the GatedTanH activation function. (default: `False`)
+        gated (bool, optional): Whether to used the GatedTanH activation
+            function. (default: obj`False`)
     """
+
     def __init__(self,
-                 input_size,
-                 hidden_size,
-                 ff_size,
-                 output_size,
-                 horizon,
-                 kernel_size,
-                 n_layers,
-                 exog_size,
-                 readout_kernel_size=1,
-                 resnet=True,
-                 dilation=1,
-                 activation='relu',
-                 n_convs_layer=2,
-                 dropout=0.,
-                 norm="none",
-                 gated=False):
+                 input_size: int,
+                 output_size: int,
+                 horizon: int,
+                 exog_size: Optional[int] = None,
+                 hidden_size: int = 32,
+                 ff_size: int = 32,
+                 kernel_size: int = 2,
+                 n_layers: int = 4,
+                 n_convs_layer: int = 2,
+                 readout_kernel_size: int = 1,
+                 dilation: int = 2,
+                 activation: str = 'relu',
+                 dropout: float = 0.,
+                 gated: bool = False,
+                 resnet: bool = True,
+                 norm: str = 'batch'):
         super(TCNModel, self).__init__()
 
         if exog_size > 0:
@@ -76,7 +79,7 @@ class TCNModel(nn.Module):
                                 exponential_dilation=True,
                                 n_layers=n_convs_layer,
                                 causal_padding=True)
-                )
+            )
             )
         self.convs = nn.ModuleList(layers)
         self.resnet = resnet
@@ -84,40 +87,25 @@ class TCNModel(nn.Module):
 
         self.readout = nn.Sequential(
             Lambda(lambda x: x[:, -readout_kernel_size:]),
-            Rearrange('b s n c -> b n (c s)'),
+            Rearrange('b t n f -> b n (f t)'),
             nn.Linear(hidden_size * readout_kernel_size, ff_size * horizon),
             activation_layer(),
             nn.Dropout(dropout),
-            Rearrange('b n (c h) -> b h n c ', c=ff_size, h=horizon),
+            Rearrange('b n (f h) -> b h n f ', c=ff_size, h=horizon),
             nn.Linear(ff_size, output_size),
         )
         self.window = readout_kernel_size
         self.horizon = horizon
 
-    def forward(self, x, u=None, **kwargs):
-        """"""
-        # x: [b s n c]
-        # u: [b s (n) c]
+    def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
+        # x: [b t n f]
+        # u: [b t (n) f]
         if u is not None:
             if u.dim() == 3:
-                u = rearrange(u, 'b s f -> b s 1 f')
+                u = rearrange(u, 'b t f -> b t 1 f')
             x = self.input_encoder(x, u)
         else:
             x = self.input_encoder(x)
         for conv in self.convs:
             x = x + conv(x) if self.resnet else conv(x)
         return self.readout(x)
-
-    @staticmethod
-    def add_model_specific_args(parser: ArgParser):
-        parser.opt_list('--hidden-size', type=int, default=32, tunable=True, options=[32])
-        parser.opt_list('--ff-size', type=int, default=32, tunable=True, options=[256])
-        parser.opt_list('--kernel-size', type=int, default=2, tunable=True, options=[2, 3])
-        parser.opt_list('--n-layers', type=int, default=4, tunable=True, options=[2, 4, 6])
-        parser.opt_list('--n-convs-layer', type=int, default=2, tunable=True, options=[1, 2])
-        parser.opt_list('--dilation', type=int, default=2, tunable=True, options=[1, 2])
-        parser.opt_list('--dropout', type=float, default=0., tunable=True, options=[0., 0.2])
-        parser.opt_list('--gated', type=str_to_bool, tunable=False, nargs='?', const=True, default=False, options=[True, False])
-        parser.opt_list('--resnet', type=str_to_bool, tunable=False, nargs='?', const=True, default=True, options=[True, False])
-        parser.opt_list('--norm', type=str, default="batch", options=["none", "batch", "instance", "layer"])
-        return parser

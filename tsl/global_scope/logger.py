@@ -1,4 +1,3 @@
-import logging
 import logging.config
 
 DEFAULT_LOGGING = {
