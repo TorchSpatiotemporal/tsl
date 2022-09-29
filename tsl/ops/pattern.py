@@ -7,17 +7,26 @@ import torch
 from numpy import ndarray
 from torch import Tensor
 
-PATTERN_TNF = re.compile('^t?n{0,2}f*$')
-PATTERN_TNEF = re.compile('^t?(n{0,2}|e?)f*$')
+_PATTERNS = {
+    'tnf': re.compile('^t?n{0,2}f*$'),
+    'tnef': re.compile('^t?(n{0,2}|e?)f*$'),
+    'btnf': re.compile('^b?t?n{0,2}f*$'),
+    'btnef': re.compile('^b?t?(n{0,2}|e?)f*$'),
+}
 
 
 def check_pattern(pattern: str, split: bool = False, ndim: int = None,
-                  include_edges: bool = False) -> Union[str, list]:
+                  include_edges: bool = False,
+                  include_batch: bool = False) -> Union[str, list]:
     pattern_squeezed = pattern.replace(' ', '').replace('c', 'f')
     # check 'c'/'f' follows 'n', 'n' follows 't'
     # allow for duplicate 'n' dims (e.g., 'n n', 't n n f')
     # allow for limitless 'c'/'f' dims (e.g., 't n f f')
-    match_with = PATTERN_TNEF if include_edges else PATTERN_TNF
+    regex = 'tnef' if include_edges else 'tnf'
+    # allow for batch dimension
+    if include_batch:
+        regex = 'b' + regex
+    match_with = _PATTERNS[regex]
     if not match_with.match(pattern_squeezed):
         raise RuntimeError(f'Pattern "{pattern}" not allowed.')
     elif ndim is not None and len(pattern_squeezed) != ndim:

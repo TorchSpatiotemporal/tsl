@@ -10,7 +10,36 @@ from tsl.nn.models.base_model import BaseModel
 
 
 class RNNImputerModel(BaseModel):
-    r"""Fill the blanks with a GRU 1-step-ahead predictor."""
+    r"""Fill the blanks with a GRU 1-step-ahead predictor.
+
+    Args:
+        input_size (int): Number of features of the input sample.
+        hidden_size (int): Number of hidden units.
+            (default: 64)
+        exog_size (int, optional): Number of features of the input covariate,
+            if any.
+            (default: :obj:`None`)
+        cell (str): Type of recurrent cell to be used, one of [:obj:`gru`,
+            :obj:`lstm`].
+            (default: :obj:`gru`)
+        concat_mask (bool): If :obj:`True`, then the input tensor is
+            concatenated to the mask when fed to the RNN cell.
+            (default: :obj:`True`)
+        fully_connected (bool): If :obj:`True`, then the node and feature
+            dimensions are flattened together.
+            (default: :obj:`False`)
+        n_nodes (int, optional): The number of nodes in the input sample, to be
+            provided in case :obj:`fully_connected` is :obj:`True`.
+            (default: :obj:`None`)
+        detach_input (bool): If :obj:`True`, call :meth:`~torch.Tensor.detach`
+            on predictions before they are used to fill the gaps, breaking the
+            error backpropagation.
+            (default: :obj:`False`)
+        state_init (str): How to initialize the state of the recurrent cell,
+            one of [:obj:`zero`, :obj:`noise`]. With :obj:`noise`, the states
+            are drawn from a normal distribution.
+            (default: :obj:`zero`)
+    """
 
     def __init__(self, input_size: int, hidden_size: int = 64,
                  exog_size: Optional[int] = None,
@@ -109,7 +138,7 @@ class RNNImputerModel(BaseModel):
         return [x_hat, h]
 
 
-class BiRNNImputerModel(nn.Module):
+class BiRNNImputerModel(BaseModel):
     r"""Fill the blanks with a bidirectional GRU 1-step-ahead predictor."""
 
     def __init__(self, input_size: int, hidden_size: int = 64,

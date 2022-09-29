@@ -3,6 +3,7 @@ from typing import Tuple, List, Union, Optional
 
 import numpy as np
 import torch
+from einops import rearrange
 from scipy import stats
 from torch import Tensor
 from torch.nn import Module
@@ -295,27 +296,38 @@ class ScalerModule(Module):
         super(ScalerModule, self).__init__()
         self.training = False
         self.inherited_from = None
-        self.pattern = check_pattern(pattern) if pattern is not None else None
+        self.t_axis = None  # axis of time dimension
+        self.n_axis = None  # axis of node dimension
         # initialize from scaler (if any)
         if isinstance(scaler, Scaler):
             scaler = scaler.torch()
             self.inherited_from = scaler.__class__
         elif isinstance(scaler, ScalerModule):
             self.inherited_from = scaler.inherited_from
-            self.pattern = scaler.pattern
+            pattern = scaler.pattern
         if scaler is not None:
-            bias = scaler.bias.clone().detach()
-            scale = scaler.scale.clone().detach()
-        # initialize from params
-        else:
-            bias = torch.atleast_1d(torch.as_tensor(bias))
-            scale = torch.atleast_1d(torch.as_tensor(scale))
+            bias = scaler.bias
+            scale = scaler.scale
         # register scaling params as non-trainable parameters
-        self.register_buffer('bias', bias)
-        self.register_buffer('scale', scale)
+        self.bias = bias
+        self.scale = scale
+        self.pattern = pattern
 
     def __call__(self, *args, **kwargs):
         return self.transform(*args, **kwargs)
+
+    def __setattr__(self, key, value):
+        if key in ['bias', 'scale']:
+            if isinstance(value, Tensor):
+                value = value.clone().detach()
+            else:
+                value = torch.tensor(value)
+            value = torch.atleast_1d(value)
+            self.register_buffer(key, value)
+        elif key == 'pattern':
+            self.set_pattern(value)
+        else:
+            super(ScalerModule, self).__setattr__(key, value)
 
     def _get_name(self):
         if self.inherited_from is not None:
@@ -339,33 +351,89 @@ class ScalerModule(Module):
 
     @property
     def t(self) -> int or None:
+        """Size of temporal dimension (:obj:`None` if time-invariant)."""
         if self.pattern is not None and 't' in self.pattern:
             return max(self.scale.size(0), self.bias.size(0))
 
+    @property
+    def n(self) -> int or None:
+        """Size of temporal dimension (:obj:`None` if time-invariant)."""
+        if self.pattern is not None and 'n' in self.pattern:
+            return max(self.scale.size(0), self.bias.size(0))
+
+    def set_pattern(self, value, check: bool = False):
+        if value is not None:
+            value = value.strip()
+            if value.count('n') > 1:
+                raise RuntimeError("ScalerModule does not support data with "
+                                   "multiple 'n' dimensions.")
+            if check:
+                value = check_pattern(value, ndim=self.bias.ndim,
+                                      include_edges=True, include_batch=True)
+            self.t_axis = 0 if 't' in value else None
+            if 'n' in value:
+                self.n_axis = value.split(' ').index('n')
+        self.__dict__['pattern'] = value
+
     def transform_tensor(self, x: Tensor) -> Tensor:
-        r"""Apply transformation :math:`f(x) = (x - \mu) / \sigma`."""
+        r"""Apply transformation :math:`f(x) = (x - \mu) / \sigma` to tensor
+        :obj:`x`."""
         return (x - self.bias) / self.scale + tsl.epsilon
 
     def inverse_transform_tensor(self, x: Tensor) -> Tensor:
         r"""Apply inverse transformation
-        :math:`f(x) = (x \cdot \sigma) + \mu`."""
+        :math:`f(x) = (x \cdot \sigma) + \mu` to tensor :obj:`x`."""
         return x * (self.scale + tsl.epsilon) + self.bias
 
     def transform(self, x):
+        r"""Recursively apply transformation :math:`f(x) = (x - \mu) / \sigma`
+        to :obj:`x`."""
         return recursive_apply(x, self.transform_tensor)
 
     def inverse_transform(self, x):
+        r"""Recursively apply inverse transformation
+        :math:`f(x) = (x \cdot \sigma) + \mu` to :obj:`x`."""
         return recursive_apply(x, self.inverse_transform_tensor)
 
     def numpy(self):
-        r"""Transform all tensors to numpy arrays, either for all attributes or
-        only the ones given in :obj:`*args`."""
+        r"""Transform :class:`~tsl.data.preprocessing.ScalerModule` to
+        :class:`~tsl.data.preprocessing.Scaler`."""
         b = self.bias.detach().cpu().numpy()
         s = self.scale.detach().cpu().numpy()
         return Scaler(bias=b, scale=s)
 
+    def rearrange(self, pattern: str, inplace=False, **axes_lengths) \
+            -> "ScalerModule":
+        r"""Rearrange parameters in the scaler according to the provided patter
+         using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
+        if '->' in pattern:
+            start_pattern, end_pattern = pattern.split('->')
+            start_pattern = start_pattern.strip()
+            if self.pattern is not None and self.pattern != start_pattern:
+                raise RuntimeError(f"Starting pattern {start_pattern} does not "
+                                   f"match with scaler patter {self.pattern}.")
+            self.pattern = start_pattern
+        else:
+            end_pattern = pattern
+            pattern = self.pattern + ' -> ' + pattern
+        b = rearrange(self.bias, pattern, **axes_lengths)
+        s = rearrange(self.scale, pattern, **axes_lengths)
+        if inplace:
+            self.bias, self.scale = b, s
+            self.pattern = end_pattern
+            return self
+        return ScalerModule(bias=b, scale=s, pattern=end_pattern.strip())
+
     def slice(self, time_index: Union[List, Tensor] = None,
               node_index: Union[List, Tensor] = None):
+        """Slice the parameters of the scaler with the given time and node
+        indices.
+
+        The scaler must have a pattern defining the dimensions of the
+        parameters. This operation is not in place, it always returns a new
+        :class:`~tsl.data.preprocessing.ScalerModule`. The parameters of the
+        new scaler have same size of the indices provided along the slicing
+        axes or 1 for the params with a single, broadcastable, value."""
         if self.pattern is None:
             raise RuntimeError("You are trying to slice a scaler with no "
                                "pattern.")
@@ -374,18 +442,32 @@ class ScalerModule(Module):
         # shortcut for when scaler is time-unvarying and node_index is None
         if time_index is None and node_index is None:
             return scaler
+
         # if time-unvarying scaler, just apply unsqueezing indexing
-        new_axes = None
-        if time_index is not None and time_index.ndim > 1:
-            new_axes = torch.zeros([1] * time_index.ndim, dtype=torch.long)
-            scaler.pattern = 'b ' * (time_index.ndim - 1) + scaler.pattern
+        new_axes, pattern = None, scaler.pattern
+        if time_index is not None and time_index.ndim == 2:
+            new_axes = torch.zeros(1, 1, dtype=torch.long)
+            pattern = 'b ' + scaler.pattern
+
+        # compute actual slicing for each param
+        t, n = self.t_axis, self.n_axis  # axis of time and node dimensions
+        ti_bias = ti_scale = time_index
+        ni_bias = ni_scale = node_index
+        if self.t_axis is not None:
+            ti_bias = time_index if self.bias.size(t) > 1 else new_axes
+            ti_scale = time_index if self.scale.size(t) > 1 else new_axes
+        if self.n_axis is not None:
+            ni_bias = node_index if self.bias.size(n) > 1 else None
+            ni_scale = node_index if self.scale.size(n) > 1 else None
+
         # slice params
         scaler.bias = take(scaler.bias, self.pattern,
-                           time_index if self.bias.size(0) > 1 else new_axes,
-                           node_index)
+                           time_index=ti_bias, node_index=ni_bias)
         scaler.scale = take(scaler.scale, self.pattern,
-                            time_index if self.scale.size(0) > 1 else new_axes,
-                            node_index)
+                            time_index=ti_scale, node_index=ni_scale)
+        # update pattern
+        scaler.pattern = pattern
+
         return scaler
 
     @staticmethod

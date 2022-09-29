@@ -46,7 +46,7 @@ scaler = StandardScaler(axis=0).fit(data)
 # sample is made by a fixed-length window on the temporal axis of the dataset.
 window = 12  # length of the lookback window
 horizon = 1  # length of the forecasting horizon
-delay = 1  # number of steps between end of window and start of horizon
+delay = 0  # number of steps between end of window and start of horizon
 stride = 1  # number of steps between a window and the next one
 
 # With all the data defined, let's build our spatiotemporal dataset!

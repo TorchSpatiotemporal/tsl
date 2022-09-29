@@ -3,11 +3,11 @@ from typing import Iterator, Callable, Dict
 from typing import (Optional, Any, List, Iterable, Tuple,
                     Mapping)
 
+from einops import rearrange
 from torch import Tensor
 from torch_geometric.data.data import Data as PyGData, size_repr
 from torch_geometric.data.storage import BaseStorage
 from torch_geometric.data.view import KeysView, ValuesView, ItemsView
-from torch_sparse import SparseTensor
 
 from tsl.utils.python_utils import ensure_list
 
@@ -119,13 +119,9 @@ class StorageView(BaseStorage):
         self.__keys = keys
 
 
-class DataView(StorageView):
-    pass
-
-
 class Data(PyGData):
-    input: DataView
-    target: DataView
+    input: StorageView
+    target: StorageView
     pattern: dict
 
     def __init__(self, input: Optional[Mapping] = None,
@@ -138,9 +134,9 @@ class Data(PyGData):
         target = target if target is not None else dict()
         super(Data, self).__init__(**input, **target, **kwargs)
         # Set 'input' as view on input keys
-        self.__dict__['input'] = DataView(self._store, input.keys())
+        self.__dict__['input'] = StorageView(self._store, input.keys())
         # Set 'target' as view on input keys
-        self.__dict__['target'] = DataView(self._store, target.keys())
+        self.__dict__['target'] = StorageView(self._store, target.keys())
         # Add mask
         self.mask = mask
         # Add transform modules
@@ -161,15 +157,16 @@ class Data(PyGData):
             info += ["transform=[{}]".format(', '.join(self.transform.keys()))]
         return '{}({})'.format(cls, ', '.join(info))
 
-    def __cat_dim__(self, key: str, value: Any, *args, **kwargs) -> Any:
-        if isinstance(value, SparseTensor) and 'adj' in key:
-            return (0, 1)
-        elif 'index' in key or 'face' in key:
-            return -1
-        elif key.startswith('edge_'):
-            return 0
-        else:
-            return -2
+    #
+    # def __cat_dim__(self, key: str, value: Any, *args, **kwargs) -> Any:
+    #     if isinstance(value, SparseTensor) and 'adj' in key:
+    #         return (0, 1)
+    #     elif 'index' in key or 'face' in key:
+    #         return -1
+    #     elif key.startswith('edge_'):
+    #         return 0
+    #     else:
+    #         return -2
 
     def stores_as(self, data: 'Data'):
         self.input._keys = list(data.input.keys())
@@ -193,3 +190,29 @@ class Data(PyGData):
         attributes or only the ones given in :obj:`*args`."""
         self.detach().cpu()
         return self.apply(lambda x: x.numpy(), *args)
+
+    def rearrange_key(self, key: str, pattern: str, **axes_lengths):
+        r"""Rearrange key in Data according to the provided patter
+         using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
+        key_pattern = self.pattern[key]
+        if '->' in pattern:
+            start_pattern, end_pattern = pattern.split('->')
+            start_pattern = start_pattern.strip()
+            end_pattern = end_pattern.strip()
+            if key_pattern != start_pattern:
+                raise RuntimeError(f"Starting pattern {start_pattern} does not "
+                                   f"match with key patter {key_pattern}.")
+        else:
+            end_pattern = pattern
+            pattern = key_pattern + ' -> ' + pattern
+        self[key] = rearrange(self[key], pattern, **axes_lengths)
+        self.pattern[key] = end_pattern
+        if key in self.transform:
+            self.transform[key] = self.transform[key].rearrange(end_pattern)
+
+    def rearrange(self, patterns: Mapping):
+        r"""Rearrange all keys in Data according to the provided patter
+         using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
+        for key, pattern in patterns.items():
+            self.rearrange_key(key, pattern)
+        return self

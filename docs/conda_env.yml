@@ -1,0 +1,24 @@
+name: rtd38
+channels:
+  - pytorch
+  - pyg
+  - conda-forge
+  - defaults
+dependencies:
+  - pip
+  - pyg>=2.0
+  - python=3.8
+  - pytorch>=1.9
+  - cpuonly
+  - pip:
+      - einops
+      - numpy
+      - pandas
+      - pytorch-lightning>=1.5
+      - scikit-learn
+      - scipy
+      - tables
+      - torchmetrics>=0.7
+      - sphinx
+      - sphinxext-opengraph
+      - furo

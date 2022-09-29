@@ -1,11 +1,11 @@
 from .batch import Batch, static_graph_collate
 from .batch_map import BatchMap, BatchMapItem
-from .data import Data, DataView
+from .data import Data
 from .datamodule import *
 from .spatiotemporal_dataset import SpatioTemporalDataset
 from .imputation_stds import ImputationDataset
 
-data_classes = ['Data', 'DataView', 'Batch']
+data_classes = ['Data', 'Batch']
 dataset_classes = ['SpatioTemporalDataset', 'ImputationDataset']
 
 __all__ = [

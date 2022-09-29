@@ -14,11 +14,12 @@ from torch_sparse import SparseTensor
 
 from tsl.typing import DataArray, TemporalIndex, IndexSlice, TensArray, \
     SparseTensArray
+from . import Batch
 from .batch_map import BatchMap, BatchMapItem
+from .casting import SynchMode, WINDOW, HORIZON, STATIC
 from .data import Data
 from .mixin import DataParsingMixin
 from .preprocessing.scalers import Scaler, ScalerModule
-from .casting import SynchMode, WINDOW, HORIZON, STATIC
 from ..ops.pattern import outer_pattern, broadcast, take
 
 _WINDOWING_KEYS = ['target', 'window', 'delay', 'horizon', 'stride']
@@ -71,15 +72,26 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             data preprocessing.
             (default: :obj:`None`)
         window (int): Length (in number of steps) of the lookback window.
+            (default: 12)
         horizon (int): Length (in number of steps) of the prediction horizon.
+            (default: 1)
         delay (int): Offset (in number of steps) between end of window and start
             of horizon.
+            (default: 0)
         stride (int): Offset (in number of steps) between a sample and the next
             one.
+            (default: 1)
         window_lag (int): Sampling frequency (in number of steps) in lookback
             window.
+            (default: 1)
         horizon_lag (int): Sampling frequency (in number of steps) in prediction
             horizon.
+            (default: 1)
+        precision (int or str, optional): The float precision to store the data.
+            Can be expressed as number (16, 32, or 64) or string ("half",
+            "full", "double").
+            (default: 32)
+        name (str, optional): The (optional) name of the dataset.
     """
 
     def __init__(self, target: DataArray,
@@ -92,6 +104,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                  target_map: Optional[Union[Mapping, BatchMap]] = None,
                  scalers: Optional[Mapping[str, Scaler]] = None,
                  trend: Optional[DataArray] = None,
+                 item_pattern_layout: str = 'time_then_node',
                  window: int = 12,
                  horizon: int = 1,
                  delay: int = 0,
@@ -104,6 +117,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # Set name
         self.name = name if name is not None else self.__class__.__name__
         self.precision = precision
+        if item_pattern_layout not in ['time_then_node', 'node_then_time']:
+            raise ValueError("item_pattern_layout must be one of "
+                             "'time_then_node' or 'node_then_time'.")
+        self.item_pattern_layout = item_pattern_layout
 
         # Store windowing information
         self.window = window
@@ -185,7 +202,11 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         else:
             # convert slice to indexes
             item = self._get_time_index(item, layout='index')
-        return self.get(item)
+        item = self.get(item)
+        if self.item_pattern_layout == 'node_then_time':
+            assert isinstance(item, Data)
+            item.rearrange(self.batch_patterns_rearrange)
+        return item
 
     def __contains__(self, item) -> bool:
         return item in self.keys
@@ -306,6 +327,14 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         patterns.update({name: attr.pattern
                          for name, attr in self.target_map.items()})
         return patterns
+
+    @property
+    def batch_patterns_rearrange(self) -> dict:
+        return {
+            key: 'n t' + pattern[3:] if 'n' in pattern else '1 ' + pattern
+            for key, pattern in self.batch_patterns.items()
+            if pattern.startswith('t')
+        }
 
     @property
     def keys(self) -> list:
@@ -456,11 +485,16 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     def get(self, item):
 
+        # check if item is scalar or vector
         ndim = item.ndim if isinstance(item, Tensor) else 0
-        pattern = {name: ('b ' * ndim + pattern) if 't' in pattern else pattern
-                   for name, pattern in self.batch_patterns.items()}
-
-        sample = Data(pattern=pattern)
+        if ndim == 0:  # get a single item
+            sample = Data(pattern=self.batch_patterns)
+        elif ndim == 1:  # get batch of items
+            pattern = {name: ('b ' + pattern) if 't' in pattern else pattern
+                       for name, pattern in self.batch_patterns.items()}
+            sample = Batch(pattern=pattern)
+        else:
+            raise RuntimeError(f"Too many dimensions for index ({ndim}).")
 
         # get input synchronized with window
         if self.window > 0:
