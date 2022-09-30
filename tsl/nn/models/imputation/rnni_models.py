@@ -10,7 +10,10 @@ from tsl.nn.models.base_model import BaseModel
 
 
 class RNNImputerModel(BaseModel):
-    r"""Fill the blanks with a GRU 1-step-ahead predictor.
+    r"""Fill the blanks with 1-step-ahead predictions of a recurrent network.
+
+    .. math ::
+        \bar{x}_{t} = m_{t} \cdot x_{t} + (1 - m_{t}) \cdot \hat{x}_{t}
 
     Args:
         input_size (int): Number of features of the input sample.

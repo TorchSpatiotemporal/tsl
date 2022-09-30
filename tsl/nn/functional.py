@@ -1,8 +1,6 @@
 import math
 from typing import Optional, Union, Tuple, List
 
-import numpy as np
-
 import torch
 import torch.nn.functional as F
 from torch import Tensor
@@ -22,16 +20,16 @@ __all__ = [
 
 
 def expand_then_cat(tensors: Union[Tuple[Tensor, ...], List[Tensor]],
-                    dim=-1) -> Tensor:
-    r"""
-    Match the dimensions of tensors in the input list and then concatenate.
+                    dim: int = -1) -> Tensor:
+    """Match the dimensions of tensors in the input list and then concatenate.
 
     Args:
-        tensors: Tensors to concatenate.
+        tensors (list): Tensors to concatenate.
         dim (int): Dimension along which to concatenate.
+            (default: -1)
     """
     shapes = [t.shape for t in tensors]
-    expand_dims = list(np.max(shapes, 0))
+    expand_dims = torch.max(torch.tensor(shapes), 0).values
     expand_dims[dim] = -1
     tensors = [t.expand(*expand_dims) for t in tensors]
     return torch.cat(tensors, dim=dim)
@@ -42,15 +40,17 @@ def gated_tanh(input: Tensor, dim: int = -1) -> Tensor:
     r"""The gated tanh unite. Computes:
 
     .. math ::
-        \text{GatedTanH}(a, b) = \text{TanH}(a) \otimes \sigma(b)
+        \text{GatedTanh}(a, b) = \text{tanh}(a) \otimes \sigma(b)
 
-    where `input` is split in half along `dim` to form `a` and `b`, :math:`\text{TanH}` is the hyperbolic tangent
-    function, :math:`\sigma` is the sigmoid function and :math:`\otimes` is the element-wise product between matrices.
+    where :attr:`input` is split in half along :attr:`dim` to form :math:`a`
+    and :math:`b`, :math:`\text{tanh}` is the hyperbolic tangent function,
+    :math:`\sigma` is the sigmoid function and :math:`\otimes` is the
+    element-wise product between matrices.
 
     Args:
         input (Tensor): Input tensor.
-        dim (int, optional): Dimension on which to split the input.
-                             (default: -1)
+        dim (int): Dimension on which the input is split.
+            (default: -1)
     """
 
     out, gate = torch.tensor_split(input, 2, dim=dim)
@@ -74,8 +74,8 @@ def sparse_softmax(src: Tensor, index: Optional[Tensor] = None,
                    ptr: Optional[Tensor] = None,
                    num_nodes: Optional[int] = None,
                    dim: int = -2) -> Tensor:
-    r"""Extension of ~torch_geometric.softmax with index broadcasting to compute
-    a sparsely evaluated softmax over multiple broadcast dimensions.
+    r"""Extension of :func:`~torch_geometric.softmax` with index broadcasting
+    to compute a sparsely evaluated softmax over multiple broadcast dimensions.
 
     Given a value tensor :attr:`src`, this function first groups the values
     along the first dimension based on the indices specified in :attr:`index`,
@@ -83,13 +83,18 @@ def sparse_softmax(src: Tensor, index: Optional[Tensor] = None,
 
     Args:
         src (Tensor): The source tensor.
-        index (Tensor, optional): The indices of elements for applying the softmax.
-        ptr (LongTensor, optional): If given, computes the softmax based on
-            sorted inputs in CSR representation. (default: :obj:`None`)
-        num_nodes (int, optional): The number of nodes, *i.e.*
-            :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
-        dim (int, optional): The dimension in which to normalize, i.e., the edge
-            dimension. (default: :obj:`-2`)
+        index (Tensor, optional): The indices of elements for applying the
+            softmax.
+            (default: :obj:`None`)
+        ptr (Tensor, optional): If given, computes the softmax based on
+            sorted inputs in CSR representation.
+            (default: :obj:`None`)
+        num_nodes (int, optional): The number of nodes, i.e.,
+            :obj:`max_val + 1` of :attr:`index`.
+            (default: :obj:`None`)
+        dim (int): The dimension on which to normalize, i.e., the edge
+            dimension.
+            (default: :obj:`-2`)
     """
     if ptr is not None:
         dim = dim + src.dim() if dim < 0 else dim
@@ -115,9 +120,9 @@ def sparse_softmax(src: Tensor, index: Optional[Tensor] = None,
 @torch.jit.script
 def sparse_multi_head_attention(q: Tensor, k: Tensor, v: Tensor, index: Tensor,
                                 dim_size: Optional[int] = None,
-                                dropout_p: float = 0.0):
+                                dropout_p: float = 0.):
     r"""Computes multi-head, scaled, dot product attention on query, key and
-    value tensors, applying dropout if a probability greater than 0.0 is
+    value tensors, applying dropout if a probability greater than 0 is
     specified. Index specifies for each query in q the belonging sequence in the
     original batched, dense tensor.
     Returns a tensor pair containing attended values and attention weights.
@@ -129,8 +134,11 @@ def sparse_multi_head_attention(q: Tensor, k: Tensor, v: Tensor, index: Tensor,
         index (Tensor): Tensor containing mask values to be added to calculated
             attention. May be 2D or 3D; see Shape section for details.
         dim_size (int, optional): The batched target length sequence, i.e.
-            :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
-        dropout_p: dropout probability. If greater than 0.0, dropout is applied.
+            :obj:`max_val + 1` of :attr:`index`.
+            (default: :obj:`None`)
+        dropout_p (float): dropout probability. If greater than 0, then dropout
+            is applied.
+            (default: 0)
 
     Shape:
         - q: :math:`(S, H, E)` where S is sparsed dimension, H is the number of

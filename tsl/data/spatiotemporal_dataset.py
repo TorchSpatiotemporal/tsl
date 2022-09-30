@@ -280,10 +280,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         The pattern mapping can be useful to glimpse on how data are arranged.
         The convention we use is the following:
 
-          * 't' stands for “number of time steps”
-          * 'n' stands for “number of nodes”
-          * 'f' stands for “number of features” (per node)
-          * 'e' stands for “number edges”
+        * 't' stands for “number of time steps”
+        * 'n' stands for “number of nodes”
+        * 'f' stands for “number of features” (per node)
+        * 'e' stands for “number edges”
         """
         patterns = {'target': 't n f'}
         # add mask pattern
@@ -306,10 +306,11 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
         The pattern mapping can be useful to glimpse on how data are arranged.
         The convention we use is the following:
-            + 't' stands for “number of time steps”
-            + 'n' stands for “number of nodes”
-            + 'f' stands for “number of features” (per node)
-            + 'e' stands for “number edges”
+
+        * 't' stands for “number of time steps”
+        * 'n' stands for “number of nodes”
+        * 'f' stands for “number of features” (per node)
+        * 'e' stands for “number edges”
         """
         # add input map patterns
         patterns = {name: attr.pattern

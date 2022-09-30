@@ -17,8 +17,6 @@ install_requires = [
     'scipy',
     'tables',
     'test_tube',
-    'torch>=1.9',
-    'torch_geometric>=2.0',
     'torchmetrics>=0.7',
     'tqdm',
 ]
@@ -40,6 +38,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url=URL,
+    download_url=f'{URL}/archive/v{__version__}.tar.gz',
     license="MIT",
     keywords=[
         'pytorch',
@@ -48,6 +47,7 @@ setup(
         'graph-neural-networks',
         'graph-convolutional-networks',
         'temporal-graph-networks',
+        'spatiotemporal-graph-neural-networks',
         'spatiotemporal-processing',
     ],
     python_requires='>=3.7',

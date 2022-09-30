@@ -13,7 +13,7 @@ from ...base.embedding import StaticGraphEmbedding
 
 class GRINModel(BaseModel):
     r"""The Graph Recurrent Imputation Network with DCRNN cells from the paper
-    `"Filling the G ap s: Multivariate Time Series Imputation by Graph Neural
+    `"Filling the G_ap_s: Multivariate Time Series Imputation by Graph Neural
     Networks" <https://arxiv.org/abs/2108.00298>`_ (Cini et al., ICLR 2022).
 
     Args:
