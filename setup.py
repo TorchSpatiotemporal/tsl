@@ -29,6 +29,12 @@ full_install_requires = [
     'pytorch_fast_transformers'
 ]
 
+doc_requires = full_install_requires + [
+    'sphinx',
+    'sphinxext-opengraph',
+    'furo'
+]
+
 setup(
     name='torch_spatiotemporal',
     version=__version__,
@@ -54,6 +60,7 @@ setup(
     install_requires=install_requires,
     extras_require={
         'full': full_install_requires,
+        'doc': doc_requires,
     },
     packages=find_packages(exclude=['examples*']),
 )

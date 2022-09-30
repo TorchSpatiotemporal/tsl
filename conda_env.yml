@@ -1,24 +1,23 @@
-name: rtd38
+name: tsl
 channels:
   - pytorch
+  - pyg
   - conda-forge
   - defaults
 dependencies:
   - python=3.8
   - pytorch>=1.9
-  - cpuonly
   - pytorch-lightning>=1.5
   - torchmetrics>=0.7
+  - pyg>=2.0
   - pip
   - pip:
-      - ..[full]
+      - .
       - einops
       - numpy
       - pandas
       - scikit-learn
       - scipy
       - tables
-      - test_tube
-      - sphinx
-      - sphinxext-opengraph
-      - furo
+      - test-tube
+      - tqdm

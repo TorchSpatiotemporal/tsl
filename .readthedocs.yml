@@ -6,8 +6,7 @@ build:
     python: "mambaforge-4.10"
   jobs:
     post_create_environment:
-      - conda env list
-      - mamba install pyg -c pyg
+      - pip install .[doc]
 
 conda:
-  environment: docs/conda_env.yml
+  environment: conda_env.yml
