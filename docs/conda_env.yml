@@ -1,7 +1,6 @@
 name: rtd38
 channels:
   - pytorch
-  - pyg
   - conda-forge
   - defaults
 dependencies:
@@ -10,7 +9,6 @@ dependencies:
   - cpuonly
   - pytorch-lightning>=1.5
   - torchmetrics>=0.7
-  - pyg>=2.0
   - pip
   - pip:
       - ..[full]

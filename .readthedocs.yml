@@ -4,6 +4,10 @@ build:
   os: "ubuntu-20.04"
   tools:
     python: "mambaforge-4.10"
+  jobs:
+    post_create_environment:
+      - conda env list
+      - mamba install pyg -c pyg
 
 conda:
   environment: docs/conda_env.yml
