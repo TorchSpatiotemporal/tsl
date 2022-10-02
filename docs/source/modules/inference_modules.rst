@@ -1,38 +1,24 @@
 Inference modules
 =================
 
-In TSL, inference engines are packed into :class:`~pytorch_lightning.core.LightningModule`.
-These modules are meant to wrap deep models in order to ease training and inference phases.
+The module :mod:`tsl.inference` contains inference modules, i.e., modules meant
+to wrap deep models in order to ease training and inference phases.
+Every inference module extends a :class:`~pytorch_lightning.core.LightningModule`.
 
-Currently there are two categories of inference modules:
+Currently, there are two basic inference modules:
 
-#. `Predictors`_ (in :mod:`tsl.predictors`).
-#. `Imputers`_ (in :mod:`tsl.imputers`).
+* :class:`~tsl.inference.Predictor`
 
+  Use this module when you are addressing the prediction task, i.e., inference
+  of future observations.
 
-Predictors
-----------
+* :class:`~tsl.inference.Imputer`
 
-.. currentmodule:: tsl.predictors
-.. autosummary::
-   :nosignatures:
-   {% for cls in tsl.predictors.predictor_classes %}
-     {{ cls }}
-   {% endfor %}
+  Use this module when you are addressing the imputation task, i.e.,
+  reconstruction of missing observations.
 
-.. automodule:: tsl.predictors
-    :members:
+We suggest to extends this module and override some of the methods to meet your
+project-specific needs.
 
-
-Imputers
---------
-
-.. currentmodule:: tsl.imputers
-.. autosummary::
-   :nosignatures:
-   {% for cls in tsl.imputers.imputer_classes %}
-     {{ cls }}
-   {% endfor %}
-
-.. automodule:: tsl.imputers
+.. automodule:: tsl.inference
     :members:

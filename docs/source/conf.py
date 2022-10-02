@@ -3,6 +3,19 @@ import doctest
 
 import tsl
 
+# -- Project information -----------------------------------------------------
+#
+
+project = "tsl"
+author = "Andrea Cini, Ivan Marisca"
+copyright = "{}, {}".format(datetime.datetime.now().year, author)
+
+version = tsl.__version__
+release = tsl.__version__
+
+# -- General configuration ---------------------------------------------------
+#
+
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
@@ -11,8 +24,9 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
+    'sphinx_design',
     'sphinxext.opengraph',
-    'sphinx.ext.githubpages',
+    'sphinx_copybutton',
 ]
 
 autosummary_generate = True
@@ -20,29 +34,44 @@ autosummary_generate = True
 source_suffix = '.rst'
 master_doc = 'index'
 
-# exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
-# -- Project information -----------------------------------------------------
-project = 'tsl'
-author = 'Andrea Cini, Ivan Marisca'
-copyright = '{}, {}'.format(datetime.datetime.now().year, author)
-
-version = tsl.__version__
-release = tsl.__version__
-
-html_theme = 'furo'
-
 doctest_default_flags = doctest.NORMALIZE_WHITESPACE
 autodoc_member_order = 'bysource'
+
+rst_context = {'tsl': tsl}
+
+add_module_names = False
+# autodoc_inherit_docstrings = False
+
+# exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+
+# -- Options for intersphinx -------------------------------------------------
+#
+
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'pd': ('https://pandas.pydata.org/docs/', None),
     'PyTorch': ('https://pytorch.org/docs/stable/', None),
     'pytorch_lightning': (
-    'https://pytorch-lightning.readthedocs.io/en/latest/', None),
+        'https://pytorch-lightning.readthedocs.io/en/latest/', None),
     'PyG': ('https://pytorch-geometric.readthedocs.io/en/latest/', None)
 }
+
+# -- Theme options -----------------------------------------------------------
+#
+
+html_title = "Torch Spatiotemporal"
+html_theme = 'furo'
+language = "en"
+
+html_static_path = ['_static']
+html_logo = '_static/img/tsl_logo.svg'
+html_favicon = '_static/img/tsl_logo.svg'
+
+html_css_files = [
+    'css/custom.css',
+]
 
 html_theme_options = {
     "sidebar_hide_name": False,
@@ -57,27 +86,19 @@ html_theme_options = {
         "color-brand-content": "#ee4c2c",
     }
 }
-html_title = "Torch Spatiotemporal"
+
 pygments_style = "tango"
 pygments_dark_style = "material"
 
-html_static_path = ['_static']
-html_logo = '_static/img/tsl_logo.svg'
-html_favicon = '_static/img/tsl_logo.svg'
+# -- OpenGraph options -------------------------------------------------------
+#
 
-html_css_files = [
-    'css/custom.css',
-]
-
-rst_context = {'tsl': tsl}
-
-add_module_names = False
-# autodoc_inherit_docstrings = False
-
-# OpenGraph metadata
 ogp_site_url = "https://torch-spatiotemporal.readthedocs.io/en/latest/"
 ogp_image = ogp_site_url + "_static/tsl_logo.svg"
 
+
+# -- Setup options -----------------------------------------------------------
+#
 
 def setup(app):
     def rst_jinja_render(app, docname, source):

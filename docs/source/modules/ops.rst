@@ -21,6 +21,12 @@ Imputation
 .. automodule:: tsl.ops.imputation
    :members:
 
+Pattern
+-------
+
+.. automodule:: tsl.ops.pattern
+   :members:
+
 Test
 ----
 

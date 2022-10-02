@@ -2,3 +2,18 @@ a {
     overflow-wrap: break-word;
     word-wrap: break-word;
 }
+
+.carousel-logo {
+    background: unset;
+    box-shadow: unset !important;
+    border: unset!important;
+    width: 50px !important;
+    margin: auto;
+    filter: contrast(0.3);
+    transition-duration: 0.4s;
+}
+
+.carousel-logo:hover {
+    filter: unset;
+    transform: unset;
+}

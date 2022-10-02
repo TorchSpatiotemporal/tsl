@@ -6,7 +6,6 @@ URL = 'https://github.com/TorchSpatiotemporal/tsl'
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-
 install_requires = [
     'einops',
     'numpy',
@@ -31,6 +30,8 @@ full_install_requires = [
 
 doc_requires = full_install_requires + [
     'sphinx',
+    'sphinx-design',
+    'sphinx-copybutton',
     'sphinxext-opengraph',
     'furo'
 ]

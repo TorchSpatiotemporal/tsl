@@ -1,6 +1,11 @@
 Spatiotemporal Data Representation
 ==================================
 
+.. figure:: /_static/img/sliding_window.svg
+    :align: center
+
+    Sliding window parameters.
+
 Understanding patterns
 ----------------------
 

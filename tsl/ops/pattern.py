@@ -8,8 +8,8 @@ from numpy import ndarray
 from torch import Tensor
 
 _PATTERNS = {
-    'tnf': re.compile('^t?n{0,2}f*$'),
-    'tnef': re.compile('^t?(n{0,2}|e?)f*$'),
+    'tnf': re.compile('^[1-2]?t?n{0,2}f*$'),
+    'tnef': re.compile('^[1-2]?t?(n{0,2}|e?)f*$'),
     'btnf': re.compile('^b?t?n{0,2}f*$'),
     'btnef': re.compile('^b?t?(n{0,2}|e?)f*$'),
 }
@@ -18,6 +18,45 @@ _PATTERNS = {
 def check_pattern(pattern: str, split: bool = False, ndim: int = None,
                   include_edges: bool = False,
                   include_batch: bool = False) -> Union[str, list]:
+    r"""Check that :attr:`pattern` is allowed. A pattern is a string of tokens
+    interleaved with blank spaces, where each token specifies what an axis in a
+    tensor refers to. The supported tokens are:
+
+    * 't', for the time dimension
+    * 'n', for the node dimension
+    * 'f' or 'c', for the feature/channel dimension ('c' token is automatically
+      converted to 'f')
+    * 'e', for the edge dimension
+
+    In order to be valid, a pattern must have:
+
+    1. at most one 't' dimension, as the first token;
+    2. at most two (consecutive) 'n' dimensions, right after the 't' token or
+       at the beginning of the pattern;
+    3. if :attr:`include_edges`, then a single 'e' can be the first token or
+       follow 't', and there must not be 'n' dimensions
+       at the beginning of the pattern;
+    4. all further tokens must be 'c' or 'f'.
+
+    Args:
+        pattern (str): The input pattern, specifying with a token what an axis
+            in a tensor refers to. The supported tokens are:
+
+            * 't', for the time dimension
+            * 'n', for the node dimension
+            * 'f' or 'c', for the feature/channel dimension ('c' token is
+              automatically converted to 'f')
+            * 'e', for the edge dimension
+
+        split:
+        ndim:
+        include_edges:
+        include_batch:
+
+    Returns:
+        str or list: The sanitized pattern as a string, or a list of the tokens
+            in the pattern.
+    """
     pattern_squeezed = pattern.replace(' ', '').replace('c', 'f')
     # check 'c'/'f' follows 'n', 'n' follows 't'
     # allow for duplicate 'n' dims (e.g., 'n n', 't n n f')
