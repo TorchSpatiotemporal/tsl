@@ -5,7 +5,7 @@ from torch import Tensor
 from torch_geometric.data.storage import recursive_apply
 from torchmetrics import Metric
 
-from tsl.predictors import Predictor
+from .predictor import Predictor
 
 
 class Imputer(Predictor):

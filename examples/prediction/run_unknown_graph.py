@@ -25,7 +25,7 @@ from tsl.nn.metrics.metrics import MaskedMAE, MaskedMAPE, MaskedMSE
 from tsl.nn.models.stgn.dcrnn_model import DCRNNModel
 from tsl.nn.models.stgn.nri_model import NRIModel
 from tsl.nn.utils import casting
-from tsl.predictors import Predictor
+from tsl.inference import Predictor
 from tsl.utils import TslExperiment, ArgParser, parser_utils, numpy_metrics
 from tsl.utils.neptune_utils import TslNeptuneLogger
 from tsl.utils.parser_utils import str_to_bool

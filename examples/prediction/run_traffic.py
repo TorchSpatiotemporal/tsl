@@ -15,7 +15,7 @@ from tsl.datasets import MetrLA, PemsBay
 from tsl.data import SpatioTemporalDataset, SpatioTemporalDataModule
 from tsl.data.preprocessing import StandardScaler
 from tsl.nn.utils import casting
-from tsl.predictors import Predictor
+from tsl.inference import Predictor
 from tsl.utils import TslExperiment, ArgParser, parser_utils, numpy_metrics
 from tsl.utils.parser_utils import str_to_bool
 from tsl.utils.neptune_utils import TslNeptuneLogger
