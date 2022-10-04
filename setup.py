@@ -33,6 +33,7 @@ doc_requires = full_install_requires + [
     'sphinx-design',
     'sphinx-copybutton',
     'sphinxext-opengraph',
+    'myst-nb',
     'furo'
 ]
 

@@ -9,7 +9,7 @@ nn = LazyLoader('nn', globals(), 'tsl.nn')
 predictors = LazyLoader('predictors', globals(), 'tsl.predictors')
 imputers = LazyLoader('imputers', globals(), 'tsl.imputers')
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 epsilon = 5e-8
 config = Config()

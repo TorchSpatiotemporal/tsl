@@ -9,15 +9,34 @@ Torch Spatiotemporal
     <script src="_static/js/particles.js"></script>
     <script src="_static/js/particles_config.js"></script>
 
-Torch Spatiotemporal (ts) is a python library for neural spatiotemporal data processing, with a focus on Graph Neural Networks.
+Torch Spatiotemporal (tsl) is a python library for neural spatiotemporal data processing, with a focus on Graph Neural Networks.
 
 It is built upon the most used libraries of the python scientific computing ecosystem, with the final objective of providing a straightforward process that goes from data preprocessing to model prototyping. In particular, tsl offers a wide range of utilities to develop neural networks in `PyTorch <https://pytorch.org/>`_ and `PyG <https://github.com/pyg-team/pytorch_geometric/>`_ for processing spatiotemporal data signals.
 
-.. highlights::
+In detail, the package provide:
 
-    On the shoulders of giants
+* High-level and easy-to-use APIs to build you own datasets and models for sensor networks.
+* Tools to deal with irregularities in the data stream: missing data, variations in the underlying network, etc.
+* Automatization of the preprocessing phase, with methods to scale and detrend the time series (see :doc:`modules/data_preprocessing` section).
+* A set of most used datasets in spatiotemporal data processing literature (see :doc:`modules/datasets` section).
+* A straightforward way of building spatiotemporal datasets that works with `PyTorch <https://pytorch.org/>`_ and `PyG <https://www.pyg.org/>`_.
+* Out-of-the-box scalability -- from single CPUs to clusters of GPUs -- with `PyTorch Lightning <https://www.pytorchlightning.ai/>`_.
+* Plug-and-play state-of-the-art models from neural spatiotemporal literature (see :doc:`modules/nn_models` section).
+* A collection of neural layers for creating neural spatiotemporal models in a fast and modular way (see :doc:`modules/nn_layers` section).
+* A standard for experiment reproducibility, to promote and support progress on neural spatiotemporal literature.
+
+----
+
+.. pull-quote::
+
+    "If I have seen further it is by standing on the shoulders of Giants."
+
+    -- Isaac Newton
+
+tsl relies heavily on these libraries for its functionalities:
 
 .. grid:: 3 6 6 6
+    :gutter: 2
 
     .. grid-item-card::
         :class-card: carousel-logo
@@ -56,21 +75,36 @@ Get started
 
 .. grid:: 1 1 2 2
     :margin: 3 0 0 0
+    :gutter: 2
     :padding: 0
 
     .. grid-item-card::  :octicon:`rocket;1em;sd-text-primary` Installation
         :link: notes/quickstart
         :link-type: doc
-        :shadow: md
+        :shadow: sm
 
         Read the guide on how to to install tsl on your system.
 
     .. grid-item-card::  :octicon:`gear;1em;sd-text-primary` Usage
         :link: notes/spatiotemporal_data_representation
         :link-type: doc
-        :shadow: md
+        :shadow: sm
 
         Look at the basic functionalities of tsl for spatiotemporal data processing.
+
+    .. grid-item-card::  :octicon:`file-code;1em;sd-text-primary` Notebooks
+        :link: notes/notebooks
+        :link-type: doc
+        :shadow: sm
+
+        Check the notebooks for tutorial to use tsl at the best.
+
+    .. grid-item-card::  :octicon:`repo;1em;sd-text-primary` Package API
+        :link: py-modindex
+        :link-type: doc
+        :shadow: sm
+
+        In the index, you can find the main API for each submodule.
 
 
 .. toctree::
@@ -81,6 +115,7 @@ Get started
 
    notes/quickstart
    notes/spatiotemporal_data_representation
+   notes/notebooks
 
 .. toctree::
    :glob:

@@ -9,8 +9,8 @@ Connectivity
 .. automodule:: tsl.ops.connectivity
    :members:
 
-DataFrame
----------
+FrameArray
+----------
 
 .. automodule:: tsl.ops.framearray
    :members:

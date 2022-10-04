@@ -27,6 +27,7 @@ extensions = [
     'sphinx_design',
     'sphinxext.opengraph',
     'sphinx_copybutton',
+    'myst_nb'
 ]
 
 autosummary_generate = True
@@ -66,7 +67,7 @@ html_theme = 'furo'
 language = "en"
 
 html_static_path = ['_static']
-html_logo = '_static/img/tsl_logo.svg'
+html_logo = '_static/img/tsl_logo_text.svg'
 html_favicon = '_static/img/tsl_logo.svg'
 
 html_css_files = [
@@ -74,7 +75,7 @@ html_css_files = [
 ]
 
 html_theme_options = {
-    "sidebar_hide_name": False,
+    "sidebar_hide_name": True,
     "light_css_variables": {
         "color-brand-primary": "#ee4c2c",
         "color-brand-content": "#ee4c2c",
@@ -89,6 +90,14 @@ html_theme_options = {
 
 pygments_style = "tango"
 pygments_dark_style = "material"
+
+# -- Notebooks options -------------------------------------------------------
+#
+
+nb_execution_mode = 'off'
+myst_enable_extensions = ['dollarmath']
+myst_dmath_allow_space = True
+myst_dmath_double_inline = True
 
 # -- OpenGraph options -------------------------------------------------------
 #

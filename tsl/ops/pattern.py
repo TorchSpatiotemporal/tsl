@@ -48,10 +48,16 @@ def check_pattern(pattern: str, split: bool = False, ndim: int = None,
               automatically converted to 'f')
             * 'e', for the edge dimension
 
-        split:
-        ndim:
-        include_edges:
-        include_batch:
+        split (bool): If :obj:`True`, then return an ordered list of the tokens
+            in the sanitized pattern.
+            (default: :obj:`False`)
+        ndim (int, optional): If it is not :obj:`None`, then check that
+            :attr:`pattern` has :attr:`ndim` tokens.
+            (default: :obj:`None`)
+        include_edges (bool): If :obj:`True`, then allows the token :obj:`e`.
+            (default: :obj:`False`)
+        include_batch (bool): If :obj:`True`, then allows the token :obj:`b`.
+            (default: :obj:`False`)
 
     Returns:
         str or list: The sanitized pattern as a string, or a list of the tokens
