@@ -19,7 +19,7 @@ class TemporalSelfAttention(nn.Module):
         dtype (optional): Data Type of the parameters.
     Examples::
         >>> import torch
-        >>> m = SpatialSelfAttention(32, 4, -1)
+        >>> m = TemporalSelfAttention(32, 4, -1)
         >>> input = torch.randn(128, 24, 10, 20)
         >>> output, _ = m(input)
         >>> print(output.size())

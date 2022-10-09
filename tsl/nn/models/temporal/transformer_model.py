@@ -9,7 +9,7 @@ from tsl.nn.blocks.encoders.mlp import MLP
 from tsl.nn.blocks.encoders.transformer import Transformer
 from tsl.nn.layers.positional_encoding import PositionalEncoding
 from tsl.nn.models.base_model import BaseModel
-from tsl.nn.ops.ops import Select
+from tsl.nn.layers.ops import Select
 
 
 class TransformerModel(BaseModel):
@@ -39,7 +39,7 @@ class TransformerModel(BaseModel):
                  dropout: float = 0.,
                  axis: str = 'time',
                  activation: str = 'elu'):
-        super(TransformerModel, self).__init__()
+        super(TransformerModel, self).__init__(return_type=Tensor)
 
         if exog_size > 0:
             self.input_encoder = ConditionalBlock(input_size=input_size,
@@ -72,6 +72,7 @@ class TransformerModel(BaseModel):
         )
 
     def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
+        """"""
         # x: [batches steps nodes features]
         # u: [batches steps (nodes) features]
         b, *_ = x.size()

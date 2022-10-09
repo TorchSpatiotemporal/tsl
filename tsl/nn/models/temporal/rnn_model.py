@@ -41,7 +41,7 @@ class RNNModel(BaseModel):
                  ff_dropout: float = 0.,
                  cell_type: str = 'gru',
                  activation: str = 'relu'):
-        super(RNNModel, self).__init__()
+        super(RNNModel, self).__init__(return_type=Tensor)
 
         if exog_size is not None:
             self.input_encoder = ConditionalBlock(input_size=input_size,
@@ -71,6 +71,7 @@ class RNNModel(BaseModel):
         )
 
     def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
+        """"""
         # x: [batches steps nodes features]
         # u: [batches steps (nodes) features]
         if u is not None:
@@ -132,6 +133,7 @@ class FCRNNModel(RNNModel):
                                          activation=activation)
 
     def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
+        """"""
         # x: [batches, steps, nodes, features]
         # u: [batches, steps, (nodes), features]
         b, _, n, _ = x.size()

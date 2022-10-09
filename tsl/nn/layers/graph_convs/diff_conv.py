@@ -10,26 +10,28 @@ from tsl.ops.connectivity import transpose, normalize
 
 
 class DiffConv(MessagePassing):
-    r"""An implementation of the Diffusion Convolution Layer from `"Diffusion
-    Convolutional Recurrent Neural Network: Data-Driven Traffic Forecasting"
-    <https://arxiv.org/abs/1707.01926>`_.
+    r"""The Diffusion Convolution Layer from the paper `"Diffusion Convolutional
+    Recurrent Neural Network: Data-Driven Traffic Forecasting"
+    <https://arxiv.org/abs/1707.01926>`_ (Li et al., ICLR 2018).
 
     Args:
         in_channels (int): Number of input features.
         out_channels (int): Number of output features.
         k (int): Filter size :math:`K`.
-        bias (bool, optional): If set to :obj:`False`, the layer
-            will not learn an additive bias (default :obj:`True`).
-        add_backward (bool): If :obj:`True`, additional :math:`K` filters are
-            learnt for the transposed connectivity.
+        root_weight (bool): If :obj:`True`, then add a filter also for the
+            :math:`0`-order neighborhood (i.e., the root node itself).
             (default :obj:`True`)
-
+        add_backward (bool): If :obj:`True`, then additional :math:`K` filters
+            are learnt for the transposed connectivity.
+            (default :obj:`True`)
+        bias (bool, optional): If :obj:`True`, add a trainable additive bias.
+            (default: :obj:`True`)
     """
 
     def __init__(self, in_channels, out_channels, k,
                  root_weight: bool = True,
                  add_backward: bool = True,
-                 bias: bool=True):
+                 bias: bool = True):
         super(DiffConv, self).__init__(aggr="add", node_dim=-2)
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -50,16 +52,18 @@ class DiffConv(MessagePassing):
     def compute_support_index(edge_index: Adj, edge_weight: OptTensor = None,
                               num_nodes: int = None,
                               add_backward: bool = True) -> List:
+        """Normalize the connectivity weights and (optionally) add normalized
+        backward weights."""
         norm_edge_index, \
         norm_edge_weight = normalize(edge_index, edge_weight,
                                      dim=1, num_nodes=num_nodes)
         # Add backward matrices
         if add_backward:
             return [(norm_edge_index, norm_edge_weight)] + \
-                    DiffConv.compute_support_index(transpose(edge_index),
-                                                   edge_weight=edge_weight,
-                                                   num_nodes=num_nodes,
-                                                   add_backward=False)
+                   DiffConv.compute_support_index(transpose(edge_index),
+                                                  edge_weight=edge_weight,
+                                                  num_nodes=num_nodes,
+                                                  add_backward=False)
         # Normalize
         return [(norm_edge_index, norm_edge_weight)]
 
@@ -68,10 +72,12 @@ class DiffConv(MessagePassing):
         self._support = None
 
     def message(self, x_j: Tensor, weight: Tensor) -> Tensor:
+        """"""
         # x_j: [batch, edges, channels]
         return weight.view(-1, 1) * x_j
 
     def message_and_aggregate(self, adj_t: SparseTensor, x: Tensor) -> Tensor:
+        """"""
         # adj_t: SparseTensor [nodes, nodes]
         # x: [(batch,) nodes, channels]
         return matmul(adj_t, x, reduce=self.aggr)

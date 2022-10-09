@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from einops import rearrange
@@ -107,7 +107,8 @@ class RNNImputerModel(BaseModel):
 
     def forward(self, x: Tensor, mask: Tensor,
                 u: Optional[Tensor] = None,
-                return_hidden: bool = False) -> list:
+                return_hidden: bool = False) -> Union[Tensor, list]:
+        """"""
         # x: [batches, steps, nodes, features]
         steps, nodes = x.size(1), x.size(2)
 
@@ -140,6 +141,11 @@ class RNNImputerModel(BaseModel):
             h = rearrange(h, f'{self._to_pattern} -> b s n c', n=nodes)
         return [x_hat, h]
 
+    def predict(self, x: Tensor, mask: Tensor,
+                u: Optional[Tensor] = None) -> Tensor:
+        """"""
+        return self.forward(x=x, mask=mask, u=u, return_hidden=False)
+
 
 class BiRNNImputerModel(BaseModel):
     r"""Fill the blanks with a bidirectional GRU 1-step-ahead predictor."""
@@ -153,7 +159,7 @@ class BiRNNImputerModel(BaseModel):
                  n_nodes: Optional[int] = None,
                  detach_input: bool = False,
                  state_init: str = 'zero'):
-        super(BiRNNImputerModel, self).__init__()
+        super(BiRNNImputerModel, self).__init__(return_type=list)
         self.fwd_rnn = RNNImputerModel(input_size, hidden_size,
                                        exog_size=exog_size,
                                        cell=cell,
@@ -184,6 +190,7 @@ class BiRNNImputerModel(BaseModel):
     def forward(self, x: Tensor, mask: Tensor,
                 u: Optional[Tensor] = None,
                 return_hidden: bool = False) -> list:
+        """"""
         # x: [batches, steps, nodes, features]
         x_hat_fwd, h_fwd = self.fwd_rnn(x, mask, u=u, return_hidden=True)
         u_rev = reverse_tensor(u, 1) if u is not None else None
@@ -198,3 +205,8 @@ class BiRNNImputerModel(BaseModel):
         if return_hidden:
             return [x_hat, (x_hat_fwd, x_hat_bwd), h]
         return [x_hat, (x_hat_fwd, x_hat_bwd)]
+
+    def predict(self, x: Tensor, mask: Tensor,
+                u: Optional[Tensor] = None) -> Tensor:
+        """"""
+        return self.forward(x=x, mask=mask, u=u, return_hidden=False)[0]

@@ -8,7 +8,7 @@ from tsl.nn.blocks.encoders import ConditionalBlock
 from tsl.nn.blocks.encoders.tcn import TemporalConvNet
 from tsl.nn.layers.norm import Norm
 from tsl.nn.models.base_model import BaseModel
-from tsl.nn.ops.ops import Lambda
+from tsl.nn.layers.ops import Lambda
 from tsl.nn.utils.utils import get_layer_activation
 
 
@@ -18,29 +18,39 @@ class TCNModel(BaseModel):
     using dynamics weights.
 
     Args:
-        input_size (int): Input size.
-        hidden_size (int): Channels in the hidden layers.
+        input_size (int): Number of features of the input sample.
+        output_size (int): Number of output channels.
+        horizon (int): Number of future time steps to forecast.
+        exog_size (int, optional): Number of features of the input covariate,
+            if any. (default: :obj:`None`)
+        hidden_size (int): Number of hidden units.
+            (default: :obj:`32`)
         ff_size (int): Number of units in the hidden layers of the decoder.
-        output_size (int): Output channels.
-        horizon (int): Forecasting horizon.
+            (default: :obj:`32`)
         kernel_size (int): Size of the convolutional kernel.
+            (default: :obj:`2`)
         n_layers (int): Number of TCN blocks.
-        exog_size (int): Size of the exogenous variables.
-        readout_kernel_size (int, optional): Width of the readout kernel size.
-        resnet (bool, optional): Whether to use residual connections.
+            (default: :obj:`4`)
+        n_convs_layer (int): Number of temporal convolutions in each layer.
+            (default: :obj:`2`)
+        readout_kernel_size (int): Width of the readout kernel size.
+            (default: :obj:`1`)
         dilation (int): Dilation coefficient of the convolutional kernel.
-        activation (str, optional): Activation function. (default: `relu`)
-        n_convs_layer (int, optional): Number of temporal convolutions in each
-            layer. (default: 2)
-        norm (str, optional): Normalization strategy.
-        gated (bool, optional): Whether to used the GatedTanH activation
-            function. (default: obj`False`)
+            (default: :obj:`2`)
+        gated (bool): If :obj:`True`, then the
+            :func:`~tsl.nn.functional.gated_tanh` activation function is used.
+            (default: :obj:`False`)
+        resnet (bool): If :obj:`True`, then residual connections are used.
+            (default: :obj:`True`)
+        norm (str): Normalization strategy.
+            (default: :obj:`'batch'`)
+        dropout (float): Dropout probability.
+            (default: :obj:`0`)
+        activation (str): Activation function.
+            (default: :obj:`'relu`)
     """
 
-    def __init__(self,
-                 input_size: int,
-                 output_size: int,
-                 horizon: int,
+    def __init__(self, input_size: int, output_size: int, horizon: int,
                  exog_size: Optional[int] = None,
                  hidden_size: int = 32,
                  ff_size: int = 32,
@@ -49,12 +59,12 @@ class TCNModel(BaseModel):
                  n_convs_layer: int = 2,
                  readout_kernel_size: int = 1,
                  dilation: int = 2,
-                 activation: str = 'relu',
-                 dropout: float = 0.,
                  gated: bool = False,
                  resnet: bool = True,
-                 norm: str = 'batch'):
-        super(TCNModel, self).__init__()
+                 norm: str = 'batch',
+                 dropout: float = 0.,
+                 activation: str = 'relu'):
+        super(TCNModel, self).__init__(return_type=Tensor)
 
         if exog_size > 0:
             self.input_encoder = ConditionalBlock(input_size=input_size,
@@ -98,6 +108,7 @@ class TCNModel(BaseModel):
         self.horizon = horizon
 
     def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
+        """"""
         # x: [b t n f]
         # u: [b t (n) f]
         if u is not None:

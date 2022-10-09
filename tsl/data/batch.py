@@ -15,7 +15,8 @@ def _collate_scaler_modules(batch: List[Mapping[str, Any]]):
         # minibatch, just add a fake, 1-sized, batch dimension
         transform[k] = ScalerModule(bias=transform[k].bias[None],
                                     scale=transform[k].scale[None])
-        transform[k].pattern = 'b ' + transform[k].pattern
+        if transform[k].pattern is not None:
+            transform[k].pattern = 'b ' + transform[k].pattern
     return transform
 
 

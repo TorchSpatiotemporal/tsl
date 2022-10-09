@@ -7,8 +7,8 @@ from torch_geometric.typing import OptTensor, Adj
 
 from tsl.nn.functional import reverse_tensor
 from tsl.nn.layers.graph_convs.grin_cell import GRIL
-from ..base_model import BaseModel
-from ...base.embedding import StaticGraphEmbedding
+from tsl.nn.models.base_model import BaseModel
+from tsl.nn.base.embedding import StaticGraphEmbedding
 
 
 class GRINModel(BaseModel):
@@ -19,16 +19,30 @@ class GRINModel(BaseModel):
     Args:
         input_size (int): Size of the input.
         hidden_size (int): Number of units in the DCRNN hidden layer.
+            (default: :obj:`64`)
         ff_size (int): Number of units in the nonlinear readout.
+            (default: :obj:`128`)
         embedding_size (int, optional): Number of features in the optional node
             embeddings.
-        exog_size (int): Number of channels for the exogenous variables.
+            (default: :obj:`None`)
+        exog_size (int): Number of channels in the exogenous variables, if any.
+            (default: :obj:`None`)
         n_layers (int): Number DCRNN cells.
+            (default: :obj:`1`)
         n_nodes (int, optional): Number of nodes in the input graph.
-        kernel_size (int): Order of the spatial diffusion process.
-        layer_norm (bool, optional): Whether to use layer normalization
+            (default: :obj:`None`)
+        kernel_size (int): Order of the spatial diffusion process in the DCRNN
+            cells. (default: :obj:`2`)
+        decoder_order (int): Order of the spatial diffusion process in the
+            spatial decoder.
+            (default: :obj:`1`)
+        layer_norm (bool, optional): If :obj:`True`, then use layer
+            normalization.
+            (default: :obj:`False`)
         dropout (float, optional): Dropout probability in the DCRNN cells.
+            (default: :obj:`0`)
         ff_dropout (float, optional): Dropout probability in the readout.
+            (default: :obj:`0`)
         merge_mode (str, optional): Strategy used to merge representations
             coming from the two branches of the bidirectional model.
             (default: :obj:`mlp`)
@@ -47,7 +61,7 @@ class GRINModel(BaseModel):
                  dropout: float = 0.,
                  ff_dropout: float = 0.,
                  merge_mode: str = 'mlp'):
-        super(GRINModel, self).__init__()
+        super(GRINModel, self).__init__(return_type=list)
         self.fwd_gril = GRIL(input_size=input_size,
                              hidden_size=hidden_size,
                              exog_size=exog_size,
@@ -87,7 +101,8 @@ class GRINModel(BaseModel):
 
     def forward(self, x: Tensor, edge_index: Adj,
                 edge_weight: OptTensor = None, mask: OptTensor = None,
-                u: OptTensor = None):
+                u: OptTensor = None) -> list:
+        """"""
         # x: [batch, steps, nodes, channels]
         fwd_out, fwd_pred, fwd_repr, _ = self.fwd_gril(x,
                                                        edge_index, edge_weight,
@@ -111,4 +126,13 @@ class GRINModel(BaseModel):
             imputation = torch.stack([fwd_out, bwd_out], dim=-1)
             imputation = self.out(imputation, dim=-1)
 
-        return imputation, (fwd_out, bwd_out, fwd_pred, bwd_pred)
+        return [imputation, (fwd_out, bwd_out, fwd_pred, bwd_pred)]
+
+    def predict(self, x: Tensor, edge_index: Adj,
+                edge_weight: OptTensor = None, mask: OptTensor = None,
+                u: OptTensor = None) -> Tensor:
+        """"""
+        imputation = self.forward(x=x, mask=mask, u=u,
+                                  edge_index=edge_index,
+                                  edge_weight=edge_weight)[0]
+        return imputation
