@@ -1,5 +1,6 @@
-# tsl: a PyTorch library for spatiotemporal data processing
-
+<div style="text-align: center">
+    <img src="docs/source/_static/img/tsl_logo_text.svg" width="60%"/>
+</div>
 
 **tsl** *(Torch Spatiotemporal)* is a library built to accelerate research on neural spatiotemporal data processing 
 methods, with a focus on Graph Neural Networks.

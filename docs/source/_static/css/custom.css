@@ -3,10 +3,43 @@ a {
     word-wrap: break-word;
 }
 
+section#torch-spatiotemporal h1 {
+    display: none;
+}
+
+.hero-logo {
+    position: absolute;
+    width: 65%;
+    min-width: 300px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 0 20px var(--color-background-primary));
+    z-index: 20;
+}
+
+.hero-shade {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    background: linear-gradient(rgba(0,0,0,0), var(--color-background-primary));
+    z-index: 10;
+}
+
+#particles-js {
+    z-index: -30;
+    position: relative;
+}
+
+.particles-js-canvas-el {
+    opacity: 50%;
+}
+
 .carousel-logo {
     background: unset;
     box-shadow: unset !important;
-    border: unset!important;
+    border: unset !important;
     width: 50px !important;
     margin: auto;
     filter: contrast(0.3);

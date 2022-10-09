@@ -5,13 +5,16 @@ Torch Spatiotemporal
 
 .. raw:: html
 
-    <div id="particles-js"></div>
+    <div id="particles-js">
+        <div class="hero-shade"></div>
+        <img src="_static/img/tsl_logo_text.svg" class="hero-logo"/>
+    </div>
     <script src="_static/js/particles.js"></script>
     <script src="_static/js/particles_config.js"></script>
 
 Torch Spatiotemporal (tsl) is a python library for neural spatiotemporal data processing, with a focus on Graph Neural Networks.
 
-It is built upon the most used libraries of the python scientific computing ecosystem, with the final objective of providing a straightforward process that goes from data preprocessing to model prototyping. In particular, tsl offers a wide range of utilities to develop neural networks in `PyTorch <https://pytorch.org/>`_ and `PyG <https://github.com/pyg-team/pytorch_geometric/>`_ for processing spatiotemporal data signals.
+It is built upon the most used libraries of the python scientific computing ecosystem, with the final objective of providing a straightforward process that goes from data preprocessing to model prototyping. In particular, tsl offers a wide range of utilities to develop neural networks in `PyTorch <https://pytorch.org/>`_ and `PyG <https://www.pyg.org/>`_ for processing spatiotemporal data signals.
 
 In detail, the package provide:
 
@@ -71,7 +74,7 @@ tsl relies heavily on these libraries for its functionalities:
 ----
 
 Get started
-+++++++++++
+-----------
 
 .. grid:: 1 1 2 2
     :margin: 3 0 0 0

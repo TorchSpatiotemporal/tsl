@@ -1,7 +1,10 @@
 import datetime
 import doctest
+import os
 
 import tsl
+
+os.environ["PYTORCH_JIT"] = '0'  # generate doc for torch.jit.script methods
 
 # -- Project information -----------------------------------------------------
 #
@@ -77,14 +80,12 @@ html_css_files = [
 html_theme_options = {
     "sidebar_hide_name": True,
     "light_css_variables": {
-        "color-brand-primary": "#ee4c2c",
-        "color-brand-content": "#ee4c2c",
+        "color-brand-primary": "#D34317",
+        "color-brand-content": "#D34317",
     },
     "dark_css_variables": {
-        # "color-code-background": "#131416",
-        # "color-background-primary": "#131416",
-        "color-brand-primary": "#ee4c2c",
-        "color-brand-content": "#ee4c2c",
+        "color-brand-primary": "#FF5722",
+        "color-brand-content": "#FF5722",
     }
 }
 
@@ -98,6 +99,7 @@ nb_execution_mode = 'off'
 myst_enable_extensions = ['dollarmath']
 myst_dmath_allow_space = True
 myst_dmath_double_inline = True
+nb_code_prompt_hide = 'Hide code cell outputs'
 
 # -- OpenGraph options -------------------------------------------------------
 #
