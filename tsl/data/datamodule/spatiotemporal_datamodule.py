@@ -1,12 +1,11 @@
-from typing import Optional, Mapping
+from typing import Optional, Mapping, Literal
 
-import numpy as np
 from pytorch_lightning import LightningDataModule
-from torch.utils.data import Dataset, Subset
+from torch.utils.data import Dataset, Subset, DataLoader, RandomSampler, \
+    SequentialSampler, BatchSampler
 
 import tsl
 from .splitters import Splitter
-from ..loader import StaticGraphLoader
 from ..spatiotemporal_dataset import SpatioTemporalDataset
 from ...typing import Index
 
@@ -158,31 +157,35 @@ class SpatioTemporalDataModule(LightningDataModule):
             tsl.logger.info('Scaler for {}: {}'.format(k, scaler))
             self.torch_dataset.add_scaler(k, scaler)
 
-    def train_dataloader(self, shuffle=True, batch_size=None):
-        if self.trainset is None:
+    def get_dataloader(self, split: Literal['train', 'val', 'test'],
+                       shuffle: bool = False,
+                       batch_size: int = None):
+        if split not in ['train', 'val', 'test']:
+            raise ValueError("Argument `split` must be one of "
+                             "'train', 'val', or 'test'.")
+        dataset = getattr(self, f'{split}set')
+        if dataset is None:
             return None
-        return StaticGraphLoader(self.trainset,
-                                 batch_size=batch_size or self.batch_size,
-                                 shuffle=shuffle,
-                                 num_workers=self.workers,
-                                 pin_memory=self.pin_memory,
-                                 drop_last=True)
+        pin_memory = self.pin_memory if split == 'train' else None
+        sampler_cls = RandomSampler if shuffle else SequentialSampler
+        sampler = BatchSampler(sampler_cls(dataset),
+                               batch_size=batch_size or self.batch_size,
+                               drop_last=split == 'train')
+        return DataLoader(dataset,
+                          sampler=sampler,
+                          batch_size=None,
+                          collate_fn=lambda x: x,
+                          num_workers=self.workers,
+                          pin_memory=pin_memory)
+
+    def train_dataloader(self, shuffle=True, batch_size=None):
+        return self.get_dataloader('train', shuffle, batch_size)
 
     def val_dataloader(self, shuffle=False, batch_size=None):
-        if self.valset is None:
-            return None
-        return StaticGraphLoader(self.valset,
-                                 batch_size=batch_size or self.batch_size,
-                                 shuffle=shuffle,
-                                 num_workers=self.workers)
+        return self.get_dataloader('val', shuffle, batch_size)
 
     def test_dataloader(self, shuffle=False, batch_size=None):
-        if self.testset is None:
-            return None
-        return StaticGraphLoader(self.testset,
-                                 batch_size=batch_size or self.batch_size,
-                                 shuffle=shuffle,
-                                 num_workers=self.workers)
+        return self.get_dataloader('test', shuffle, batch_size)
 
     @staticmethod
     def add_argparse_args(parser, **kwargs):
