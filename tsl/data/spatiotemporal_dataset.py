@@ -16,10 +16,10 @@ from tsl.typing import DataArray, TemporalIndex, IndexSlice, TensArray, \
     SparseTensArray
 from . import Batch
 from .batch_map import BatchMap, BatchMapItem
-from .casting import SynchMode, WINDOW, HORIZON, STATIC
 from .data import Data
 from .mixin import DataParsingMixin
 from .preprocessing.scalers import Scaler, ScalerModule
+from .synch_mode import SynchMode, WINDOW, HORIZON, STATIC
 from ..ops.pattern import outer_pattern, broadcast, take
 
 _WINDOWING_KEYS = ['target', 'window', 'delay', 'horizon', 'stride']
@@ -136,6 +136,15 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         self.input_map = BatchMap()
         self.target_map = BatchMap()
 
+        # Store preprocessing modules
+        self.scalers: dict = dict()
+        self.trend: Optional[Tensor] = None
+        # cache scalers for composed batch items
+        self._batch_scalers: dict = dict()
+        # handle trend as bias in target scaler, so cache actual one (if any)
+        # to restore after trend update/deletion
+        self.__target_bias: Optional[Tensor] = None
+
         # Store time information
         # if index is not explicitly passed and data is a dataframe, defaults to
         # data's index
@@ -173,21 +182,13 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         if target_map is not None:
             self.set_target_map(target_map)
 
-        # Store preprocessing options
-        self.scalers: dict = dict()
-        self.trend: Optional[Tensor] = None
-
         # A scaler is a module that transforms data with a linear operation
-        self._batch_scalers: dict = dict()
         if scalers is not None:
             for k, v in scalers.items():
                 self.add_scaler(k, v)
 
         # Target's trend (i.e., 't n f' tensor to be removed when target
         # is preprocessed)
-        # handle trend as bias in target scaler, so cache actual one (if any)
-        # to restore after trend update/deletion
-        self.__target_bias: Optional[Tensor] = None
         if trend is not None:
             self.set_trend(trend)
 
@@ -204,8 +205,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             item = self._get_time_index(item, layout='index')
         item = self.get(item)
         if self.item_pattern_layout == 'node_then_time':
-            assert isinstance(item, Data)
-            item.rearrange(self.batch_patterns_rearrange)
+            patterns = self.batch_patterns_rearrange
+            if isinstance(item, Batch):
+                patterns = {k: 'b ' + v for k, v in patterns.items()}
+            item.rearrange(patterns)
         return item
 
     def __contains__(self, item) -> bool:
@@ -493,7 +496,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         elif ndim == 1:  # get batch of items
             pattern = {name: ('b ' + pattern) if 't' in pattern else pattern
                        for name, pattern in self.batch_patterns.items()}
-            sample = Batch(pattern=pattern)
+            sample = Batch(pattern=pattern, size=item.size(0))
         else:
             raise RuntimeError(f"Too many dimensions for index ({ndim}).")
 
@@ -645,9 +648,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         if isinstance(time_index, slice):
             if layout == 'slice':
                 return time_index
-            return torch.arange(max(time_index.start or 0, 0),
-                                min(time_index.stop or len(self), len(self)),
-                                time_index.step or 1)
+            time_index = torch.arange(max(time_index.start or 0, 0),
+                                      min(time_index.stop or len(self),
+                                          len(self)),
+                                      time_index.step or 1)
         if not isinstance(time_index, Tensor):
             time_index = torch.as_tensor(time_index, dtype=torch.long)
         if layout == 'mask':
@@ -662,10 +666,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         if isinstance(node_index, slice):
             if layout == 'slice':
                 return node_index
-            return torch.arange(max(node_index.start or 0, 0),
-                                min(node_index.stop or self.n_nodes,
-                                    self.n_nodes),
-                                node_index.step or 1)
+            node_index = torch.arange(max(node_index.start or 0, 0),
+                                      min(node_index.stop or self.n_nodes,
+                                          self.n_nodes),
+                                      node_index.step or 1)
         if not isinstance(node_index, Tensor):
             node_index = torch.as_tensor(node_index, dtype=torch.long)
         if layout == 'mask':
@@ -1001,16 +1005,16 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         indices = torch.arange(len(self)) if indices is None else indices
 
         ds_indices = dict()
-        ds_indices['window'] = self.get_window_indices(indices)
+        if self.window > 0:
+            ds_indices['window'] = self.get_window_indices(indices)
         ds_indices['horizon'] = self.get_horizon_indices(indices)
 
         if merge:
-            return torch.unique(torch.cat([ds_indices['window'].view(-1),
-                                           ds_indices['horizon'].view(-1)]))
+            return torch.unique(torch.cat([v.contiguous().view(-1)
+                                           for v in ds_indices.values()]))
 
         if unique:
-            ds_indices['window'] = torch.unique(ds_indices['window'])
-            ds_indices['horizon'] = torch.unique(ds_indices['horizon'])
+            ds_indices = {k: torch.unique(v) for k, v in ds_indices.items()}
 
         return ds_indices
 

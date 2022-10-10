@@ -120,6 +120,35 @@ class StorageView(BaseStorage):
 
 
 class Data(PyGData):
+    r"""A data object describing a spatiotemporal graph, i.e., a graph with time
+    series of equal length associated with every node.
+
+
+    The data object extends :class:`~torch_geometric.data.Data`, thus preserving
+    all its functionalities (see the :class:`documentation
+    <torch_geometric.data.Data>` and `the accompanying
+    tutorial <https://pytorch-geometric.readthedocs.io/en/latest/notes/
+    introduction.html#data-handling-of-graphs>`_).
+
+    Args:
+        input (Mapping, optional): Named mapping of :class:`~torch.Tensor` to be
+            used as input to the model.
+            (default: :obj:`None`)
+        target (Mapping, optional): Named mapping of :class:`~torch.Tensor` to be
+            used as target of the task.
+            (default: :obj:`None`)
+        mask (Tensor, optional): The optional mask associated with the target.
+            (default: :obj:`None`)
+        transform (Mapping, optional): Named mapping of
+            :class:`~tsl.data.preprocessing.Scaler` associated with entries in
+            :attr:`input` or :attr:`output`.
+            (default: :obj:`None`)
+        pattern (Mapping, optional): Map of the pattern of each entry in
+            :attr:`input` or :attr:`output`.
+            (default: :obj:`None`)
+        **kwargs: Any keyword argument for :class:`~torch_geometric.data.Data`.
+    """
+
     input: StorageView
     target: StorageView
     pattern: dict

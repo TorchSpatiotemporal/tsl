@@ -2,7 +2,7 @@ from typing import Iterator
 from typing import (Optional, Union, List, Tuple, Mapping)
 
 from tsl.utils.python_utils import ensure_list
-from .casting import SynchMode, WINDOW, STATIC
+from .synch_mode import SynchMode, WINDOW, STATIC
 
 
 class BatchMapItem:

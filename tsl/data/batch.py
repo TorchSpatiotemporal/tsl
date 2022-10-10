@@ -29,7 +29,7 @@ def static_graph_collate(batch: List[Data], cls: Optional[type] = None) -> Data:
         # if key.startswith('edge_'):
         #     return items[0]
         if pattern is not None:
-            if 's' in pattern:
+            if 't' in pattern:
                 return default_collate(items), 'b ' + pattern
             return items[0], pattern
         return default_collate(items), None
@@ -52,6 +52,30 @@ def static_graph_collate(batch: List[Data], cls: Optional[type] = None) -> Data:
 
 class Batch(Data):
     _collate_fn: Callable = static_graph_collate
+
+    def __init__(self, input: Optional[Mapping] = None,
+                 target: Optional[Mapping] = None,
+                 mask: Optional[Tensor] = None,
+                 transform: Optional[Mapping] = None,
+                 pattern: Optional[Mapping] = None,
+                 size: Optional[int] = None,
+                 **kwargs):
+        super(Batch, self).__init__(input=input,
+                                    target=target,
+                                    mask=mask,
+                                    transform=transform,
+                                    pattern=pattern,
+                                    **kwargs)
+        self._batch_size = size
+
+    @property
+    def batch_size(self) -> int:
+        if self._batch_size is not None:
+            return self._batch_size
+        if self.pattern is not None:
+            for key, pattern in self.pattern.items():
+                if pattern.startswith('b'):
+                    return self[key].size(0)
 
     @classmethod
     def from_data_list(cls, data_list: List[Data]):

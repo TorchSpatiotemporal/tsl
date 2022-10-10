@@ -100,7 +100,7 @@ class DataParsingMixin:
 
     def _check_name(self, name: str):
         # name cannot be an attribute of self, nor a key in get
-        invalid_names = set(dir(self)).union(self.keys)
+        invalid_names = set(dir(self))
         if name in invalid_names:
             raise ValueError(f"Cannot set attribute with name '{name}', there "
                              f"is already an attribute named '{name}' in the "

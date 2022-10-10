@@ -186,7 +186,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
         if self.mask is not None:
             patterns['mask'] = 't n f'
         patterns.update({name: attr['pattern']
-                        for name, attr in self._covariates.items()})
+                         for name, attr in self._covariates.items()})
         return patterns
 
     # Covariates properties
@@ -344,8 +344,9 @@ class TabularDataset(Dataset, TabularParsingMixin):
                                             str, int, List, None]]] = None,
                   node_index: Union[List, np.ndarray] = None,
                   time_index: Union[List, np.ndarray] = None,
-                  cat_dim: Optional[int] = None,
-                  return_pattern: bool = True):
+                  cat_dim: Optional[int] = -1,
+                  return_pattern: bool = True,
+                  as_numpy: bool = True):
 
         # parse channels
         if channels is None:
@@ -371,6 +372,38 @@ class TabularDataset(Dataset, TabularParsingMixin):
         if cat_dim is not None:
             frames = np.concatenate(frames, axis=cat_dim)
 
+        if not as_numpy:
+            time_index = self._get_time_index(time_index, layout="slice")
+            node_index = self._get_node_index(node_index, layout="slice")
+            assert self.is_target_dataframe
+            idxs, names = [], []
+            for dim in pattern.replace(' ', ''):
+                if dim == 't':
+                    idxs.append(self.index[time_index])
+                    names.append('index')
+                elif dim == 'n':
+                    idxs.append(self.nodes[node_index])
+                    names.append('nodes')
+                else:  # dim = 'f'
+                    channel_index = []
+                    for key, chn in channels.items():
+                        if chn is None:
+                            obj = getattr(self, key)
+                            dim = self.patterns[key].split(' ').index('f')
+                            if isinstance(obj, pd.DataFrame):
+                                axis = 'columns' if dim > 0 else 'index'
+                                level = dim - 1 if dim > 0 else 0
+                                chn = getattr(obj, axis).unique(level)
+                            else:
+                                chn = np.arange(obj.shape[dim])
+                        channel_index.extend([f"{key}/{c}" for c in chn])
+                    idxs.append(channel_index)
+                    names.append('nodes')
+            index = pd.Index(idxs.pop(0), name=names.pop(0))
+            columns = pd.MultiIndex.from_product(idxs, names=names)
+            frames = pd.DataFrame(frames.reshape(frames.shape[0], -1),
+                                  index=index, columns=columns)
+
         if return_pattern:
             return frames, pattern
         return frames
@@ -379,8 +412,14 @@ class TabularDataset(Dataset, TabularParsingMixin):
 
     def _get_time_index(self, time_index=None, layout='index'):
         if time_index is None:
-            return None
-        if isinstance(time_index, pd.Index):
+            return slice(None) if layout == 'slice' else None
+        if isinstance(time_index, slice):
+            if layout == 'slice':
+                return time_index
+            time_index = np.arange(max(time_index.start or 0, 0),
+                                   min(time_index.stop or len(self), len(self)),
+                                   time_index.step or 1)
+        elif isinstance(time_index, pd.Index):
             assert self.is_target_dataframe
             time_indexer = self.index.get_indexer(time_index)
             if any(time_indexer < 0):
@@ -396,8 +435,15 @@ class TabularDataset(Dataset, TabularParsingMixin):
 
     def _get_node_index(self, node_index=None, layout='index'):
         if node_index is None:
-            return None
-        if isinstance(node_index, pd.Index):
+            return slice(None) if layout == 'slice' else None
+        if isinstance(node_index, slice):
+            if layout == 'slice':
+                return node_index
+            node_index = np.arange(max(node_index.start or 0, 0),
+                                   min(node_index.stop or self.n_nodes,
+                                       self.n_nodes),
+                                   node_index.step or 1)
+        elif isinstance(node_index, pd.Index):
             assert self.is_target_dataframe
             node_indexer = self.nodes.get_indexer(node_index)
             if any(node_indexer < 0):

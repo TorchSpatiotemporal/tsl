@@ -5,8 +5,8 @@ from typing import Mapping, Optional
 class Config(dict):
     """Manage the package configuration from a single object.
 
-    With a :obj:`Config` object you can edit settings within the tsl scope, like
-    directory in which you store configuration files for experiments
+    With a :class:`~tsl.Config` object you can edit settings within the tsl
+    scope, like directory in which you store configuration files for experiments
     (:obj:`config_dir`), logs (:obj:`log_dir`), and data (:obj:`data_dir`).
     """
 

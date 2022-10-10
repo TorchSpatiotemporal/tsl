@@ -7,7 +7,7 @@ import numpy as np
 
 from tsl.utils.python_utils import ensure_list
 from ..spatiotemporal_dataset import SpatioTemporalDataset
-from ..casting import SynchMode
+from ..synch_mode import SynchMode
 
 __all__ = [
     'Splitter',

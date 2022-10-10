@@ -1,7 +1,8 @@
 import os
 
-import tsl.global_scope
-from tsl.global_scope import *
+from .config import Config
+from .lazy_loader import LazyLoader
+from .logger import logger
 
 data = LazyLoader('data', globals(), 'tsl.data')
 datasets = LazyLoader('datasets', globals(), 'tsl.datasets')
@@ -23,7 +24,6 @@ __all__ = [
     'config',
     'epsilon',
     'logger',
-    'tsl',
     'data',
     'datasets',
     'nn',

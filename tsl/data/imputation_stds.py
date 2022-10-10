@@ -2,9 +2,10 @@ from typing import Union, Optional, Mapping, Tuple
 
 import numpy as np
 
-from tsl.data import SpatioTemporalDataset, BatchMap, BatchMapItem
-from tsl.data.preprocessing import Scaler
 from tsl.typing import (TensArray, TemporalIndex)
+from .batch_map import BatchMap, BatchMapItem
+from .preprocessing import Scaler
+from .spatiotemporal_dataset import SpatioTemporalDataset
 
 
 class ImputationDataset(SpatioTemporalDataset):

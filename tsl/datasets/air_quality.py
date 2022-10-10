@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from tsl.data.datamodule.splitters import disjoint_months, Splitter
-from tsl.data.casting import HORIZON
+from tsl.data.synch_mode import HORIZON
 from tsl.datasets.prototypes import PandasDataset
 from tsl.datasets.prototypes.mixin import MissingValuesMixin
 from tsl.utils import download_url, extract_zip

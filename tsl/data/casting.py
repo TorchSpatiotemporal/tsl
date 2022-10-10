@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import Union
 
 import torch
@@ -8,18 +7,6 @@ from torch_sparse import SparseTensor
 
 from tsl.ops.framearray import framearray_to_numpy
 from tsl.utils.python_utils import precision_stoi
-
-
-class SynchMode(Enum):
-    WINDOW = 'window'
-    HORIZON = 'horizon'
-    STATIC = 'static'
-
-
-# Aliases
-WINDOW = SynchMode.WINDOW
-HORIZON = SynchMode.HORIZON
-STATIC = SynchMode.STATIC
 
 
 def to_time_nodes_channels(obj):
