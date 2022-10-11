@@ -51,6 +51,36 @@ def static_graph_collate(batch: List[Data], cls: Optional[type] = None) -> Data:
 
 
 class Batch(Data):
+    r"""A batch of :class:`tsl.data.Data` objects for multiple spatiotemporal
+    graphs sharing the same topology.
+
+    The batch object extends :class:`~tsl.data.Data`, thus preserving
+    all its functionalities.
+
+    Args:
+        input (Mapping, optional): Named mapping of :class:`~torch.Tensor` to be
+            used as input to the model.
+            (default: :obj:`None`)
+        target (Mapping, optional): Named mapping of :class:`~torch.Tensor` to be
+            used as target of the task.
+            (default: :obj:`None`)
+        mask (Tensor, optional): The optional mask associated with the target.
+            (default: :obj:`None`)
+        transform (Mapping, optional): Named mapping of
+            :class:`~tsl.data.preprocessing.Scaler` associated with entries in
+            :attr:`input` or :attr:`output`.
+            (default: :obj:`None`)
+        pattern (Mapping, optional): Map of the pattern of each entry in
+            :attr:`input` or :attr:`output`.
+            (default: :obj:`None`)
+        size (int, optional): The batch size, i.e., the number of spatiotemporal
+            graphs in the batch. The different samples in the batch share all
+            the same topology, such that there is (at most) only one
+            :obj:`edge_index` and :obj:`edge_weight`. If :obj:`None`, then the
+            batch size is inferred from data (if possible).
+            (default: :obj:`None`)
+        **kwargs: Any keyword argument for :class:`~torch_geometric.data.Data`.
+    """
     _collate_fn: Callable = static_graph_collate
 
     def __init__(self, input: Optional[Mapping] = None,
@@ -70,6 +100,8 @@ class Batch(Data):
 
     @property
     def batch_size(self) -> int:
+        """The batch size, i.e., the number of spatiotemporal graphs in the
+        batch."""
         if self._batch_size is not None:
             return self._batch_size
         if self.pattern is not None:

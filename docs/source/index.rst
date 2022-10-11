@@ -127,8 +127,6 @@ Get started
    :hidden:
 
    modules/data
-   modules/data_datamodule
-   modules/data_preprocessing
    modules/datasets
    modules/nn
    modules/inference_modules

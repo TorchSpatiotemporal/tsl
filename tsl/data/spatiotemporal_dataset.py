@@ -816,9 +816,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
         Args:
             name (str): The name of the exogenous variable. If the name starts
-                with "global_", the variable is assumed to be graph-level
-                (overriding parameter :obj:`node_level`), and the "global_"
-                prefix is removed from the name.
+                with :obj:`"global_"`, the variable is assumed to be graph-level
+                (overriding parameter :obj:`node_level`), and the
+                :obj:`"global_"` prefix is removed from the name.
             value (DataArray): The data sequence. Can be a
                 :class:`~pandas.DataFrame`, a :class:`~numpy.ndarray` or a
                 :class:`~torch.Tensor`.

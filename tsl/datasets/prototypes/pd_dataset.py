@@ -113,6 +113,7 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
     # Aggregation methods
 
     def sort(self):
+        """"""
         self.target.sort_index(inplace=True)
         if self.force_synchronization:
             for name, attr in self._covariates.items():
@@ -122,6 +123,7 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
     def resample_(self, freq=None, aggr: str = None,
                   keep: Literal["first", "last", False] = 'first',
                   mask_tolerance: float = 0.):
+        """"""
         freq = to_pandas_freq(freq) if freq is not None else self.freq
         aggr = aggr if aggr is not None else self.temporal_aggregation
 
@@ -157,6 +159,7 @@ class PandasDataset(TabularDataset, TemporalFeaturesMixin):
     def resample(self, freq=None, aggr: str = None,
                  keep: Literal["first", "last", False] = 'first',
                  mask_tolerance: float = 0.):
+        """"""
         return deepcopy(self).resample_(freq, aggr, keep, mask_tolerance)
 
     # Preprocessing

@@ -130,7 +130,7 @@ class Imputer(Predictor):
                              unused: Optional[int] = 0) -> None:
         r"""For every training batch, randomly mask out value with probability
         :math:`p = \texttt{self.whiten\_prob}`. Then, whiten missing values in
-         :obj:`batch.input.x`"""
+        :obj:`batch.input.x`."""
         super(Imputer, self).on_train_batch_start(batch, batch_idx, unused)
         # randomly mask out value with probability p = whiten_prob
         batch.original_mask = mask = batch.input.mask

@@ -139,7 +139,6 @@ class SpatioTemporalDataModule(LightningDataModule):
             setattr(self, slice_name, _slice)
 
     def setup(self, stage=None):
-
         # splitting
         if self.splitter is not None:
             self.splitter.split(self.torch_dataset)
@@ -159,7 +158,8 @@ class SpatioTemporalDataModule(LightningDataModule):
 
     def get_dataloader(self, split: Literal['train', 'val', 'test'],
                        shuffle: bool = False,
-                       batch_size: int = None):
+                       batch_size: Optional[int] = None) \
+            -> Optional[DataLoader]:
         if split not in ['train', 'val', 'test']:
             raise ValueError("Argument `split` must be one of "
                              "'train', 'val', or 'test'.")
@@ -178,13 +178,22 @@ class SpatioTemporalDataModule(LightningDataModule):
                           num_workers=self.workers,
                           pin_memory=pin_memory)
 
-    def train_dataloader(self, shuffle=True, batch_size=None):
+    def train_dataloader(self, shuffle: bool = True,
+                         batch_size: Optional[int] = None) \
+            -> Optional[DataLoader]:
+        """"""
         return self.get_dataloader('train', shuffle, batch_size)
 
-    def val_dataloader(self, shuffle=False, batch_size=None):
+    def val_dataloader(self, shuffle: bool = False,
+                       batch_size: Optional[int] = None) \
+            -> Optional[DataLoader]:
+        """"""
         return self.get_dataloader('val', shuffle, batch_size)
 
-    def test_dataloader(self, shuffle=False, batch_size=None):
+    def test_dataloader(self, shuffle: bool = False,
+                        batch_size: Optional[int] = None) \
+            -> Optional[DataLoader]:
+        """"""
         return self.get_dataloader('test', shuffle, batch_size)
 
     @staticmethod

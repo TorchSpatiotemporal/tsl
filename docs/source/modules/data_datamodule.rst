@@ -1,21 +1,23 @@
-Data module
-===========
-
+.. py:module:: tsl.data.datamodule
 .. currentmodule:: tsl.data.datamodule
 
+Organizing data
+===============
 
-Datamodule
+
+DataModule
 ----------
 
-.. currentmodule:: tsl.data.datamodule
 .. autosummary::
    :nosignatures:
    {% for cls in tsl.data.datamodule.datamodule_classes %}
      {{ cls }}
    {% endfor %}
 
-.. automodule:: tsl.data.datamodule
-    :members: {% for cls in tsl.data.datamodule.datamodule_classes %}{{ cls }}, {% endfor %}
+{% for cls in tsl.data.datamodule.datamodule_classes %}
+.. autoclass:: {{ cls }}
+    :members:
+{% endfor %}
 
 
 Splitters

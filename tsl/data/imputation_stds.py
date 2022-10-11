@@ -9,6 +9,7 @@ from .spatiotemporal_dataset import SpatioTemporalDataset
 
 
 class ImputationDataset(SpatioTemporalDataset):
+    """Extension of :class:`~tsl.data.SpatioTemporalDataset` for imputation."""
 
     def __init__(self, target: TensArray,
                  index: Optional[TemporalIndex] = None,

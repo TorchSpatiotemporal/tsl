@@ -1,7 +1,12 @@
-Ops
-===
-
+.. py:module:: tsl.ops
 .. currentmodule:: tsl.ops
+
+Operations
+==========
+
+The module :mod:`tsl.ops` exposes API for operations and utilities on
+spatiotemporal data. It is divided into submodules, one for each operation scope.
+
 
 Connectivity
 ------------

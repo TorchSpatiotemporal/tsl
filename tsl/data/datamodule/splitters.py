@@ -136,6 +136,8 @@ class Splitter:
 
 
 class CustomSplitter(Splitter):
+    r"""Create a :class:`~tsl.data.datamodule.splitters.Splitter` using custom
+    validation and test sets splitting functions."""
 
     def __init__(self, val_split_fn: Callable = None,
                  test_split_fn: Callable = None,
@@ -169,6 +171,8 @@ class CustomSplitter(Splitter):
 
 
 class FixedIndicesSplitter(Splitter):
+    r"""Create a :class:`~tsl.data.datamodule.splitters.Splitter` using fixed
+    indices for training, validation and test sets."""
 
     def __init__(self, train_idxs: Optional[Index] = None,
                  val_idxs: Optional[Index] = None,
@@ -182,8 +186,10 @@ class FixedIndicesSplitter(Splitter):
 
 
 class TemporalSplitter(Splitter):
+    r"""Split the data sequentially with specified lengths."""
 
-    def __init__(self, val_len: int = None, test_len: int = None):
+    def __init__(self, val_len: Union[int, float] = None,
+                 test_len: Union[int, float] = None):
         super(TemporalSplitter, self).__init__()
         self._val_len = val_len
         self._test_len = test_len
@@ -209,6 +215,9 @@ class TemporalSplitter(Splitter):
 
 
 class AtTimeStepSplitter(Splitter):
+    r"""Split the data at given time steps (only for
+    :class:`~tsl.data.SpatioTemporalDataset` with
+    :class:`~pandas.DatetimeIndex` index)."""
 
     def __init__(self, first_val_ts: Union[Tuple, datetime] = None,
                  first_test_ts: Union[Tuple, datetime] = None,

@@ -12,5 +12,5 @@ dataset_classes = ['SpatioTemporalDataset', 'ImputationDataset']
 __all__ = [
     *data_classes,
     *dataset_classes,
-    SynchMode, WINDOW, HORIZON, STATIC
+    'SynchMode', 'WINDOW', 'HORIZON', 'STATIC'
 ]

@@ -1,11 +1,12 @@
 import inspect
-from typing import Type, Mapping, Callable, Optional
+from typing import Type, Mapping, Callable, Optional, Union
 
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.utilities import move_data_to_device
 from torchmetrics import MetricCollection, Metric
 
+from tsl.data import Data, Batch
 from tsl.nn.metrics.metric_base import MaskedMetric
 
 
@@ -40,6 +41,7 @@ class Predictor(pl.LightningModule):
             :obj:`scheduler_class` at instantiation.
             (default: :obj:`None`)
     """
+
     def __init__(self,
                  model_class: Type,
                  model_kwargs: Mapping,
@@ -81,12 +83,14 @@ class Predictor(pl.LightningModule):
             self.model = None
 
     def reset_model(self):
+        """"""
         if self.model_cls is not None:
             self.model = self.model_cls(**self.model_kwargs)
         else:
             self.model = None
 
     def load_model(self, filename: str):
+        """"""
         model = torch.load(filename, lambda storage, loc: storage)
         model_cls, model_kwargs = model['hyper_parameters']['model_class'], \
                                   model['hyper_parameters']['model_kwargs']
@@ -97,10 +101,12 @@ class Predictor(pl.LightningModule):
 
     @property
     def trainable_parameters(self):
+        """"""
         return sum(
             p.numel() for p in self.model.parameters() if p.requires_grad)
 
     def forward(self, *args, **kwargs):
+        """"""
         return self.model(*args, **kwargs)
 
     @staticmethod
@@ -126,10 +132,12 @@ class Predictor(pl.LightningModule):
             {f'test_{k}': self._check_metric(m) for k, m in metrics.items()})
 
     def log_metrics(self, metrics, **kwargs):
+        """"""
         self.log_dict(metrics, on_step=False, on_epoch=True,
                       logger=True, prog_bar=True, **kwargs)
 
     def log_loss(self, name, loss, **kwargs):
+        """"""
         self.log(name + '_loss', loss.detach(), on_step=False, on_epoch=True,
                  logger=True, prog_bar=False, **kwargs)
 
@@ -145,21 +153,32 @@ class Predictor(pl.LightningModule):
         transform = batch.get('transform')
         return inputs, targets, mask, transform
 
-    def predict_batch(self, batch, preprocess=False, postprocess=True,
-                      return_target=False, forward_kwargs=None):
-        """
-        This method takes as an input a batch as a two dictionaries containing tensors and outputs the predictions.
-        Prediction should have a shape [batch, nodes, horizon]
+    def predict_batch(self, batch: Union[Batch, Data],
+                      preprocess: bool = False, postprocess: bool = True,
+                      return_target: bool = False,
+                      **forward_kwargs):
+        """This method takes as input a :class:`~tsl.data.Batch` or
+        :class:`~tsl.data.Data` object and outputs the predictions.
 
-        :param batch: list dictionary following the structure [data:
-                                                                {'x':[...], 'y':[...], 'u':[...], ...},
-                                                              preprocessing:
-                                                                {'bias': ..., 'scale': ..., 'x_trend':[...], 'y_trend':[...]}]
-        :param preprocess: whether the data need to be preprocessed (note that inputs are by default preprocessed before creating the batch)
-        :param postprocess: whether to postprocess the predictions (if True we assume that the model has learned to predict the trasformed signal)
-        :param return_target: whether to return the prediction target y_true and the prediction mask
-        :param forward_kwargs: optional, additional keyword arguments passed to the forward method.
-        :return: (y_true), y_hat, (mask)
+        Args:
+            batch (Batch or Data): The batch to be forwarded to the model.
+            preprocess (bool, optional): If :obj:`True`, then preprocess tensors
+                in :attr:`batch.input` using transformation modules in
+                :attr:`batch.transform`. Note that inputs are preprocessed
+                before creating the batch by default.
+                (default: :obj:`False`)
+            postprocess (bool, optional): If :obj:`True`, then postprocess the
+                model output using transformation modules for
+                :attr:`batch.target` in :attr:`batch.transform`.
+                (default: :obj:`True`)
+            return_target (bool, optional): If :obj:`True`, then returns also
+                the prediction target :attr:`batch.target` and the prediction
+                mask :attr:`batch.mask`, besides the model output. In this case,
+                the order of the arguments in the return is
+                :attr:`batch.target`, :obj:`y_hat`, :attr:`batch.mask`.
+                (default: :obj:`False`)
+            **forward_kwargs: additional keyword arguments passed to the forward
+                method.
         """
         inputs, targets, mask, transform = self._unpack_batch(batch)
         if preprocess:
@@ -210,6 +229,7 @@ class Predictor(pl.LightningModule):
         return y, y_hat
 
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
+        """"""
         # Unpack batch
         x, y, mask, transform = self._unpack_batch(batch)
 
@@ -222,6 +242,7 @@ class Predictor(pl.LightningModule):
         return output
 
     def on_predict_epoch_end(self, results):
+        """"""
         # iterate over results of each dataloader
         processed_results = []
         for res in results:
@@ -241,7 +262,7 @@ class Predictor(pl.LightningModule):
                 res[k] = torch.cat(v, 0)
 
     def training_step(self, batch, batch_idx):
-
+        """"""
         y = y_loss = batch.y
         mask = batch.get('mask')
 
@@ -265,7 +286,7 @@ class Predictor(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-
+        """"""
         y = y_loss = batch.y
         mask = batch.get('mask')
 
@@ -289,7 +310,7 @@ class Predictor(pl.LightningModule):
         return val_loss
 
     def test_step(self, batch, batch_idx):
-
+        """"""
         # Compute outputs and rescale
         y_hat = self.predict_batch(batch, preprocess=False, postprocess=True)
 
@@ -303,6 +324,7 @@ class Predictor(pl.LightningModule):
         return test_loss
 
     def configure_optimizers(self):
+        """"""
         cfg = dict()
         optimizer = self.optim_class(self.parameters(), **self.optim_kwargs)
         cfg['optimizer'] = optimizer
