@@ -130,6 +130,8 @@ Get started
    modules/datasets
    modules/nn
    modules/inference_modules
+   modules/metrics
+   modules/experiment
    modules/ops
 
 .. toctree::

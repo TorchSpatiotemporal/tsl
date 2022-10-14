@@ -7,6 +7,7 @@ classes for creating new ones.
 
 .. toctree::
     :glob:
+    :maxdepth: 2
     :caption: Datasets
 
     datasets_prototypes

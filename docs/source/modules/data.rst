@@ -9,6 +9,7 @@ store, represent, and process spatiotemporal data in PyTorch.
 
 .. toctree::
    :glob:
+   :maxdepth: 2
    :caption: Data structures
 
    data_objects
