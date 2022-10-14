@@ -1,7 +1,6 @@
-from functools import partial
 import inspect
 from copy import deepcopy
-from typing import Optional
+from functools import partial
 
 import torch
 from torchmetrics import Metric

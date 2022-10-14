@@ -1,4 +1,4 @@
-from tsl.nn.metrics.metric_base import MaskedMetric
+from .metric_base import MaskedMetric
 from tsl.utils.python_utils import ensure_list
 
 

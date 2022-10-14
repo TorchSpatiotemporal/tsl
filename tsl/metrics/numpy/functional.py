@@ -2,6 +2,16 @@ import numpy as np
 
 import tsl
 
+metrics = [
+    'mae', 'nmae', 'mape', 'mse', 'rmse', 'nrmse', 'nrmse_2', 'r2'
+]
+
+masked_metrics = [
+    'masked_mae', 'masked_mape', 'masked_mse', 'masked_mre', 'masked_rmse'
+]
+
+__all__ = metrics + masked_metrics + ['metrics', 'masked_metrics']
+
 
 def mae(y_hat, y):
     return np.abs(y_hat - y).mean()

@@ -1,5 +1,5 @@
 import torch
-from tsl.nn.metrics.metric_base import MaskedMetric
+from .metric_base import MaskedMetric
 import torch.nn as nn
 
 class MaskedMultiLoss(MaskedMetric):

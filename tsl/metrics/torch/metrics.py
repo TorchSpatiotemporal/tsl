@@ -1,13 +1,10 @@
-import tsl
-from .metric_base import MaskedMetric
-from torch.nn import functional as F
 import torch
-
+from torch.nn import functional as F
 from torchmetrics.utilities.checks import _check_same_shape
 
-
-def mape(y_hat, y):
-    return torch.abs((y_hat - y) / y)
+import tsl
+from .functional import mape
+from .metric_base import MaskedMetric
 
 
 class MaskedMAE(MaskedMetric):
@@ -22,6 +19,7 @@ class MaskedMAE(MaskedMetric):
                              is used for logging the aggregate error across different minibatches.
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
+
     def __init__(self,
                  mask_nans=False,
                  mask_inf=False,
@@ -52,6 +50,7 @@ class MaskedMAPE(MaskedMetric):
                              is used for logging the aggregate error across different minibatches.
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
+
     def __init__(self,
                  mask_nans=False,
                  compute_on_step=True,
@@ -59,7 +58,6 @@ class MaskedMAPE(MaskedMetric):
                  process_group=None,
                  dist_sync_fn=None,
                  at=None):
-
         super(MaskedMAPE, self).__init__(metric_fn=mape,
                                          mask_nans=mask_nans,
                                          mask_inf=True,
@@ -82,6 +80,7 @@ class MaskedMSE(MaskedMetric):
                              is used for logging the aggregate error across different minibatches.
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
+
     def __init__(self,
                  mask_nans=False,
                  mask_inf=False,
@@ -113,6 +112,7 @@ class MaskedMRE(MaskedMetric):
                              is used for logging the aggregate error across different minibatches.
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
+
     def __init__(self,
                  mask_nans=False,
                  mask_inf=False,
@@ -130,7 +130,8 @@ class MaskedMRE(MaskedMetric):
                                         dist_sync_fn=dist_sync_fn,
                                         metric_kwargs={'reduction': 'none'},
                                         at=at)
-        self.add_state('tot', dist_reduce_fx='sum', default=torch.tensor(0., dtype=torch.float))
+        self.add_state('tot', dist_reduce_fx='sum',
+                       default=torch.tensor(0., dtype=torch.float))
 
     def _compute_masked(self, y_hat, y, mask):
         _check_same_shape(y_hat, y)
@@ -162,5 +163,3 @@ class MaskedMRE(MaskedMetric):
         self.value += val
         self.numel += numel
         self.tot += tot
-
-

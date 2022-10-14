@@ -7,7 +7,7 @@ from pytorch_lightning.utilities import move_data_to_device
 from torchmetrics import MetricCollection, Metric
 
 from tsl.data import Data, Batch
-from tsl.nn.metrics.metric_base import MaskedMetric
+from tsl.metrics.torch import MaskedMetric
 
 
 class Predictor(pl.LightningModule):
