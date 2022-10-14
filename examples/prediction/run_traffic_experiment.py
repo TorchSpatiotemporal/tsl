@@ -1,0 +1,201 @@
+import torch
+from omegaconf import DictConfig
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.loggers import TensorBoardLogger
+
+from tsl.data import SpatioTemporalDataset, SpatioTemporalDataModule
+from tsl.data.preprocessing import StandardScaler
+from tsl.datasets import MetrLA, PemsBay
+from tsl.experiment import Experiment, NeptuneLogger
+from tsl.inference import Predictor
+from tsl.metrics import torch as torch_metrics, numpy as numpy_metrics
+from tsl.nn import models
+from tsl.nn.utils import casting
+
+
+def get_model_class(model_str):
+    if model_str == 'dcrnn':
+        model = models.DCRNNModel
+    elif model_str == 'stcn':
+        model = models.STCNModel
+    elif model_str == 'gwnet':
+        model = models.GraphWaveNetModel
+    elif model_str == 'rnn':
+        model = models.RNNModel
+    elif model_str == 'fcrnn':
+        model = models.FCRNNModel
+    elif model_str == 'tcn':
+        model = models.TCNModel
+    elif model_str == 'transformer':
+        model = models.TransformerModel
+    elif model_str == 'gatedgn':
+        model = models.GatedGraphNetworkModel
+    else:
+        raise NotImplementedError(f'Model "{model_str}" not available.')
+    return model
+
+
+def get_dataset(dataset_name):
+    if dataset_name == 'la':
+        dataset = MetrLA(impute_zeros=True)
+    elif dataset_name == 'bay':
+        dataset = PemsBay()
+    else:
+        raise ValueError(f"Dataset {dataset_name} not available.")
+    return dataset
+
+
+def run_traffic(cfg: DictConfig):
+    ########################################
+    # data module                          #
+    ########################################
+    dataset = get_dataset(cfg.dataset.name)
+
+    # encode time of the day and use it as exogenous variable
+    covariates = {'u': dataset.datetime_encoded('day').values}
+
+    # get adjacency matrix
+    adj = dataset.get_connectivity(**cfg.dataset.connectivity)
+
+    torch_dataset = SpatioTemporalDataset(target=dataset.dataframe(),
+                                          mask=dataset.mask,
+                                          connectivity=adj,
+                                          covariates=covariates,
+                                          horizon=cfg.dataset.horizon,
+                                          window=cfg.dataset.window)
+    transform = {
+        'target': StandardScaler(axis=(0, 1))
+    }
+
+    dm = SpatioTemporalDataModule(
+        dataset=torch_dataset,
+        scalers=transform,
+        splitter=dataset.get_splitter(**cfg.dataset.splitting),
+        **cfg.datamodule
+    )
+
+    ########################################
+    # predictor                            #
+    ########################################
+
+    model_cls = get_model_class(cfg.model.name)
+
+    model_kwargs = dict(n_nodes=torch_dataset.n_nodes,
+                        input_size=torch_dataset.n_channels,
+                        output_size=torch_dataset.n_channels,
+                        horizon=torch_dataset.horizon,
+                        exog_size=torch_dataset.input_map.u.shape[-1])
+
+    model_kwargs.update(cfg.model.params)
+    model_cls.filter_model_args_(model_kwargs)
+
+    loss_fn = torch_metrics.MaskedMAE(compute_on_step=True)
+
+    log_metrics = {'mae': torch_metrics.MaskedMAE(compute_on_step=False),
+                   'mse': torch_metrics.MaskedMSE(compute_on_step=False),
+                   'mape': torch_metrics.MaskedMAPE(compute_on_step=False),
+                   'mae_at_15': torch_metrics.MaskedMAE(compute_on_step=False,
+                                                        at=2),  # 3rd is 15 min
+                   'mae_at_30': torch_metrics.MaskedMAE(compute_on_step=False,
+                                                        at=5),  # 6th is 30 min
+                   'mae_at_60': torch_metrics.MaskedMAE(compute_on_step=False,
+                                                        at=11)}  # 12th is 1 h
+
+    # setup predictor
+    predictor = Predictor(
+        model_class=model_cls,
+        model_kwargs=model_kwargs,
+        optim_class=getattr(torch.optim, cfg.training.optimizer.name),
+        optim_kwargs=dict(cfg.training.optimizer.params),
+        loss_fn=loss_fn,
+        metrics=log_metrics,
+        scheduler_class=getattr(torch.optim.lr_scheduler,
+                                cfg.training.scheduler.name),
+        scheduler_kwargs=dict(cfg.training.scheduler.params)
+    )
+
+    ########################################
+    # logging options                      #
+    ########################################
+
+    # add tags
+    tags = list(cfg.tags) + [cfg.model.name, cfg.dataset.name]
+
+    if cfg.get('neptune'):
+        logger = NeptuneLogger(api_key=cfg.neptune.token,
+                               project_name=f"{cfg.neptune.username}/"
+                                            f"{cfg.neptune.project_name}",
+                               experiment_name=cfg.run.name,
+                               tags=tags,
+                               params=vars(cfg),
+                               offline_mode=False,
+                               upload_stdout=False)
+    else:
+        logger = TensorBoardLogger(
+            save_dir=cfg.run.dir,
+            name=f'{cfg.run.name}_{"_".join(tags)}',
+        )
+
+    ########################################
+    # training                             #
+    ########################################
+
+    early_stop_callback = EarlyStopping(
+        monitor='val_mae',
+        patience=cfg.training.patience,
+        mode='min'
+    )
+
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=cfg.run.dir,
+        save_top_k=1,
+        monitor='val_mae',
+        mode='min',
+    )
+
+    trainer = Trainer(max_epochs=cfg.training.epochs,
+                      default_root_dir=cfg.run.dir,
+                      logger=logger,
+                      gpus=1 if torch.cuda.is_available() else None,
+                      gradient_clip_val=cfg.training.grad_clip_val,
+                      callbacks=[early_stop_callback, checkpoint_callback])
+
+    trainer.fit(predictor, datamodule=dm)
+
+    ########################################
+    # testing                              #
+    ########################################
+
+    predictor.load_model(checkpoint_callback.best_model_path)
+
+    predictor.freeze()
+    trainer.test(predictor, datamodule=dm)
+
+    output = trainer.predict(predictor, dataloaders=dm.test_dataloader())
+    output = casting.numpy(output)
+    y_hat, y_true, mask = output['y_hat'], \
+                          output['y'], \
+                          output['mask']
+    res = dict(test_mae=numpy_metrics.masked_mae(y_hat, y_true, mask),
+               test_rmse=numpy_metrics.masked_rmse(y_hat, y_true, mask),
+               test_mape=numpy_metrics.masked_mape(y_hat, y_true, mask))
+
+    output = trainer.predict(predictor, dataloaders=dm.val_dataloader())
+    output = casting.numpy(output)
+    y_hat, y_true, mask = output['y_hat'], \
+                          output['y'], \
+                          output['mask']
+    res.update(dict(val_mae=numpy_metrics.masked_mae(y_hat, y_true, mask),
+                    val_rmse=numpy_metrics.masked_rmse(y_hat, y_true, mask),
+                    val_mape=numpy_metrics.masked_mape(y_hat, y_true, mask)))
+
+    if isinstance(logger, NeptuneLogger):
+        logger.finalize('success')
+
+    print(res)
+
+
+if __name__ == '__main__':
+    exp = Experiment(run_fn=run_traffic, config_path='config')
+    res = exp.run()
