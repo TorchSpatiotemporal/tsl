@@ -1,5 +1,7 @@
 einops
+hydra-core
 numpy
+omegaconf
 pandas
 pytorch_lightning>=1.5
 PyYAML

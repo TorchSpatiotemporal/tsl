@@ -21,10 +21,12 @@ install_requires = [
 ]
 
 full_install_requires = [
+    'hydra-core',
     'holidays',
     'matplotlib',
     'mpld3',
     'neptune-client>=0.14',
+    'omegaconf',
     'pytorch_fast_transformers'
 ]
 

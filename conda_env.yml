@@ -14,7 +14,9 @@ dependencies:
   - pip:
       - .
       - einops
+      - hydra-core
       - numpy
+      - omegaconf
       - pandas
       - scikit-learn
       - scipy

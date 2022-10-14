@@ -4,14 +4,29 @@ from typing import Optional, Union, List, Mapping
 import numpy as np
 import pandas as pd
 from einops import rearrange
-from pytorch_lightning.loggers import NeptuneLogger
+from pytorch_lightning.loggers import NeptuneLogger as LightningNeptuneLogger
 from torch import Tensor
 
 from tsl.utils.io import save_figure
 from tsl.utils.python_utils import ensure_list
 
 
-class TslNeptuneLogger(NeptuneLogger):
+class NeptuneLogger(LightningNeptuneLogger):
+    """Extensions of PyTorch Lightning
+    :class:`~pytorch_lightning.loggers.NeptuneLogger` with useful logging
+    functionalities.
+
+    Args:
+        api_key:
+        project_name:
+        experiment_name:
+        tags:
+        params:
+        offline_mode:
+        prefix:
+        upload_stdout:
+        **kwargs:
+    """
     def __init__(self, api_key: Optional[str] = None,
                  project_name: Optional[str] = None,
                  experiment_name: Optional[str] = None,
@@ -25,7 +40,7 @@ class TslNeptuneLogger(NeptuneLogger):
         if tags is not None:
             kwargs['tags'] = ensure_list(tags)
         mode = 'debug' if offline_mode else 'async'
-        super(TslNeptuneLogger, self).__init__(
+        super(NeptuneLogger, self).__init__(
             api_key=api_key,
             project=project_name,
             name=experiment_name,
