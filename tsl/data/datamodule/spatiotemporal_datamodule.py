@@ -156,14 +156,17 @@ class SpatioTemporalDataModule(LightningDataModule):
             tsl.logger.info('Scaler for {}: {}'.format(k, scaler))
             self.torch_dataset.add_scaler(k, scaler)
 
-    def get_dataloader(self, split: Literal['train', 'val', 'test'],
+    def get_dataloader(self, split: Literal['train', 'val', 'test'] = None,
                        shuffle: bool = False,
                        batch_size: Optional[int] = None) \
             -> Optional[DataLoader]:
-        if split not in ['train', 'val', 'test']:
+        if split is None:
+            dataset = self.torch_dataset
+        elif split in ['train', 'val', 'test']:
+            dataset = getattr(self, f'{split}set')
+        else:
             raise ValueError("Argument `split` must be one of "
                              "'train', 'val', or 'test'.")
-        dataset = getattr(self, f'{split}set')
         if dataset is None:
             return None
         pin_memory = self.pin_memory if split == 'train' else None

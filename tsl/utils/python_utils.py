@@ -1,5 +1,7 @@
+import inspect
 import os
-from typing import Any, Sequence, List, Union
+from argparse import ArgumentParser
+from typing import Any, Sequence, List, Union, Callable, Optional, Set, Type
 
 
 def ensure_list(value: Any) -> List:
@@ -37,6 +39,55 @@ def set_property(obj, name, prop_function):
     new_class = type(class_name, (obj.__class__,),
                      {name: property(prop_function)})
     obj.__class__ = new_class
+
+
+def foo_signature(foo: Union[Callable, Type]):
+    if isinstance(foo, type):
+        foo = foo.__init__
+    argspec = inspect.getfullargspec(foo)
+    args = argspec.args
+    if len(args) and args[0] in ['self', 'cls']:  # temp, to do better
+        args = args[1:]
+    has_args = argspec.varargs is not None
+    has_kwargs = argspec.varkw is not None
+    return {'signature': args,
+            'has_args': has_args,
+            'has_kwargs': has_kwargs}
+
+
+def parameters_to_args(foo: Union[Callable, Type],
+                       parser: Optional[ArgumentParser] = None,
+                       exclude_args: Optional[Set] = None):
+    if isinstance(foo, type):
+        foo = foo.__init__
+    sign = inspect.signature(foo)
+    # filter excluded arguments
+    excluded = {'self'}
+    if exclude_args is not None:
+        excluded.update(exclude_args)
+    # filter excluded arguments
+    if parser is None:
+        parser = ArgumentParser()
+    # parse signature
+    for name, param in sign.parameters.items():
+        if name in excluded:
+            continue
+        name = '--' + name.replace('_', '-')
+        kwargs = dict()
+        if param.annotation is not inspect._empty:
+            kwargs['type'] = param.annotation
+        if param.default is not inspect._empty:
+            kwargs['default'] = param.default
+            if 'type' not in kwargs:
+                kwargs['type'] = type(param.default)
+        try:
+            parser.add_argument(name, **kwargs)
+        except:
+            if 'default' in kwargs:
+                parser.add_argument(name, default=kwargs['default'])
+            else:
+                parser.add_argument(name)
+    return parser
 
 
 def precision_stoi(precision: Union[int, str]) -> int:

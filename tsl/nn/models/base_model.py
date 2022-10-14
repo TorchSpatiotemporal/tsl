@@ -1,11 +1,21 @@
 import inspect
 from argparse import ArgumentParser
-from typing import Set, Optional, Tuple
+from typing import Set, Optional
 
 from torch import nn
 
 from tsl.typing import ModelReturnOptions
-from tsl.utils.python_utils import ensure_list
+from tsl.utils.python_utils import ensure_list, foo_signature
+
+
+def _forward_packer(model, input, output):
+    if isinstance(output, model.return_type):
+        return output
+    if model.return_type is list:
+        return ensure_list(output)
+    raise TypeError(f"return type of forward ({type(output)}) does not "
+                    f"match with {model.__class__.__name__}.return_type "
+                    f"({model.return_type}).")
 
 
 class BaseModel(nn.Module):
@@ -36,10 +46,17 @@ class BaseModel(nn.Module):
         super(BaseModel, self).__init__()
         self.return_type = return_type
         if return_type is not None:
-            self.register_forward_hook(self.forward_packer)
-        self.forward_signature, \
-        self.has_forward_args, \
-        self.has_forward_kwargs = self._get_forward_signature()
+            self.register_forward_hook(_forward_packer)
+
+        model_signature = self.get_model_signature()
+        self.model_signature = model_signature['signature']
+        self.has_model_args = model_signature['has_args']
+        self.has_model_kwargs = model_signature['has_kwargs']
+
+        forward_signature = self.get_forward_signature()
+        self.forward_signature = forward_signature['signature']
+        self.has_forward_args = forward_signature['has_args']
+        self.has_forward_kwargs = forward_signature['has_kwargs']
 
     @property
     def has_loss(self) -> bool:
@@ -61,27 +78,29 @@ class BaseModel(nn.Module):
         """Forward function used only for inference."""
         return self.forward(*args, **kwargs)
 
-    def _get_forward_signature(self) -> Tuple[list, bool, bool]:
-        has_args, has_kwargs = False, False
-        fwd_params = inspect.signature(self.forward).parameters
-        args = []
-        for name, param in fwd_params.items():
-            if param.kind == inspect._ParameterKind.VAR_POSITIONAL:
-                has_args = True
-            elif param.kind == inspect._ParameterKind.VAR_KEYWORD:
-                has_kwargs = True
-            elif name != 'self':
-                args.append(name)
-        return args, has_args, has_kwargs
+    @classmethod
+    def get_model_signature(cls) -> dict:
+        """Get signature of the model's
+        :class:`~tsl.nn.models.BaseModel`'s :obj:`__init__` function."""
+        return foo_signature(cls)
 
-    def forward_packer(self, input, output):
-        if isinstance(output, self.return_type):
-            return output
-        if self.return_type is list:
-            return ensure_list(output)
-        raise TypeError(f"return type of forward ({type(output)}) does not "
-                        f"match with {self.__class__.__name__}.return_type "
-                        f"({self.return_type}).")
+    @classmethod
+    def get_forward_signature(cls) -> dict:
+        """Get signature of the model's
+        :meth:`~tsl.nn.models.BaseModel.forward` function."""
+        return foo_signature(cls.forward)
+
+    @classmethod
+    def filter_model_args_(cls, mapping: dict):
+        """Remove from :attr:`mapping` all the keys that are not in
+        :class:`~tsl.nn.models.BaseModel`'s :obj:`__init__` function."""
+        model_sign = cls.get_model_signature()
+        if model_sign['has_kwargs']:
+            return
+        model_signature = model_sign['signature']
+        del_keys = filter(lambda k: k not in model_signature, mapping.keys())
+        for k in list(del_keys):
+            del mapping[k]
 
     @classmethod
     def model_excluded_args(cls) -> Set:
