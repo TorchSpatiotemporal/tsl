@@ -20,13 +20,19 @@ install_requires = [
     'tqdm',
 ]
 
-full_install_requires = [
-    'hydra-core',
-    'holidays',
+plot_requires = [
     'matplotlib',
-    'mpld3',
+    'mpld3'
+]
+
+experiment_requires = [
+    'hydra-core',
+    'omegaconf'
+]
+
+full_install_requires = plot_requires + experiment_requires + [
+    'holidays',
     'neptune-client>=0.14',
-    'omegaconf',
     'pytorch_fast_transformers'
 ]
 
@@ -63,6 +69,7 @@ setup(
     python_requires='>=3.7',
     install_requires=install_requires,
     extras_require={
+        'experiment': experiment_requires,
         'full': full_install_requires,
         'doc': doc_requires,
     },

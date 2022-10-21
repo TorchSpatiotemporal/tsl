@@ -1,8 +1,0 @@
-name: dcrnn
-
-params:
-  hidden_size: 64
-  ff_size: 128
-  kernel_size: 2
-  n_layers: 1
-  dropout: 0

@@ -424,7 +424,7 @@ class Dataset(object):
         elif layout == 'edge_index':
             from tsl.ops.connectivity import adj_to_edge_index
             return adj_to_edge_index(adj)
-        elif layout == 'coo':
+        elif layout in ['coo', 'sparse_matrix']:
             return coo_matrix(adj)
         elif layout == 'csr':
             return csr_matrix(adj)

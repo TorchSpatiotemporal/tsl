@@ -2,12 +2,13 @@ import torch
 from omegaconf import DictConfig
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
+from tsl import logger
 from tsl.data import SpatioTemporalDataset, SpatioTemporalDataModule
 from tsl.data.preprocessing import StandardScaler
 from tsl.datasets import MetrLA, PemsBay
-from tsl.experiment import Experiment, NeptuneLogger
+from tsl.experiment import Experiment
 from tsl.inference import Predictor
 from tsl.metrics import torch as torch_metrics, numpy as numpy_metrics
 from tsl.nn import models
@@ -62,8 +63,9 @@ def run_traffic(cfg: DictConfig):
                                           mask=dataset.mask,
                                           connectivity=adj,
                                           covariates=covariates,
-                                          horizon=cfg.dataset.horizon,
-                                          window=cfg.dataset.window)
+                                          horizon=cfg.horizon,
+                                          window=cfg.window,
+                                          stride=cfg.stride)
     transform = {
         'target': StandardScaler(axis=(0, 1))
     }
@@ -72,8 +74,10 @@ def run_traffic(cfg: DictConfig):
         dataset=torch_dataset,
         scalers=transform,
         splitter=dataset.get_splitter(**cfg.dataset.splitting),
-        **cfg.datamodule
+        batch_size=cfg.batch_size,
+        workers=cfg.workers
     )
+    dm.setup()
 
     ########################################
     # predictor                            #
@@ -106,13 +110,13 @@ def run_traffic(cfg: DictConfig):
     predictor = Predictor(
         model_class=model_cls,
         model_kwargs=model_kwargs,
-        optim_class=getattr(torch.optim, cfg.training.optimizer.name),
-        optim_kwargs=dict(cfg.training.optimizer.params),
+        optim_class=getattr(torch.optim, cfg.optimizer.name),
+        optim_kwargs=dict(cfg.optimizer.params),
         loss_fn=loss_fn,
         metrics=log_metrics,
         scheduler_class=getattr(torch.optim.lr_scheduler,
-                                cfg.training.scheduler.name),
-        scheduler_kwargs=dict(cfg.training.scheduler.params)
+                                cfg.lr_scheduler.name),
+        scheduler_kwargs=dict(cfg.lr_scheduler.params)
     )
 
     ########################################
@@ -122,20 +126,14 @@ def run_traffic(cfg: DictConfig):
     # add tags
     tags = list(cfg.tags) + [cfg.model.name, cfg.dataset.name]
 
-    if cfg.get('neptune'):
-        logger = NeptuneLogger(api_key=cfg.neptune.token,
-                               project_name=f"{cfg.neptune.username}/"
-                                            f"{cfg.neptune.project_name}",
-                               experiment_name=cfg.run.name,
-                               tags=tags,
-                               params=vars(cfg),
-                               offline_mode=False,
-                               upload_stdout=False)
+    if 'wandb' in cfg:
+        exp_logger = WandbLogger(name=cfg.run.name,
+                                 save_dir=cfg.run.dir,
+                                 offline=cfg.wandb.offline,
+                                 project=cfg.wandb.project)
     else:
-        logger = TensorBoardLogger(
-            save_dir=cfg.run.dir,
-            name=f'{cfg.run.name}_{"_".join(tags)}',
-        )
+        exp_logger = TensorBoardLogger(save_dir=cfg.run.dir,
+                                       name=f'{cfg.run.name}_{"_".join(tags)}')
 
     ########################################
     # training                             #
@@ -143,7 +141,7 @@ def run_traffic(cfg: DictConfig):
 
     early_stop_callback = EarlyStopping(
         monitor='val_mae',
-        patience=cfg.training.patience,
+        patience=cfg.patience,
         mode='min'
     )
 
@@ -154,11 +152,11 @@ def run_traffic(cfg: DictConfig):
         mode='min',
     )
 
-    trainer = Trainer(max_epochs=cfg.training.epochs,
+    trainer = Trainer(max_epochs=cfg.epochs,
                       default_root_dir=cfg.run.dir,
-                      logger=logger,
+                      logger=exp_logger,
                       gpus=1 if torch.cuda.is_available() else None,
-                      gradient_clip_val=cfg.training.grad_clip_val,
+                      gradient_clip_val=cfg.grad_clip_val,
                       callbacks=[early_stop_callback, checkpoint_callback])
 
     trainer.fit(predictor, datamodule=dm)
@@ -190,12 +188,10 @@ def run_traffic(cfg: DictConfig):
                     val_rmse=numpy_metrics.masked_rmse(y_hat, y_true, mask),
                     val_mape=numpy_metrics.masked_mape(y_hat, y_true, mask)))
 
-    if isinstance(logger, NeptuneLogger):
-        logger.finalize('success')
-
-    print(res)
+    return res
 
 
 if __name__ == '__main__':
-    exp = Experiment(run_fn=run_traffic, config_path='config')
+    exp = Experiment(run_fn=run_traffic, config_path='config/traffic')
     res = exp.run()
+    logger.info(res)

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pandas.tseries.frequencies as pd_freq
 
+from tsl import logger
 from tsl.utils.python_utils import precision_stoi
 
 
@@ -16,6 +17,7 @@ def to_nodes_channels_columns(df: pd.DataFrame,
         columns = pd.MultiIndex.from_product([nodes, pd.RangeIndex(1)],
                                              names=['nodes', 'channels'])
         df.columns = columns
+        logger.debug('Inferred input data-format: [time, nodes]')
     elif df.columns.nlevels == 2:
         # # make tabular
         cols = [df.columns.unique(i) for i in range(2)]

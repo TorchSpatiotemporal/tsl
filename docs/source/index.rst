@@ -26,7 +26,7 @@ In detail, the package provide:
 * Out-of-the-box scalability -- from single CPUs to clusters of GPUs -- with `PyTorch Lightning <https://www.pytorchlightning.ai/>`_.
 * Plug-and-play state-of-the-art models from neural spatiotemporal literature (see :doc:`modules/nn_models` section).
 * A collection of neural layers for creating neural spatiotemporal models in a fast and modular way (see :doc:`modules/nn_layers` section).
-* A standard for experiment reproducibility, to promote and support progress on neural spatiotemporal literature.
+* A standard for experiment reproducibility based on the `Hydra <https://hydra.cc/>`_ framework, to promote and support progress on neural spatiotemporal literature.
 
 ----
 
@@ -40,11 +40,6 @@ tsl relies heavily on these libraries for its functionalities:
 
 .. grid:: 3 6 6 6
     :gutter: 2
-
-    .. grid-item-card::
-        :class-card: carousel-logo
-        :img-background: _static/img/logos/python.svg
-        :link: https://www.python.org/
 
     .. grid-item-card::
         :class-card: carousel-logo
@@ -70,6 +65,11 @@ tsl relies heavily on these libraries for its functionalities:
         :class-card: carousel-logo
         :img-background: _static/img/logos/lightning.svg
         :link: https://www.pytorchlightning.ai/
+
+    .. grid-item-card::
+        :class-card: carousel-logo
+        :img-background: _static/img/logos/hydra.svg
+        :link: https://hydra.cc/
 
 ----
 

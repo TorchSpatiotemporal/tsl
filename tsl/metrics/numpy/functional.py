@@ -1,6 +1,7 @@
 import numpy as np
 
 import tsl
+from tsl.typing import FrameArray
 
 metrics = [
     'mae', 'nmae', 'mape', 'mse', 'rmse', 'nrmse', 'nrmse_2', 'r2'
@@ -13,24 +14,102 @@ masked_metrics = [
 __all__ = metrics + masked_metrics + ['metrics', 'masked_metrics']
 
 
-def mae(y_hat, y):
+def mae(y_hat: FrameArray, y: FrameArray) -> float:
+    r"""Compute the `Mean Absolute Error (MAE)
+    <https://en.wikipedia.org/wiki/Mean_absolute_error>`_ between the estimate
+    :math:`\hat{y}` and the true value :math:`y`, i.e.
+
+    .. math::
+
+        \text{MAE} = \frac{\sum_{i=1}^n |\hat{y}_i - y_i|}{n}
+
+    Args:
+        y_hat (FrameArray): The estimated variable.
+        y (FrameArray): The ground-truth variable.
+
+    Returns:
+        float: The Mean Absolute Error.
+    """
     return np.abs(y_hat - y).mean()
 
 
-def nmae(y_hat, y):
+def nmae(y_hat: FrameArray, y: FrameArray) -> float:
+    r"""Compute the *Normalized Mean Absolute Error* (NMAE) between the estimate
+    :math:`\hat{y}` and the true value :math:`y`. The NMAE is the `Mean Absolute
+    Error (MAE) <https://en.wikipedia.org/wiki/Mean_absolute_error>`_ scaled by
+    the maximum difference in the target data, i.e.
+
+    .. math::
+
+        \text{NMAE}_{\%} = \frac{\sum_{i=1}^n |\hat{y}_i - y_i|}{n} \cdot
+        \frac{100\%}{\max(y) - \min(y)}
+
+    Args:
+        y_hat (FrameArray): The estimated variable.
+        y (FrameArray): The ground-truth variable.
+
+    Returns:
+        float: The Normalized Mean Absolute Error in percentage.
+    """
     delta = np.max(y) - np.min(y) + tsl.epsilon
     return mae(y_hat, y) * 100 / delta
 
 
-def mape(y_hat, y):
+def mape(y_hat: FrameArray, y: FrameArray) -> float:
+    r"""Compute the `Mean Absolute Percentage Error (MAPE)
+    <https://en.wikipedia.org/wiki/Mean_absolute_percentage_error>`_ between the
+    estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
+
+    .. math::
+
+        \text{MAPE}_{\%} = \frac{100\%}{n} \sum_{i=1}^n \frac{|\hat{y}_i - y_i|}
+        {y_i}
+
+    Args:
+        y_hat (FrameArray): The estimated variable.
+        y (FrameArray): The ground-truth variable.
+
+    Returns:
+        float: The Mean Absolute Percentage Error in percentage.
+    """
     return 100 * np.abs((y_hat - y) / (y + tsl.epsilon)).mean()
 
 
-def mse(y_hat, y):
+def mse(y_hat: FrameArray, y: FrameArray) -> float:
+    r"""Compute the `Mean Squared Error (MSE)
+    <https://en.wikipedia.org/wiki/Mean_squared_error>`_ between the
+    estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
+
+    .. math::
+
+        \text{MSE} = \frac{\sum_{i=1}^n (\hat{y}_i - y_i)^2}{n}
+
+    Args:
+        y_hat (FrameArray): The estimated variable.
+        y (FrameArray): The ground-truth variable.
+
+    Returns:
+        float: The Mean Squared Error.
+    """
     return np.square(y_hat - y).mean()
 
 
-def rmse(y_hat, y):
+def rmse(y_hat: FrameArray, y: FrameArray) -> float:
+    r"""Compute the `Root Mean Squared Error (MSE)
+    <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
+    estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
+
+    .. math::
+
+        \text{RMSE} = \sqrt{\frac{\sum_{i=1}^n (\hat{y}_i - y_i)^2}{n}}
+
+    Args:
+        y_hat (FrameArray): The estimated variable.
+        y (FrameArray): The ground-truth variable.
+
+    Returns:
+        float: The Root Mean Squared Error.
+    """
     return np.sqrt(mse(y_hat, y))
 
 
@@ -44,7 +123,25 @@ def nrmse_2(y_hat, y):
     return nrmse_ * 100
 
 
-def r2(y_hat, y):
+def r2(y_hat: FrameArray, y: FrameArray) -> float:
+    r"""Compute the `coefficient of determination
+    <https://en.wikipedia.org/wiki/Coefficient_of_determination>`_ :math:`R^2`
+    between the estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
+
+    .. math::
+
+        R^{2} = 1 - \frac{\sum_{i} (\hat{y}_i - y_i)^2}
+        {\sum_{i} (\bar{y} - y_i)^2}
+
+    where :math:`\bar{y}=\frac{1}{n}\sum_{i=1}^n y_i` is the mean of :math:`y`.
+
+    Args:
+        y_hat (FrameArray): The estimated variable.
+        y (FrameArray): The ground-truth variable.
+
+    Returns:
+        float: The :math:`R^2`.
+    """
     return 1. - np.square(y_hat - y).sum() / (np.square(y.mean(0) - y).sum())
 
 

@@ -14,7 +14,6 @@ class Config(dict):
         super(Config, self).__init__()
         # configure paths for config files and logs
         self.config_dir = kwargs.pop('config_dir', 'config')
-        self.log_dir = kwargs.pop('log_dir', 'log')
         # set 'data_dir' as directory for data loading and downloading
         # defaults to '{tsl_path}/.storage'
         default_storage = os.path.join(self.root_dir, '.storage')
@@ -48,7 +47,7 @@ class Config(dict):
     @property
     def root_dir(self):
         """Path to tsl installation."""
-        return os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        return os.path.dirname(os.path.realpath(__file__))
 
     @property
     def curr_dir(self):
@@ -59,10 +58,6 @@ class Config(dict):
         mapping = dict(mapping or {}, **kwargs)
         for k, v in mapping.items():
             self[k] = v
-
-    def disable_logging(self):
-        from .logger import logger
-        logger.disabled = True
 
     def load_config_file(self, filename: str):
         """Load a configuration from a json or yaml file."""

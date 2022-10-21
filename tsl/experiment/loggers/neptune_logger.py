@@ -4,6 +4,7 @@ from typing import Optional, Union, List, Mapping
 import numpy as np
 import pandas as pd
 from einops import rearrange
+from matplotlib.figure import Figure
 from pytorch_lightning.loggers import NeptuneLogger as LightningNeptuneLogger
 from torch import Tensor
 
@@ -17,29 +18,50 @@ class NeptuneLogger(LightningNeptuneLogger):
     functionalities.
 
     Args:
-        api_key:
-        project_name:
-        experiment_name:
-        tags:
-        params:
-        offline_mode:
-        prefix:
-        upload_stdout:
-        **kwargs:
+        api_key (str, optional): Neptune API token, found on https://neptune.ai
+            upon registration. Read: `how to find and set Neptune API token
+            <https://docs.neptune.ai/administration/security-and-privacy/how-to-find-and-set-neptune-api-token>`_.
+            It is recommended to keep it in the :obj:`NEPTUNE_API_TOKEN`
+            environment variable, then you can drop :attr:`api_key=None`.
+            (default: :obj:`None`)
+        project_name (str, optional): Name of a project in a form of
+            "my_workspace/my_project". If :obj:`None`, the value of
+            `NEPTUNE_PROJECT` environment variable will be taken.
+            You need to create the project in https://neptune.ai first.
+            (default: :obj:`None`)
+        experiment_name (str, optional): Editable name of the run.
+            Run name appears in the "all metadata/sys" section in Neptune UI.
+            (default: :obj:`None`)
+        tags (list, optional): List of tags of the run.
+            (default: :obj:`None`)
+        params (Mapping, optional): Mapping of the run's parameters (are logged
+            as :obj:`"parameters"` on Neptune).
+            (default: :obj:`None`)
+        debug (bool): If :obj:`True`, then do not log online (i.e., log in
+            :obj:`"debug"` mode). Otherwise log online in :obj:`"async"` mode.
+            (default: :obj:`False`)
+        prefix (str, optional): Root namespace for all metadata logging.
+            (default: :obj:`"logs"`)
+        upload_stdout (bool): If :obj:`True`, then log also :obj:`stdout` on
+            Neptune.
+            (default: :obj:`False`)
+        **kwargs: Additional parameters for
+            :class:`~pytorch_lightning.loggers.NeptuneLogger`.
     """
+
     def __init__(self, api_key: Optional[str] = None,
                  project_name: Optional[str] = None,
                  experiment_name: Optional[str] = None,
                  tags: Optional[Union[str, List]] = None,
                  params: Optional[Mapping] = None,
-                 offline_mode: bool = False,
+                 debug: bool = False,
                  prefix: Optional[str] = 'logs',
                  upload_stdout: bool = False,
                  **kwargs):
         prefix = prefix or ""
         if tags is not None:
             kwargs['tags'] = ensure_list(tags)
-        mode = 'debug' if offline_mode else 'async'
+        mode = 'debug' if debug else 'async'
         super(NeptuneLogger, self).__init__(
             api_key=api_key,
             project=project_name,
@@ -101,26 +123,24 @@ class NeptuneLogger(LightningNeptuneLogger):
         self.experiment.log_artifact(name)
         os.remove(name)
 
-    def log_dataframe(self, df, name='dataframe'):
-        """
-        Log a dataframe as csv.
+    def log_dataframe(self, df: pd.DataFrame, name: str = 'dataframe'):
+        """Log a dataframe as csv.
 
-        :param name: name of the file
-        :param df: dataframe
-        :return:
+        Args:
+            df (DataFrame): The dataframe to be logged.
+            name (str): The name of the file. (default: :obj:`'dataframe'`)
         """
         if not name.endswith('.csv'):
             name += '.csv'
         df.to_csv(name, index=True, index_label='index')
         self.log_artifact(name, delete_after=True)
 
-    def log_figure(self, fig, name='figure'):
-        """
-        Log a figure as html.
+    def log_figure(self, fig: Figure, name: str = 'figure'):
+        """Log a matplotlib figure as html.
 
-        :param fig: the figure to be logged
-        :param name: name of the file
-        :return:
+        Args:
+            fig (Figure): The matplotlib figure to be logged
+            name (str): The name of the file. (default: :obj:`'figure'`)
         """
         if not name.endswith('.html'):
             name += '.html'

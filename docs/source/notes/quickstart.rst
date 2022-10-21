@@ -64,7 +64,7 @@ Example scripts
 ---------------
 
 The github repository hosts `example scripts <https://github.com/TorchSpatiotemporal/tsl/tree/main/examples>`_ and `notebooks <https://github.com/TorchSpatiotemporal/tsl/tree/main/examples/notebooks>`_ on how to use the library for different use cases, such as spatiotemporal predictions and imputations.
-You can refer to the notebook `A Gentle Introduction to TSL <https://colab.research.google.com/github/TorchSpatiotemporal/tsl/blob/main/examples/notebooks/a_gentle_introduction_to_tsl.ipynb>`_ for an introductory overview of the library main functionalities.
+You can refer to the notebook :doc:`../notebooks/a_gentle_introduction_to_tsl` for an introductory overview of the library main functionalities.
 
 .. raw:: html
 
@@ -80,12 +80,11 @@ If you use Torch Spatiotemporal for your research, please consider citing the li
 {% raw %}
 .. code-block:: latex
 
-    @software{Cini_Torch_Spatiotemporal_2022,
+    @Misc{cini2022torch,
         author = {Cini, Andrea and Marisca, Ivan},
-        license = {MIT},
-        month = {3},
-        title = {{Torch Spatiotemporal}},
-        url = {https://github.com/TorchSpatiotemporal/tsl},
-        year = {2022}
+        title = {Torch Spatiotemporal},
+        howpublished = {Github},
+        year = {2022},
+        url = {https://github.com/TorchSpatiotemporal/tsl}
     }
 {% endraw %}

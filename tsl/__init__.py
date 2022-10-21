@@ -1,5 +1,3 @@
-import os
-
 from .config import Config
 from .lazy_loader import LazyLoader
 from .logger import logger
@@ -7,17 +5,12 @@ from .logger import logger
 data = LazyLoader('data', globals(), 'tsl.data')
 datasets = LazyLoader('datasets', globals(), 'tsl.datasets')
 nn = LazyLoader('nn', globals(), 'tsl.nn')
-predictors = LazyLoader('predictors', globals(), 'tsl.predictors')
-imputers = LazyLoader('imputers', globals(), 'tsl.imputers')
+inference = LazyLoader('inference', globals(), 'tsl.inference')
 
 __version__ = '0.1.1'
 
 epsilon = 5e-8
 config = Config()
-
-config_file = os.path.join(config.curr_dir, 'tsl_config.yaml')
-if os.path.exists(config_file):
-    config.load_config_file(config_file)
 
 __all__ = [
     '__version__',
@@ -27,6 +20,5 @@ __all__ = [
     'data',
     'datasets',
     'nn',
-    'predictors',
-    'imputers'
+    'inference'
 ]
