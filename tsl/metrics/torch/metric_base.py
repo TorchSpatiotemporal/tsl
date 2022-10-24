@@ -1,6 +1,7 @@
 import inspect
 from copy import deepcopy
 from functools import partial
+from typing import Any
 
 import torch
 from torchmetrics import Metric
@@ -23,7 +24,7 @@ def convert_to_masked_metric(metric_fn, **kwargs):
             metric_kwargs = {'reduction': 'none'}
         else:
             metric_kwargs = dict()
-        return MaskedMetric(metric_fn, metric_kwargs=metric_kwargs, **kwargs)
+        return MaskedMetric(metric_fn, metric_fn_kwargs=metric_kwargs, **kwargs)
     assert not len(kwargs)
     return deepcopy(metric_fn)
 
@@ -44,28 +45,26 @@ class MaskedMetric(Metric):
                          is used for logging the aggregate value across different mini-batches.
         at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
+
+    is_differentiable: bool = None
+    higher_is_better: bool = None
     full_state_update: bool = None
+
     def __init__(self,
                  metric_fn,
                  mask_nans=False,
                  mask_inf=False,
-                 compute_on_step=True,
-                 dist_sync_on_step=False,
-                 process_group=None,
-                 dist_sync_fn=None,
-                 metric_kwargs=None,
-                 at=None):
-        super(MaskedMetric, self).__init__(compute_on_step=compute_on_step,
-                                           dist_sync_on_step=dist_sync_on_step,
-                                           process_group=process_group,
-                                           dist_sync_fn=dist_sync_fn)
+                 metric_fn_kwargs=None,
+                 at=None,
+                 **kwargs: Any):
+        super(MaskedMetric, self).__init__(**kwargs)
 
-        if metric_kwargs is None:
-            metric_kwargs = dict()
+        if metric_fn_kwargs is None:
+            metric_fn_kwargs = dict()
         if metric_fn is None:
             self.metric_fn = None
         else:
-            self.metric_fn = partial(metric_fn, **metric_kwargs)
+            self.metric_fn = partial(metric_fn, **metric_fn_kwargs)
         self.mask_nans = mask_nans
         self.mask_inf = mask_inf
         if at is None:

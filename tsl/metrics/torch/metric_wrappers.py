@@ -1,5 +1,7 @@
+from torch.nn import Identity
+
 from .metric_base import MaskedMetric
-from tsl.utils.python_utils import ensure_list
+from ...nn.layers import Select
 
 
 class MaskedMetricWrapper(MaskedMetric):
@@ -12,13 +14,13 @@ class MaskedMetricWrapper(MaskedMetric):
         self.metric = metric
 
         if input_preprocessing is None:
-            input_preprocessing = lambda x: x
+            input_preprocessing = Identity
 
         if target_preprocessing is None:
-            target_preprocessing = lambda x: x
+            target_preprocessing = Identity
 
         if mask_preprocessing is None:
-            mask_preprocessing = lambda x: x
+            mask_preprocessing = Identity
 
         self.input_preprocessing = input_preprocessing
         self.target_preprocessing = target_preprocessing
@@ -27,7 +29,8 @@ class MaskedMetricWrapper(MaskedMetric):
     def update(self, y_hat, y, mask=None):
         y_hat = self.input_preprocessing(y_hat)
         y = self.target_preprocessing(y)
-        mask = self.mask_preprocessing(mask)
+        if mask is not None:
+            mask = self.mask_preprocessing(mask)
         return self.metric.update(y_hat, y, mask)
 
     def compute(self):
@@ -35,48 +38,25 @@ class MaskedMetricWrapper(MaskedMetric):
 
     def reset(self):
         self.metric.reset()
-        super(MaskedMetricWrapper, self).reset()
 
 
-class SplitMetricWrapper(MaskedMetricWrapper):
-    def __init__(self, metric, input_idx=None, target_idx=None, mask_idx=None):
+class SelectMetricWrapper(MaskedMetricWrapper):
+    def __init__(self, metric, dim, input_idx=None, target_idx=None, mask_idx=None):
         if input_idx is not None:
-            input_preprocessing = lambda x: x[input_idx]
+            input_preprocessing = Select(dim, input_idx)
         else:
             input_preprocessing = None
 
         if target_idx is not None:
-            target_preprocessing = lambda x: x[target_idx]
+            target_preprocessing = Select(dim, target_idx)
         else:
             target_preprocessing = None
 
         if mask_idx is not None:
-            map_preprocessing = lambda x: x[mask_idx]
+            mask_preprocessing = Select(dim, mask_idx)
         else:
-            map_preprocessing = None
-        super(SplitMetricWrapper, self).__init__(metric,
-                                                 input_preprocessing=input_preprocessing,
-                                                 target_preprocessing=target_preprocessing,
-                                                 mask_preprocessing=map_preprocessing)
-
-
-class ChannelSplitMetricWrapper(MaskedMetricWrapper):
-    def __init__(self, metric, input_channels=None, target_channels=None, map_channels=None):
-        if input_channels is not None:
-            input_preprocessing = lambda x: x[..., ensure_list(input_channels)]
-        else:
-            input_preprocessing = None
-
-        if target_channels is not None:
-            target_preprocessing = lambda x: x[..., ensure_list(target_channels)]
-        else:
-            target_preprocessing = None
-
-        if map_channels is not None:
-            map_preprocessing = lambda x: x[..., ensure_list(map_channels)]
-        else:
-            map_preprocessing = None
-        super(ChannelSplitMetricWrapper, self).__init__(metric,
-                                                        input_preprocessing=input_preprocessing,
-                                                        target_preprocessing=target_preprocessing,
-                                                        mask_preprocessing=map_preprocessing)
+            mask_preprocessing = None
+        super(SelectMetricWrapper, self).__init__(metric,
+                                                  input_preprocessing=input_preprocessing,
+                                                  target_preprocessing=target_preprocessing,
+                                                  mask_preprocessing=mask_preprocessing)

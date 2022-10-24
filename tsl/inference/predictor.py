@@ -117,7 +117,7 @@ class Predictor(pl.LightningModule):
             else:
                 metric_kwargs = dict()
             return MaskedMetric(metric, compute_on_step=on_step,
-                                metric_kwargs=metric_kwargs)
+                                metric_fn_kwargs=metric_kwargs)
         metric = metric.clone()
         metric.reset()
         return metric

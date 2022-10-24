@@ -1,19 +1,5 @@
-import torch
-from .metric_base import MaskedMetric
-from tsl.utils.python_utils import ensure_list
-
-
-def _pinball_loss(y_hat, y, q):
-    err = y - y_hat
-    return torch.maximum((q - 1) * err, q * err)
-
-def _multi_quantile_pinball_loss(y_hat, y, q):
-    q = ensure_list(q)
-    assert y_hat.size(0) == len(q)
-    loss = torch.zeros_like(y_hat)
-    for i, qi in enumerate(q):
-        loss += _pinball_loss(y_hat[i], y, qi)
-    return loss
+from tsl.metrics.torch import pinball_loss
+from tsl.metrics.torch.metric_base import MaskedMetric
 
 
 class MaskedPinballLoss(MaskedMetric):
@@ -29,6 +15,11 @@ class MaskedPinballLoss(MaskedMetric):
                              is used for logging the aggregate error across different minibatches.
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
+
+    is_differentiable: bool = True
+    higher_is_better: bool = False
+    full_state_update: bool = False
+
     def __init__(self,
                  q,
                  mask_nans=False,
@@ -38,12 +29,12 @@ class MaskedPinballLoss(MaskedMetric):
                  process_group=None,
                  dist_sync_fn=None,
                  at=None):
-        super(MaskedPinballLoss, self).__init__(metric_fn=_pinball_loss,
+        super(MaskedPinballLoss, self).__init__(metric_fn=pinball_loss,
                                                 mask_nans=mask_nans,
                                                 mask_inf=mask_inf,
                                                 compute_on_step=compute_on_step,
                                                 dist_sync_on_step=dist_sync_on_step,
                                                 process_group=process_group,
                                                 dist_sync_fn=dist_sync_fn,
-                                                metric_kwargs={'q': q},
+                                                metric_fn_kwargs={'q': q},
                                                 at=at)

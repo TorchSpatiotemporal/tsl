@@ -1,3 +1,5 @@
+from typing import Any
+
 import torch
 from torch.nn import functional as F
 from torchmetrics.utilities.checks import _check_same_shape
@@ -20,23 +22,22 @@ class MaskedMAE(MaskedMetric):
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
 
+    is_differentiable: bool = True
+    higher_is_better: bool = False
+    full_state_update: bool = False
+
     def __init__(self,
                  mask_nans=False,
                  mask_inf=False,
-                 compute_on_step=True,
-                 dist_sync_on_step=False,
-                 process_group=None,
-                 dist_sync_fn=None,
-                 at=None):
+                 at=None,
+                 **kwargs: Any):
         super(MaskedMAE, self).__init__(metric_fn=F.l1_loss,
                                         mask_nans=mask_nans,
                                         mask_inf=mask_inf,
-                                        compute_on_step=compute_on_step,
-                                        dist_sync_on_step=dist_sync_on_step,
-                                        process_group=process_group,
-                                        dist_sync_fn=dist_sync_fn,
-                                        metric_kwargs={'reduction': 'none'},
-                                        at=at)
+                                        metric_fn_kwargs={'reduction': 'none'},
+                                        at=at,
+                                        **kwargs
+                                        )
 
 
 class MaskedMAPE(MaskedMetric):
@@ -51,21 +52,19 @@ class MaskedMAPE(MaskedMetric):
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
 
+    is_differentiable: bool = True
+    higher_is_better: bool = False
+    full_state_update: bool = False
+
     def __init__(self,
                  mask_nans=False,
-                 compute_on_step=True,
-                 dist_sync_on_step=False,
-                 process_group=None,
-                 dist_sync_fn=None,
-                 at=None):
+                 at=None,
+                 **kwargs: Any):
         super(MaskedMAPE, self).__init__(metric_fn=mape,
                                          mask_nans=mask_nans,
                                          mask_inf=True,
-                                         compute_on_step=compute_on_step,
-                                         dist_sync_on_step=dist_sync_on_step,
-                                         process_group=process_group,
-                                         dist_sync_fn=dist_sync_fn,
-                                         at=at)
+                                         at=at,
+                                         **kwargs)
 
 
 class MaskedMSE(MaskedMetric):
@@ -81,23 +80,21 @@ class MaskedMSE(MaskedMetric):
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
 
+    is_differentiable: bool = True
+    higher_is_better: bool = False
+    full_state_update: bool = False
+
     def __init__(self,
                  mask_nans=False,
                  mask_inf=False,
-                 compute_on_step=True,
-                 dist_sync_on_step=False,
-                 process_group=None,
-                 dist_sync_fn=None,
-                 at=None):
+                 at=None,
+                 **kwargs: Any):
         super(MaskedMSE, self).__init__(metric_fn=F.mse_loss,
                                         mask_nans=mask_nans,
                                         mask_inf=mask_inf,
-                                        compute_on_step=compute_on_step,
-                                        dist_sync_on_step=dist_sync_on_step,
-                                        process_group=process_group,
-                                        dist_sync_fn=dist_sync_fn,
-                                        metric_kwargs={'reduction': 'none'},
-                                        at=at)
+                                        metric_fn_kwargs={'reduction': 'none'},
+                                        at=at,
+                                        **kwargs)
 
 
 class MaskedMRE(MaskedMetric):
@@ -113,23 +110,21 @@ class MaskedMRE(MaskedMetric):
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
 
+    is_differentiable: bool = True
+    higher_is_better: bool = False
+    full_state_update: bool = False
+
     def __init__(self,
                  mask_nans=False,
                  mask_inf=False,
-                 compute_on_step=True,
-                 dist_sync_on_step=False,
-                 process_group=None,
-                 dist_sync_fn=None,
-                 at=None):
+                 at=None,
+                 **kwargs: Any):
         super(MaskedMRE, self).__init__(metric_fn=F.l1_loss,
                                         mask_nans=mask_nans,
                                         mask_inf=mask_inf,
-                                        compute_on_step=compute_on_step,
-                                        dist_sync_on_step=dist_sync_on_step,
-                                        process_group=process_group,
-                                        dist_sync_fn=dist_sync_fn,
-                                        metric_kwargs={'reduction': 'none'},
-                                        at=at)
+                                        metric_fn_kwargs={'reduction': 'none'},
+                                        at=at,
+                                        **kwargs)
         self.add_state('tot', dist_reduce_fx='sum',
                        default=torch.tensor(0., dtype=torch.float))
 

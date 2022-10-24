@@ -5,9 +5,9 @@ tags:
   - ${model.name}
   - ${dataset.name}
 workers: 0
-wandb:
-  project: sandbox
-  offline: False
+#wandb:
+#  project: sandbox
+#  offline: False
 
 #### Dataset params ###########################################################
 dataset:
