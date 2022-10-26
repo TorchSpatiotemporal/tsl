@@ -53,7 +53,8 @@ class Predictor(pl.LightningModule):
                  scheduler_class: Optional = None,
                  scheduler_kwargs: Optional[Mapping] = None):
         super(Predictor, self).__init__()
-        self.save_hyperparameters(logger=False)
+        self.save_hyperparameters(ignore=['loss_fn'],
+                                  logger=False)
         self.model_cls = model_class
         self.model_kwargs = model_kwargs
         self.optim_class = optim_class

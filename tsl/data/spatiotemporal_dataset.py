@@ -20,7 +20,7 @@ from .data import Data
 from .mixin import DataParsingMixin
 from .preprocessing.scalers import Scaler, ScalerModule
 from .synch_mode import SynchMode, WINDOW, HORIZON, STATIC
-from ..ops.pattern import outer_pattern, broadcast, take
+from ..ops.pattern import outer_pattern, broadcast, take, check_pattern
 
 _WINDOWING_KEYS = ['target', 'window', 'delay', 'horizon', 'stride']
 
@@ -520,7 +520,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             wdw_idxs = self.get_window_indices(item)
             self._add_to_sample(sample, WINDOW, 'input', time_index=wdw_idxs)
             self._add_to_sample(sample, WINDOW, 'target', time_index=wdw_idxs)
-            self._add_to_sample(sample, WINDOW, 'auxiliary', time_index=wdw_idxs)
+            self._add_to_sample(sample, WINDOW, 'auxiliary',
+                                time_index=wdw_idxs)
 
         # get input synchronized with horizon
         hrz_idxs = self.get_horizon_indices(item)
@@ -657,6 +658,13 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         if return_pattern:
             return tensors, scalers, pattern
         return tensors, scalers
+
+    def get_mask(self, dtype: Union[type, str, np.dtype] = None) -> Tensor:
+        mask = self.mask if self.has_mask else ~torch.isnan(self.target)
+        if dtype is not None:
+            assert dtype in ['bool', 'uint8', bool, torch.bool, torch.uint8]
+            mask = mask.to(dtype)
+        return mask
 
     # Getters helpers
 
@@ -822,6 +830,73 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             self.input_map[name] = BatchMapItem(name, synch_mode, preprocess,
                                                 cat_dim=None, pattern=pattern,
                                                 shape=value.size())
+
+    def update_covariate(self, name: str, value: Optional[DataArray] = None,
+                         pattern: Optional[str] = None,
+                         add_to_input_map: bool = True,
+                         synch_mode: Optional[SynchMode] = None,
+                         preprocess: bool = None):
+        r"""Update a covariate already in the dataset.
+
+        Args:
+            name (str): the name of the object. You can then access the added
+                object as :obj:`dataset.{name}`.
+            value (DataArray, optional): the object to be added. Can be a
+                :class:`~pandas.DataFrame`, a :class:`~numpy.ndarray` or a
+                :class:`~torch.Tensor`.
+            pattern (str, optional): the pattern of the object. A pattern
+                specifies what each axis refers to:
+
+                - 't': temporal dimension;
+                - 'n': node dimension;
+                - 'c'/'f': channels/features dimension.
+
+                If :obj:`None`, the pattern is inferred from the shape.
+                (default :obj:`None`)
+            add_to_input_map (bool): Whether to map the covariate to dataset
+                item when calling :obj:`get` methods.
+                (default: :obj:`True`)
+            synch_mode (SynchMode): How to synchronize the exogenous variable
+                inside dataset item, i.e., with the window slice
+                (:obj:`SynchMode.WINDOW`) or horizon (:obj:`SynchMode.HORIZON`).
+                It applies only for time-varying covariates.
+                (default: :obj:`SynchMode.WINDOW`)
+            preprocess (bool): If :obj:`True` and the dataset has a scaler with
+                same key, then data are scaled when calling :obj:`get` methods.
+                (default: :obj:`True`)
+        """
+        # validate name. name cannot be an attribute of self, but allow override
+        if name not in self._covariates:
+            raise RuntimeError(f"There is not a covariate named {name} in "
+                               f"{self.__class__.__name__}")
+        # override value (with or without explicit pattern)
+        if value is not None:
+            value, pattern = self._parse_covariate(value, pattern, name=name)
+        # override pattern, rearranging the stored covariate
+        elif pattern is not None:
+            pattern = check_pattern(pattern, ndim=value.ndim,
+                                    include_edges=True)
+            from einops import rearrange
+            old_value = self._covariates[name]['value']
+            old_pattern = self._covariates[name]['pattern']
+            value = rearrange(old_value, f'{old_pattern} -> {pattern}')
+        # update the covariate
+        self._covariates[name] = dict(value=value, pattern=pattern)
+        # update input map
+        if add_to_input_map:
+            if name in self.input_map:
+                kwargs = dict(synch_mode=self.input_map[name].synch_mode,
+                              preprocess=self.input_map[name].preprocess)
+            else:
+                kwargs = dict(synch_mode=None, preprocess=True)
+            if preprocess is not None:
+                kwargs['preprocess'] = preprocess
+            if synch_mode is not None:
+                kwargs['synch_mode'] = synch_mode
+            shape = tuple(self._covariates[name]['value'].size())
+            pattern = self._covariates[name]['pattern']
+            self.input_map[name] = BatchMapItem(name, **kwargs, cat_dim=None,
+                                                pattern=pattern, shape=shape)
 
     def add_exogenous(self, name: str, value: DataArray,
                       node_level: bool = True,
