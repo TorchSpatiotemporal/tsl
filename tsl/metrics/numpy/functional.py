@@ -1,3 +1,5 @@
+from typing import Literal, Union
+
 import numpy as np
 
 import tsl
@@ -13,8 +15,24 @@ masked_metrics = [
 
 __all__ = metrics + masked_metrics + ['metrics', 'masked_metrics']
 
+ReductionType = Literal['mean', 'sum', 'none']
+MetricOutputType = Union[float, np.ndarray]
 
-def mae(y_hat: FrameArray, y: FrameArray) -> float:
+
+def _reduce(x: FrameArray, reduction: ReductionType) -> MetricOutputType:
+    if reduction == 'none':
+        return x
+    elif reduction == 'mean':
+        return np.mean(x)
+    elif reduction == 'sum':
+        return np.sum(x)
+    else:
+        raise ValueError(f"reduction {reduction} not allowed, must be one of "
+                         "['mean', 'sum', 'none'].")
+
+
+def mae(y_hat: FrameArray, y: FrameArray,
+        reduction: ReductionType = 'mean') -> MetricOutputType:
     r"""Compute the `Mean Absolute Error (MAE)
     <https://en.wikipedia.org/wiki/Mean_absolute_error>`_ between the estimate
     :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -26,11 +44,16 @@ def mae(y_hat: FrameArray, y: FrameArray) -> float:
     Args:
         y_hat (FrameArray): The estimated variable.
         y (FrameArray): The ground-truth variable.
+        reduction (string): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
+            be applied, ``'mean'``: the sum of the output will be divided by the
+            number of elements in the output, ``'sum'``: the output will be
+            summed. (default: ``'mean'``)
 
     Returns:
         float: The Mean Absolute Error.
     """
-    return np.abs(y_hat - y).mean()
+    return _reduce(np.abs(y_hat - y), reduction)
 
 
 def nmae(y_hat: FrameArray, y: FrameArray) -> float:

@@ -133,6 +133,7 @@ class Experiment:
                 self.register_pre_run_hook(hook)
 
         self.run_fn = self.register_run_function(run_fn)
+        self.__run_output = None
 
     def register_pre_run_hook(self, hook: Callable):
         self._pre_run_hooks.append(hook)
@@ -151,7 +152,8 @@ class Experiment:
                 # store final config
                 self.cfg = cfg
                 self.log_config()
-                return func(cfg)  # pass cfg to decorated function
+                self.__run_output = func(cfg)
+                return self.__run_output
 
             return decorated_run_fn
 
@@ -183,4 +185,5 @@ class Experiment:
 
     def run(self):
         """Run the experiment routine."""
-        return self.run_fn()
+        self.run_fn()
+        return self.__run_output
