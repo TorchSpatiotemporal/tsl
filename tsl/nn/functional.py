@@ -141,16 +141,16 @@ def sparse_multi_head_attention(q: Tensor, k: Tensor, v: Tensor, index: Tensor,
             (default: 0)
 
     Shape:
-        - q: :math:`(S, H, E)` where S is sparsed dimension, H is the number of
+        q: :math:`(S, H, E)` where S is sparsed dimension, H is the number of
             heads, and E is embedding dimension.
-        - k: :math:`(S, H, E)` where S is sparsed dimension, H is the number of
+        k: :math:`(S, H, E)` where S is sparsed dimension, H is the number of
             heads, and E is embedding dimension.
-        - v: :math:`(S, H, O)` where S is sparsed dimension, H is the number of
+        v: :math:`(S, H, O)` where S is sparsed dimension, H is the number of
             heads, and O is output dimension.
-        - index: :math:`(S)` where S is sparsed dimension.
-        - dim_size: must be :math:`(B \times Nt)`
+        index: :math:`(S)` where S is sparsed dimension.
+        dim_size: must be :math:`(B \times Nt)`
 
-        - Output: attention values have shape :math:`(B, Nt, E)`; attention
+        Output: attention values have shape :math:`(B, Nt, E)`; attention
             weights have shape :math:`(S, H)`
     """
     dim = 0
