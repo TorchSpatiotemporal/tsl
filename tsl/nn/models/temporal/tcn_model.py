@@ -22,7 +22,7 @@ class TCNModel(BaseModel):
         output_size (int): Number of output channels.
         horizon (int): Number of future time steps to forecast.
         exog_size (int, optional): Number of features of the input covariate,
-            if any. (default: :obj:`None`)
+            if any. (default: 0)
         hidden_size (int): Number of hidden units.
             (default: :obj:`32`)
         ff_size (int): Number of units in the hidden layers of the decoder.
@@ -51,7 +51,7 @@ class TCNModel(BaseModel):
     """
 
     def __init__(self, input_size: int, output_size: int, horizon: int,
-                 exog_size: Optional[int] = None,
+                 exog_size: Optional[int] = 0,
                  hidden_size: int = 32,
                  ff_size: int = 32,
                  kernel_size: int = 2,
@@ -101,7 +101,7 @@ class TCNModel(BaseModel):
             nn.Linear(hidden_size * readout_kernel_size, ff_size * horizon),
             activation_layer(),
             nn.Dropout(dropout),
-            Rearrange('b n (f h) -> b h n f ', c=ff_size, h=horizon),
+            Rearrange('b n (f h) -> b h n f ', f=ff_size, h=horizon),
             nn.Linear(ff_size, output_size),
         )
         self.window = readout_kernel_size

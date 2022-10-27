@@ -324,6 +324,16 @@ class Predictor(pl.LightningModule):
         self.log_loss('test', test_loss, batch_size=batch.batch_size)
         return test_loss
 
+    def compute_metrics(self, batch, preprocess=False, postprocess=True):
+        """"""
+        # Compute outputs and rescale
+        y_hat = self.predict_batch(batch, preprocess, postprocess)
+        y, mask = batch.y, batch.get('mask')
+        self.test_metrics.update(y_hat.detach(), y, mask)
+        metrics_dict = self.test_metrics.compute()
+        self.test_metrics.reset()
+        return metrics_dict, y_hat
+
     def configure_optimizers(self):
         """"""
         cfg = dict()
