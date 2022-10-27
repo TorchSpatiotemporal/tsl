@@ -240,7 +240,7 @@ class AtTimeStepSplitter(Splitter):
                                   last_ts=self.last_val_ts)
         if self.drop_following_steps:
             val_idx = val_idx[val_idx < test_idx.min()]
-            train_idx = np.arange(test_idx.min())
+            train_idx = np.arange(val_idx.min())
         else:
             val_idx = np.setdiff1d(val_idx, test_idx)
             train_idx = np.setdiff1d(np.arange(len(dataset)), test_idx)
@@ -261,19 +261,13 @@ def indices_between(dataset: SpatioTemporalDataset,
                     first_ts: Union[Tuple, datetime] = None,
                     last_ts: Union[Tuple, datetime] = None):
     if first_ts is not None:
-        if isinstance(first_ts, datetime):
-            pass
-        elif isinstance(first_ts, (tuple, list)) and len(first_ts) >= 3:
+        if not isinstance(first_ts, datetime):
+            # first_ts must be (tuple, list) and len(first_ts) >= 3
             first_ts = datetime(*first_ts, tzinfo=dataset.index.tzinfo)
-        else:
-            raise TypeError("first_ts must be a datetime or a tuple")
     if last_ts is not None:
-        if isinstance(last_ts, datetime):
-            pass
-        elif isinstance(last_ts, (tuple, list)) and len(last_ts) >= 3:
+        if not isinstance(last_ts, datetime):
+            # last_ts must be (tuple, list) and len(last_ts) >= 3
             last_ts = datetime(*last_ts, tzinfo=dataset.index.tzinfo)
-        else:
-            raise TypeError("last_ts must be a datetime or a tuple")
     first_day_loc, last_day_loc = dataset.index.slice_locs(first_ts, last_ts)
     first_sample_loc = first_day_loc - dataset.horizon_offset
     last_sample_loc = last_day_loc - dataset.horizon_offset - 1

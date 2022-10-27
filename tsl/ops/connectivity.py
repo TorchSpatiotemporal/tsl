@@ -224,7 +224,8 @@ def normalize(edge_index: SparseTensArray, edge_weights: OptTensArray = None,
 
     index = edge_index[dim]
     degree = weighted_degree(index, edge_weights, num_nodes=num_nodes)
-    return edge_index, edge_weights / degree[index]
+    norm_weight = (1 if edge_weights is None else edge_weights) / degree[index]
+    return edge_index, norm_weight
 
 
 def power_series(edge_index: TensArray, edge_weights: OptTensArray = None,

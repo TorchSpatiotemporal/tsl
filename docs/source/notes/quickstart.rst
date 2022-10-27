@@ -80,11 +80,12 @@ If you use Torch Spatiotemporal for your research, please consider citing the li
 {% raw %}
 .. code-block:: latex
 
-    @Misc{cini2022torch,
+    @software{Cini_Torch_Spatiotemporal_2022,
         author = {Cini, Andrea and Marisca, Ivan},
-        title = {Torch Spatiotemporal},
-        howpublished = {Github},
-        year = {2022},
-        url = {https://github.com/TorchSpatiotemporal/tsl}
+        license = {MIT},
+        month = {3},
+        title = {{Torch Spatiotemporal}},
+        url = {https://github.com/TorchSpatiotemporal/tsl},
+        year = {2022}
     }
 {% endraw %}

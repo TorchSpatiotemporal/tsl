@@ -48,6 +48,8 @@ add_module_names = False
 
 # exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+napoleon_custom_sections = [("Shape", "params_style"),
+                            ("Shapes", "params_style")]
 
 # -- Options for intersphinx -------------------------------------------------
 #

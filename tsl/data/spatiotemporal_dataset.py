@@ -20,7 +20,7 @@ from .data import Data
 from .mixin import DataParsingMixin
 from .preprocessing.scalers import Scaler, ScalerModule
 from .synch_mode import SynchMode, WINDOW, HORIZON, STATIC
-from ..ops.pattern import outer_pattern, broadcast, take
+from ..ops.pattern import outer_pattern, broadcast, take, check_pattern
 
 _WINDOWING_KEYS = ['target', 'window', 'delay', 'horizon', 'stride']
 
@@ -55,15 +55,20 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             dimension must be equal to the temporal dimension of data, as well
             as the number of nodes if the exogenous is node-level.
             (default: :obj:`None`)
-        input_map (BatchMap or dict, optional): Defines how data, exogenous and
-            attributes are mapped to the input of dataset samples. Keys in the
-            mapping are keys in :obj:`item.input`, while values are
-            :obj:`~tsl.data.new.BatchMapItem`.
+        input_map (BatchMap or dict, optional): Defines how data (i.e., the
+            target and the covariates) are mapped to dataset sample input. Keys
+            in the mapping are keys in both :obj:`item` and :obj:`item.input`,
+            while values are :obj:`~tsl.data.new.BatchMapItem`.
             (default: :obj:`None`)
-        target_map (BatchMap or dict, optional): Defines how data, exogenous and
-            attributes are mapped to the target of dataset samples. Keys in the
-            mapping are keys in :obj:`item.target`, while values are
-            :obj:`~tsl.data.new.BatchMapItem`.
+        target_map (BatchMap or dict, optional): Defines how data (i.e., the
+            target and the covariates) are mapped to dataset sample target. Keys
+            in the mapping are keys in both :obj:`item` and :obj:`item.target`,
+            while values are :obj:`~tsl.data.new.BatchMapItem`.
+            (default: :obj:`None`)
+        auxiliary_map (BatchMap or dict, optional): Defines how data (i.e., the
+            target and the covariates) are added as additional attributes to the
+            dataset sample. Keys in the mapping are keys only in :obj:`item`,
+            while values are :obj:`~tsl.data.new.BatchMapItem`.
             (default: :obj:`None`)
         trend (DataArray, optional): Trend paired with main signal. Must be of
             the same shape of `data`.
@@ -102,6 +107,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                  covariates: Optional[Mapping[str, DataArray]] = None,
                  input_map: Optional[Union[Mapping, BatchMap]] = None,
                  target_map: Optional[Union[Mapping, BatchMap]] = None,
+                 auxiliary_map: Optional[Union[Mapping, BatchMap]] = None,
                  scalers: Optional[Mapping[str, Scaler]] = None,
                  trend: Optional[DataArray] = None,
                  item_pattern_layout: str = 'time_then_node',
@@ -114,7 +120,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                  precision: Union[int, str] = 32,
                  name: Optional[str] = None):
         super(SpatioTemporalDataset, self).__init__()
-        # Set name
+
+        # Set info
         self.name = name if name is not None else self.__class__.__name__
         self.precision = precision
         if item_pattern_layout not in ['time_then_node', 'node_then_time']:
@@ -133,8 +140,11 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # Initialize private data holders
         self._covariates = dict()
         self._indices = None
+
+        # Initialize batch maps
         self.input_map = BatchMap()
         self.target_map = BatchMap()
+        self.auxiliary_map = BatchMap()
 
         # Store preprocessing modules
         self.scalers: dict = dict()
@@ -181,6 +191,11 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         self.reset_target_map()
         if target_map is not None:
             self.set_target_map(target_map)
+
+        # Updated auxiliary map (i.e., how to map data, exogenous and attribute
+        # inside item)
+        if auxiliary_map is not None:
+            self._update_batch_map('auxiliary', auxiliary_map)
 
         # A scaler is a module that transforms data with a linear operation
         if scalers is not None:
@@ -505,15 +520,19 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             wdw_idxs = self.get_window_indices(item)
             self._add_to_sample(sample, WINDOW, 'input', time_index=wdw_idxs)
             self._add_to_sample(sample, WINDOW, 'target', time_index=wdw_idxs)
+            self._add_to_sample(sample, WINDOW, 'auxiliary',
+                                time_index=wdw_idxs)
 
         # get input synchronized with horizon
         hrz_idxs = self.get_horizon_indices(item)
         self._add_to_sample(sample, HORIZON, 'input', time_index=hrz_idxs)
         self._add_to_sample(sample, HORIZON, 'target', time_index=hrz_idxs)
+        self._add_to_sample(sample, HORIZON, 'auxiliary', time_index=hrz_idxs)
 
         # get static data
         self._add_to_sample(sample, STATIC, 'input')
         self._add_to_sample(sample, STATIC, 'target')
+        self._add_to_sample(sample, STATIC, 'auxiliary')
 
         # get connectivity
         if self.edge_index is not None:
@@ -640,6 +659,13 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             return tensors, scalers, pattern
         return tensors, scalers
 
+    def get_mask(self, dtype: Union[type, str, np.dtype] = None) -> Tensor:
+        mask = self.mask if self.has_mask else ~torch.isnan(self.target)
+        if dtype is not None:
+            assert dtype in ['bool', 'uint8', bool, torch.bool, torch.uint8]
+            mask = mask.to(dtype)
+        return mask
+
     # Getters helpers
 
     def _get_time_index(self, time_index=None, layout='index'):
@@ -691,7 +717,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                                                  preprocess=item.preprocess,
                                                  time_index=time_index,
                                                  node_index=node_index)
-            getattr(out, endpoint)[key] = tensor
+            if endpoint == 'auxiliary':
+                out[key] = tensor
+            else:
+                getattr(out, endpoint)[key] = tensor
             if scaler is not None:
                 out.transform[key] = scaler
 
@@ -801,6 +830,73 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             self.input_map[name] = BatchMapItem(name, synch_mode, preprocess,
                                                 cat_dim=None, pattern=pattern,
                                                 shape=value.size())
+
+    def update_covariate(self, name: str, value: Optional[DataArray] = None,
+                         pattern: Optional[str] = None,
+                         add_to_input_map: bool = True,
+                         synch_mode: Optional[SynchMode] = None,
+                         preprocess: bool = None):
+        r"""Update a covariate already in the dataset.
+
+        Args:
+            name (str): the name of the object. You can then access the added
+                object as :obj:`dataset.{name}`.
+            value (DataArray, optional): the object to be added. Can be a
+                :class:`~pandas.DataFrame`, a :class:`~numpy.ndarray` or a
+                :class:`~torch.Tensor`.
+            pattern (str, optional): the pattern of the object. A pattern
+                specifies what each axis refers to:
+
+                - 't': temporal dimension;
+                - 'n': node dimension;
+                - 'c'/'f': channels/features dimension.
+
+                If :obj:`None`, the pattern is inferred from the shape.
+                (default :obj:`None`)
+            add_to_input_map (bool): Whether to map the covariate to dataset
+                item when calling :obj:`get` methods.
+                (default: :obj:`True`)
+            synch_mode (SynchMode): How to synchronize the exogenous variable
+                inside dataset item, i.e., with the window slice
+                (:obj:`SynchMode.WINDOW`) or horizon (:obj:`SynchMode.HORIZON`).
+                It applies only for time-varying covariates.
+                (default: :obj:`SynchMode.WINDOW`)
+            preprocess (bool): If :obj:`True` and the dataset has a scaler with
+                same key, then data are scaled when calling :obj:`get` methods.
+                (default: :obj:`True`)
+        """
+        # validate name. name cannot be an attribute of self, but allow override
+        if name not in self._covariates:
+            raise RuntimeError(f"There is not a covariate named {name} in "
+                               f"{self.__class__.__name__}")
+        # override value (with or without explicit pattern)
+        if value is not None:
+            value, pattern = self._parse_covariate(value, pattern, name=name)
+        # override pattern, rearranging the stored covariate
+        elif pattern is not None:
+            pattern = check_pattern(pattern, ndim=value.ndim,
+                                    include_edges=True)
+            from einops import rearrange
+            old_value = self._covariates[name]['value']
+            old_pattern = self._covariates[name]['pattern']
+            value = rearrange(old_value, f'{old_pattern} -> {pattern}')
+        # update the covariate
+        self._covariates[name] = dict(value=value, pattern=pattern)
+        # update input map
+        if add_to_input_map:
+            if name in self.input_map:
+                kwargs = dict(synch_mode=self.input_map[name].synch_mode,
+                              preprocess=self.input_map[name].preprocess)
+            else:
+                kwargs = dict(synch_mode=None, preprocess=True)
+            if preprocess is not None:
+                kwargs['preprocess'] = preprocess
+            if synch_mode is not None:
+                kwargs['synch_mode'] = synch_mode
+            shape = tuple(self._covariates[name]['value'].size())
+            pattern = self._covariates[name]['pattern']
+            self.input_map[name] = BatchMapItem(name, **kwargs, cat_dim=None,
+                                                pattern=pattern, shape=shape)
 
     def add_exogenous(self, name: str, value: DataArray,
                       node_level: bool = True,

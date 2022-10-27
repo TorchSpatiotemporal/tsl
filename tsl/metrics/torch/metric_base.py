@@ -53,7 +53,11 @@ class MaskedMetric(Metric):
                  mask_inf=False,
                  metric_fn_kwargs=None,
                  at=None,
+                 full_state_update: bool = None,
                  **kwargs: Any):
+        # set 'full_state_update' before Metric instantiation
+        if full_state_update is not None:
+            self.__dict__['full_state_update'] = full_state_update
         super(MaskedMetric, self).__init__(**kwargs)
 
         if metric_fn_kwargs is None:
