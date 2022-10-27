@@ -10,6 +10,8 @@ from .tcn import TemporalConvNet
 from .transformer import (TransformerLayer, SpatioTemporalTransformerLayer,
                           Transformer)
 
+from .evolvegcn import EvolveGCN
+
 general_classes = [
     'ConditionalBlock',
     'ConditionalTCNBlock',
@@ -29,7 +31,8 @@ grnn_classes = [
     'DCRNN',
     'DenseDCRNN',
     'GraphConvGRU',
-    'GraphConvLSTM'
+    'GraphConvLSTM',
+    'EvolveGCN'
 ]
 
 conv_classes = [

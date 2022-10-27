@@ -32,6 +32,8 @@ def get_model_class(model_str):
         model = models.TransformerModel
     elif model_str == 'gatedgn':
         model = models.GatedGraphNetworkModel
+    elif model_str == 'evolvegcn':
+        model = models.EvolveGCNModel
     else:
         raise NotImplementedError(f'Model "{model_str}" not available.')
     return model
@@ -91,8 +93,8 @@ def run_traffic(cfg: DictConfig):
                         horizon=torch_dataset.horizon,
                         exog_size=torch_dataset.input_map.u.shape[-1])
 
-    model_kwargs.update(cfg.model.params)
     model_cls.filter_model_args_(model_kwargs)
+    model_kwargs.update(cfg.model.hparams)
 
     loss_fn = torch_metrics.MaskedMAE(compute_on_step=True)
 
@@ -111,12 +113,12 @@ def run_traffic(cfg: DictConfig):
         model_class=model_cls,
         model_kwargs=model_kwargs,
         optim_class=getattr(torch.optim, cfg.optimizer.name),
-        optim_kwargs=dict(cfg.optimizer.params),
+        optim_kwargs=dict(cfg.optimizer.hparams),
         loss_fn=loss_fn,
         metrics=log_metrics,
         scheduler_class=getattr(torch.optim.lr_scheduler,
                                 cfg.lr_scheduler.name),
-        scheduler_kwargs=dict(cfg.lr_scheduler.params)
+        scheduler_kwargs=dict(cfg.lr_scheduler.hparams)
     )
 
     ########################################

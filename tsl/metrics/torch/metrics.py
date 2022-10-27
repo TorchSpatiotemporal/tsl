@@ -16,9 +16,6 @@ class MaskedMAE(MaskedMetric):
         Args:
             mask_nans (bool, optional): Whether to automatically mask nan values.
             mask_inf (bool, optional): Whether to automatically mask infinite values.
-            compute_on_step (bool, optional): Whether to compute the metric right-away or if accumulate the results.
-                             This should be `True` when using the metric to compute a loss function, `False` if the metric
-                             is used for logging the aggregate error across different minibatches.
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
 
@@ -46,9 +43,6 @@ class MaskedMAPE(MaskedMetric):
 
         Args:
             mask_nans (bool, optional): Whether to automatically mask nan values.
-            compute_on_step (bool, optional): Whether to compute the metric right-away or if accumulate the results.
-                             This should be `True` when using the metric to compute a loss function, `False` if the metric
-                             is used for logging the aggregate error across different minibatches.
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
 
@@ -74,9 +68,6 @@ class MaskedMSE(MaskedMetric):
         Args:
             mask_nans (bool, optional): Whether to automatically mask nan values.
             mask_inf (bool, optional): Whether to automatically mask infinite values.
-            compute_on_step (bool, optional): Whether to compute the metric right-away or if accumulate the results.
-                             This should be `True` when using the metric to compute a loss function, `False` if the metric
-                             is used for logging the aggregate error across different minibatches.
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
 
@@ -104,9 +95,6 @@ class MaskedMRE(MaskedMetric):
         Args:
             mask_nans (bool, optional): Whether to automatically mask nan values.
             mask_inf (bool, optional): Whether to automatically mask infinite values.
-            compute_on_step (bool, optional): Whether to compute the metric right-away or if accumulate the results.
-                             This should be `True` when using the metric to compute a loss function, `False` if the metric
-                             is used for logging the aggregate error across different minibatches.
             at (int, optional): Whether to compute the metric only w.r.t. a certain time step.
     """
 

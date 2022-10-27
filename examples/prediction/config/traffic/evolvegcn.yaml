@@ -2,22 +2,25 @@ defaults:
   - default
   - _self_
 
+batch_size: 64
+
 model:
-  name: dcrnn
+  name: evolvegcn
   hparams:
     hidden_size: 64
-    ff_size: 128
-    kernel_size: 2
-    n_layers: 1
-    dropout: 0
+    n_layers: 2
+    directed: True
+    cached: True
+    variant: O
+    root_weight: True
 
 dataset:
   connectivity:
-    layout: csr
+    force_symmetric: True
 
 optimizer:
   hparams:
-    lr: 0.01
+    lr: 0.005
 
 lr_scheduler:
   name: MultiStepLR

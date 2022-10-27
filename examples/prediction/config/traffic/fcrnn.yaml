@@ -4,7 +4,7 @@ defaults:
 
 model:
   name: fcrnn
-  params:
+  hparams:
     hidden_size: 128
     ff_size: 64
     rec_layers: 2
@@ -14,11 +14,11 @@ model:
     cell_type: gru
 
 optimizer:
-  params:
+  hparams:
     lr: 0.001
 
 lr_scheduler:
   name: MultiStepLR
-  params:
+  hparams:
     gamma: 0.1
     milestones: [ 20, 30, 40 ]

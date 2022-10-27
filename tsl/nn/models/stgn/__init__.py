@@ -4,6 +4,7 @@ from .graph_wavenet_model import GraphWaveNetModel
 from .grin_model import GRINModel
 from .rnn2gcn_model import RNNEncGCNDecModel
 from .stcn_model import STCNModel
+from .evolve_gcn_model import EvolveGCNModel
 
 __all__ = [
     'DCRNNModel',
@@ -11,7 +12,8 @@ __all__ = [
     'GatedGraphNetworkModel',
     'RNNEncGCNDecModel',
     'STCNModel',
-    'GRINModel'
+    'GRINModel',
+    'EvolveGCNModel'
 ]
 
 classes = __all__

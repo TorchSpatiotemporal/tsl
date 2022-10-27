@@ -1,3 +1,5 @@
+from typing import Any
+
 from torch.nn import Identity
 
 from .metric_base import MaskedMetric
@@ -25,6 +27,9 @@ class MaskedMetricWrapper(MaskedMetric):
         self.input_preprocessing = input_preprocessing
         self.target_preprocessing = target_preprocessing
         self.mask_preprocessing = mask_preprocessing
+
+    def forward(self, *args: Any, **kwargs: Any) -> Any:
+        return self.metric(*args, **kwargs)
 
     def update(self, y_hat, y, mask=None):
         y_hat = self.input_preprocessing(y_hat)
