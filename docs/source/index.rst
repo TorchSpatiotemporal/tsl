@@ -12,7 +12,7 @@ Torch Spatiotemporal
     <script src="_static/js/particles.js"></script>
     <script src="_static/js/particles_config.js"></script>
 
-Torch Spatiotemporal (tsl) is a python library for neural spatiotemporal data processing, with a focus on Graph Neural Networks.
+**Torch Spatiotemporal** (tsl) is a python library for **neural spatiotemporal data processing**, with a focus on Graph Neural Networks.
 
 It is built upon the most used libraries of the python scientific computing ecosystem, with the final objective of providing a straightforward process that goes from data preprocessing to model prototyping. In particular, tsl offers a wide range of utilities to develop neural networks in `PyTorch <https://pytorch.org/>`_ and `PyG <https://www.pyg.org/>`_ for processing spatiotemporal data signals.
 
@@ -22,11 +22,11 @@ In detail, the package provide:
 * Tools to deal with irregularities in the data stream: missing data, variations in the underlying network, etc.
 * Automatization of the preprocessing phase, with methods to scale and detrend the time series (see :doc:`modules/data_preprocessing` section).
 * A set of most used datasets in spatiotemporal data processing literature (see :doc:`modules/datasets` section).
-* A straightforward way of building spatiotemporal datasets that works with `PyTorch <https://pytorch.org/>`_ and `PyG <https://www.pyg.org/>`_.
-* Out-of-the-box scalability -- from single CPUs to clusters of GPUs -- with `PyTorch Lightning <https://www.pytorchlightning.ai/>`_.
+* A straightforward way of building spatiotemporal datasets that work with `PyTorch <https://pytorch.org/>`_ and `PyG <https://www.pyg.org/>`_ (see :doc:`modules/data` section).
+* Out-of-the-box scalability -- from a single CPU to clusters of GPUs -- with `PyTorch Lightning <https://www.pytorchlightning.ai/>`_  (see :doc:`modules/inference_modules` section).
 * Plug-and-play state-of-the-art models from neural spatiotemporal literature (see :doc:`modules/nn_models` section).
 * A collection of neural layers for creating neural spatiotemporal models in a fast and modular way (see :doc:`modules/nn_layers` section).
-* A standard for experiment reproducibility based on the `Hydra <https://hydra.cc/>`_ framework, to promote and support progress on neural spatiotemporal literature.
+* A standard for experiment reproducibility based on the `Hydra <https://hydra.cc/>`_ framework, to promote and support research on spatiotemporal data mining  (see :doc:`modules/experiment` section).
 
 ----
 
