@@ -1,28 +1,33 @@
-from typing import Literal, Union
+from typing import Literal, Union, Optional
 
 import numpy as np
 
 import tsl
+from tsl.ops.framearray import framearray_to_numpy
 from tsl.typing import FrameArray
-
-metrics = [
-    'mae', 'nmae', 'mape', 'mse', 'rmse', 'nrmse', 'nrmse_2', 'r2'
-]
-
-masked_metrics = [
-    'masked_mae', 'masked_mape', 'masked_mse', 'masked_mre', 'masked_rmse'
-]
-
-__all__ = metrics + masked_metrics + ['metrics', 'masked_metrics']
 
 ReductionType = Literal['mean', 'sum', 'none']
 MetricOutputType = Union[float, np.ndarray]
 
+__all__ = [
+    'mae', 'nmae', 'mape', 'mse', 'rmse', 'nrmse', 'nrmse_2', 'r2'
+]
 
-def _reduce(x: FrameArray, reduction: ReductionType) -> MetricOutputType:
+
+def _masked_reduce(x: FrameArray, reduction: ReductionType,
+                   mask: Optional[FrameArray] = None,
+                   nan_to_num: bool = False) -> MetricOutputType:
+    x = framearray_to_numpy(x)  # covert x to ndarray if not already (no copy)
+    # 'none': return x with x[i] = 0/nan where mask[i] == False
     if reduction == 'none':
+        if mask is not None:
+            masked_idxs = np.logical_not(framearray_to_numpy(mask))
+            x[masked_idxs] = 0 if nan_to_num else np.nan
         return x
-    elif reduction == 'mean':
+    # 'mean'/'sum': return mean/sum of x[mask == True]
+    if mask is not None:
+        x = x[framearray_to_numpy(mask)]
+    if reduction == 'mean':
         return np.mean(x)
     elif reduction == 'sum':
         return np.sum(x)
@@ -31,8 +36,9 @@ def _reduce(x: FrameArray, reduction: ReductionType) -> MetricOutputType:
                          "['mean', 'sum', 'none'].")
 
 
-def mae(y_hat: FrameArray, y: FrameArray,
-        reduction: ReductionType = 'mean') -> MetricOutputType:
+def mae(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None,
+        reduction: ReductionType = 'mean',
+        nan_to_num: bool = False) -> MetricOutputType:
     r"""Compute the `Mean Absolute Error (MAE)
     <https://en.wikipedia.org/wiki/Mean_absolute_error>`_ between the estimate
     :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -44,16 +50,27 @@ def mae(y_hat: FrameArray, y: FrameArray,
     Args:
         y_hat (FrameArray): The estimated variable.
         y (FrameArray): The ground-truth variable.
-        reduction (string): Specifies the reduction to apply to the output:
+        mask (FrameArray, optional): If provided, compute the metric using only
+            the values at valid indices (with :attr:`mask` set to :obj:`True`).
+            If :attr:`mask` is not :obj:`None` and :attr:`reduction` is
+            :obj:`'none'`, masked indices are set to :obj:`nan` (see
+            :attr:`nan_to_num`).
+            (default: :obj:`None`)
+        reduction (str): Specifies the reduction to apply to the output:
             ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
             be applied, ``'mean'``: the sum of the output will be divided by the
             number of elements in the output, ``'sum'``: the output will be
             summed. (default: ``'mean'``)
+        nan_to_num (bool): If :obj:`True`, then masked values in output are
+            converted to :obj:`0`. This has an effect only when :attr:`mask` is
+            not :obj:`None` and :attr:`reduction` is :obj:`'none'`.
+            (default: :obj:`False`)
 
     Returns:
-        float: The Mean Absolute Error.
+        float | np.ndarray: The Mean Absolute Error.
     """
-    return _reduce(np.abs(y_hat - y), reduction)
+    err = np.abs(y_hat - y)
+    return _masked_reduce(err, reduction, mask, nan_to_num)
 
 
 def nmae(y_hat: FrameArray, y: FrameArray) -> float:

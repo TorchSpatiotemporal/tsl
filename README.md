@@ -1,4 +1,4 @@
-<div style="text-align: center">
+<div align="center">
     <img src="docs/source/_static/img/tsl_logo_text.svg" width="60%"/>
 </div>
 
@@ -40,6 +40,19 @@ The best way to start using `tsl` is by following the tutorial notebook in `exam
 
 The documentation is hosted on [readthedocs](https://torch-spatiotemporal.readthedocs.io/en/latest/). For local access, you can build it from the `docs` directory.
 
-## Credits
+## Citing
 
-[Andrea Cini](https://andreacini.github.io/), [Ivan Marisca](https://marshka.github.io/)
+If you use Torch Spatiotemporal for your research, please consider citing the library
+
+```latex
+@software{Cini_Torch_Spatiotemporal_2022,
+    author = {Cini, Andrea and Marisca, Ivan},
+    license = {MIT},
+    month = {3},
+    title = {{Torch Spatiotemporal}},
+    url = {https://github.com/TorchSpatiotemporal/tsl},
+    year = {2022}
+}
+```
+
+By [Andrea Cini](https://andreacini.github.io/) and [Ivan Marisca](https://marshka.github.io/).
