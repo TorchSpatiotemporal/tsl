@@ -83,8 +83,7 @@ def nmae(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None,
 
     .. math::
 
-        \text{NMAE}_{\%} = \frac{\sum_{i=1}^n |\hat{y}_i - y_i|}{n} \cdot
-        \frac{100\%}{\max(y) - \min(y)}
+        \text{NMAE} = \frac{\frac{1}{N} \sum_{i=1}^n |\hat{y}_i - y_i|}{\max(y) - \min(y)}
 
     Args:
         y_hat (FrameArray): The estimated variable.
@@ -106,23 +105,23 @@ def nmae(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None,
             (default: :obj:`False`)
 
     Returns:
-        float | np.ndarray: The Normalized Mean Absolute Error in percentage.
+        float | np.ndarray: The Normalized Mean Absolute Error
     """
     delta = np.max(y) - np.min(y) + tsl.epsilon
-    err = 100 * np.abs(y_hat - y) / delta
+    err = np.abs(y_hat - y) / delta
     return _masked_reduce(err, reduction, mask, nan_to_zero)
 
 
 def mape(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None,
          reduction: ReductionType = 'mean',
          nan_to_zero: bool = False) -> MetricOutputType:
-    r"""Compute the `Mean Absolute Percentage Error (MAPE), not in percent.
+    r"""Compute the `Mean Absolute Percentage Error (MAPE).
     <https://en.wikipedia.org/wiki/Mean_absolute_percentage_error>`_ between the
     estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
 
     .. math::
 
-        \text{MAPE}_{\%} = \frac{1}{n} \sum_{i=1}^n \frac{|\hat{y}_i - y_i|}
+        \text{MAPE} = \frac{1}{n} \sum_{i=1}^n \frac{|\hat{y}_i - y_i|}
         {y_i}
 
     Args:
@@ -145,7 +144,7 @@ def mape(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None,
             (default: :obj:`False`)
 
     Returns:
-        float | np.ndarray: The Mean Absolute Percentage Error. (not in percent)
+        float | np.ndarray: The Mean Absolute Percentage Error. 
     """
     err = np.abs((y_hat - y)/(y + tsl.epsilon))
     return _masked_reduce(err, reduction, mask, nan_to_zero)

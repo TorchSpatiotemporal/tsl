@@ -38,7 +38,7 @@ y, mask = batch.y, batch.get('mask')
 y_hat = y_hat.detach()
 
 predictor.test_metrics.update(y_hat, y)
-metrics_res=predictor.test_metrics.compute()
+metrics_res = predictor.test_metrics.compute()
 predictor.test_metrics.reset()
 predictor.test_metrics.update(y_hat, y, mask)
 masked_metrics_res = predictor.test_metrics.compute()
@@ -59,40 +59,48 @@ predictor.test_metrics.reset()
 #     out, y_hat = casting.numpy(out), casting.numpy(y_hat)
 #     return out, y_hat
 
+
 def test_mae():
     y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
     res = mae(y_hat_, y_)
     assert(np.abs(metrics_res['test_mae'] - res) < DELTA)
+
 
 def test_mae_masked():
     y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
     res = mae(y_hat_, y_, mask_.astype(np.bool))
     assert(np.abs(masked_metrics_res['test_mae'] - res) < DELTA)
 
+
 def test_mse():
     y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
     res = mse(y_hat_, y_)
     assert(np.abs(metrics_res['test_mse'] - res) < DELTA)
+
 
 def test_mse_masked():
     y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
     res = mse(y_hat_, y_, mask_.astype(np.bool))
     assert(np.abs(masked_metrics_res['test_mse'] - res) < DELTA)
 
+
 def test_mape():
     y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
     res = mape(y_hat_, y_)
     assert(np.abs(metrics_res['test_mape'] - res) < DELTA)
+
 
 def test_mape_masked():
     y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
     res = mape(y_hat_, y_, mask_.astype(np.bool))
     assert(np.abs(masked_metrics_res['test_mape'] - res) < DELTA)
 
+
 def test_mre():
     y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
     res = mre(y_hat_, y_)
     assert(np.abs(metrics_res['test_mre'] - res) < DELTA)
+
 
 def test_mre_masked():
     y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
