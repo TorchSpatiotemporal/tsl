@@ -12,7 +12,7 @@ from .diff_conv import DiffConv
 from ..norm import LayerNorm
 from ...base.embedding import StaticGraphEmbedding
 from tsl.nn.blocks.encoders.dcrnn import DCRNNCell
-from tsl.ops.connectivity import power_series, normalize, transpose
+from tsl.ops.connectivity import power_series, asymmetric_norm, transpose
 
 
 def compute_support(edge_index: LongTensor, edge_weight: OptTensor = None,
@@ -21,7 +21,7 @@ def compute_support(edge_index: LongTensor, edge_weight: OptTensor = None,
                     add_backward: bool = True):
     num_nodes = maybe_num_nodes(edge_index, num_nodes)
     edge_index, edge_weight = remove_self_loops(edge_index, edge_weight)
-    ei, ew = normalize(edge_index, edge_weight, dim=1, num_nodes=num_nodes)
+    ei, ew = asymmetric_norm(edge_index, edge_weight, dim=1, num_nodes=num_nodes)
     a = to_scipy_sparse_matrix(ei, ew, num_nodes)
     support = []
     ak = a
@@ -71,7 +71,7 @@ class SpatialDecoder(nn.Module):
                         edge_weight: OptTensor = None,
                         num_nodes: Optional[int] = None,
                         add_backward: bool = True):
-        ei, ew = normalize(edge_index, edge_weight, dim=1, num_nodes=num_nodes)
+        ei, ew = asymmetric_norm(edge_index, edge_weight, dim=1, num_nodes=num_nodes)
         ei, ew = power_series(ei, ew, self.order)
         ei, ew = remove_self_loops(ei, ew)
         if add_backward:

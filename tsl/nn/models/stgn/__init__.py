@@ -5,6 +5,7 @@ from .grin_model import GRINModel
 from .rnn2gcn_model import RNNEncGCNDecModel
 from .stcn_model import STCNModel
 from .evolve_gcn_model import EvolveGCNModel
+from .gru_gcn import GRUGCNModel
 
 __all__ = [
     'DCRNNModel',
@@ -13,7 +14,8 @@ __all__ = [
     'RNNEncGCNDecModel',
     'STCNModel',
     'GRINModel',
-    'EvolveGCNModel'
+    'EvolveGCNModel',
+    'GRUGCNModel'
 ]
 
 classes = __all__
