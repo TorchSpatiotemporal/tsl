@@ -11,7 +11,7 @@ from tsl.metrics.torch.metrics import MaskedMAE, MaskedMSE, MaskedMAPE, MaskedMR
 from tsl.nn.utils import casting
 
 from tsl.metrics.torch.metrics import MaskedMAE, MaskedMSE, MaskedMAPE, MaskedMRE
-from tsl.metrics.numpy import masked_mae, masked_mse, masked_mape, masked_mre
+from tsl.metrics.numpy.functional import mae, mse, mape, mre
 
 metrics_res = dict(mae=MaskedMAE(),
                    mse=MaskedMSE(),
@@ -61,42 +61,42 @@ predictor.test_metrics.reset()
 
 def test_mae():
     y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
-    res = masked_mae(y_hat_, y_)
+    res = mae(y_hat_, y_)
     assert(np.abs(metrics_res['test_mae'] - res) < DELTA)
 
 def test_mae_masked():
     y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
-    res = masked_mae(y_hat_, y_, mask_)
+    res = mae(y_hat_, y_, mask_.astype(np.bool))
     assert(np.abs(masked_metrics_res['test_mae'] - res) < DELTA)
 
 def test_mse():
     y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
-    res = masked_mse(y_hat_, y_)
+    res = mse(y_hat_, y_)
     assert(np.abs(metrics_res['test_mse'] - res) < DELTA)
 
 def test_mse_masked():
     y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
-    res = masked_mse(y_hat_, y_, mask_)
+    res = mse(y_hat_, y_, mask_.astype(np.bool))
     assert(np.abs(masked_metrics_res['test_mse'] - res) < DELTA)
 
 def test_mape():
     y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
-    res = masked_mape(y_hat_, y_)
+    res = mape(y_hat_, y_)
     assert(np.abs(metrics_res['test_mape'] - res) < DELTA)
 
 def test_mape_masked():
     y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
-    res = masked_mape(y_hat_, y_, mask_)
+    res = mape(y_hat_, y_, mask_.astype(np.bool))
     assert(np.abs(masked_metrics_res['test_mape'] - res) < DELTA)
 
 def test_mre():
     y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
-    res = masked_mre(y_hat_, y_)
+    res = mre(y_hat_, y_)
     assert(np.abs(metrics_res['test_mre'] - res) < DELTA)
 
 def test_mre_masked():
     y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
-    res = masked_mre(y_hat_, y_, mask_)
+    res = mre(y_hat_, y_, mask_.astype(np.bool))
     assert(np.abs(masked_metrics_res['test_mre'] - res) < DELTA)
 
 
