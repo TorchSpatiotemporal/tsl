@@ -43,12 +43,12 @@ def convert_precision_df(df: pd.DataFrame, precision: Union[int, str] = None,
     to_dtype = f'float{precision}'
     from_dtypes = {'float16', 'float32', 'float64'}.difference({to_dtype})
     float_cols = df.select_dtypes(include=from_dtypes).columns
-    df.loc[:, float_cols] = df[float_cols].astype(to_dtype)
+    df[float_cols] = df[float_cols].astype(to_dtype)
     # int to int{precision}
     to_dtype = f'int{precision}'
     from_dtypes = {'int16', 'int32', 'int64'}.difference({to_dtype})
     int_cols = df.select_dtypes(include=from_dtypes).columns
-    df.loc[:, int_cols] = df[int_cols].astype(to_dtype)
+    df[int_cols] = df[int_cols].astype(to_dtype)
     return df
 
 
