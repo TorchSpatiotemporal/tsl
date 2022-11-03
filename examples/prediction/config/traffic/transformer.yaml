@@ -1,14 +1,19 @@
-window: 12
-horizon: 12
-batch_size: 64
-l2_reg: 0.0001
-use_lr_schedule: True
-lr: 0.001
-epochs: 100
+defaults:
+  - default
+  - _self_
 
-hidden_size: 64
-ff_size: 128
-n_layers: 4
-n_heads: 2
-dropout: 0.1
-axis: both
+model:
+  name: transformer
+  hparams:
+    hidden_size: 64
+    ff_size: 128
+    n_layers: 4
+    n_heads: 2
+    dropout: 0.1
+    axis: both
+
+optimizer:
+  hparams:
+    lr: 0.001
+
+lr_scheduler: null

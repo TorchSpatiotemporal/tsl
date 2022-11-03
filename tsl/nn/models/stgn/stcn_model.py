@@ -1,16 +1,14 @@
 from tsl.nn.blocks.encoders.stcn import SpatioTemporalConvNet
-from tsl.utils.parser_utils import ArgParser
 
 from einops import rearrange
 from torch import nn
 
 from tsl.nn.blocks.encoders import ConditionalBlock
 from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
+from tsl.nn.models import BaseModel
 
-from tsl.utils.parser_utils import str_to_bool
 
-
-class STCNModel(nn.Module):
+class STCNModel(BaseModel):
     r"""
         Spatiotemporal GNN with interleaved temporal and spatial diffusion convolutions.
 
@@ -97,15 +95,3 @@ class STCNModel(nn.Module):
 
         return self.readout(x)
 
-    @staticmethod
-    def add_model_specific_args(parser: ArgParser):
-        parser.opt_list('--hidden-size', type=int, default=32, tunable=True, options=[16, 32, 64, 128])
-        parser.opt_list('--ff-size', type=int, default=256, tunable=True, options=[64, 128, 256, 512])
-        parser.opt_list('--n-layers', type=int, default=1, tunable=True, options=[1, 2])
-        parser.opt_list('--dropout', type=float, default=0., tunable=True, options=[0., 0.1, 0.25, 0.5])
-        parser.opt_list('--temporal-kernel-size', type=int, default=2, tunable=True, options=[2, 3, 5])
-        parser.opt_list('--spatial-kernel-size', type=int, default=2, tunable=True, options=[1, 2])
-        parser.opt_list('--dilation', type=int, default=2, tunable=True, options=[1, 2])
-        parser.opt_list('--norm', type=str, default='none', tunable=True, options=['none', 'layer', 'batch'])
-        parser.opt_list('--gated', type=str_to_bool, tunable=False, nargs='?', const=True, default=False, options=[True, False])
-        return parser

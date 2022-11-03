@@ -109,6 +109,11 @@ def run_traffic(cfg: DictConfig):
                                                         at=5),  # 6th is 30 min
                    'mae_at_60': torch_metrics.MaskedMAE(compute_on_step=False,
                                                         at=11)}  # 12th is 1 h
+    if cfg.lr_scheduler is not None:
+        scheduler_class = getattr(torch.optim.lr_scheduler, cfg.lr_scheduler.name)
+        scheduler_kwargs = dict(cfg.lr_scheduler.hparams)
+    else:
+        scheduler_class = scheduler_kwargs = None
 
     # setup predictor
     predictor = Predictor(
@@ -118,9 +123,8 @@ def run_traffic(cfg: DictConfig):
         optim_kwargs=dict(cfg.optimizer.hparams),
         loss_fn=loss_fn,
         metrics=log_metrics,
-        scheduler_class=getattr(torch.optim.lr_scheduler,
-                                cfg.lr_scheduler.name),
-        scheduler_kwargs=dict(cfg.lr_scheduler.hparams)
+        scheduler_class=scheduler_class,
+        scheduler_kwargs=scheduler_kwargs
     )
 
     ########################################
@@ -179,18 +183,18 @@ def run_traffic(cfg: DictConfig):
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
                           output['mask']
-    res = dict(test_mae=numpy_metrics.masked_mae(y_hat, y_true, mask),
-               test_rmse=numpy_metrics.masked_rmse(y_hat, y_true, mask),
-               test_mape=numpy_metrics.masked_mape(y_hat, y_true, mask))
+    res = dict(test_mae=numpy_metrics.mae(y_hat, y_true, mask),
+               test_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
+               test_mape=numpy_metrics.mape(y_hat, y_true, mask))
 
     output = trainer.predict(predictor, dataloaders=dm.val_dataloader())
     output = casting.numpy(output)
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
                           output['mask']
-    res.update(dict(val_mae=numpy_metrics.masked_mae(y_hat, y_true, mask),
-                    val_rmse=numpy_metrics.masked_rmse(y_hat, y_true, mask),
-                    val_mape=numpy_metrics.masked_mape(y_hat, y_true, mask)))
+    res.update(dict(val_mae=numpy_metrics.mae(y_hat, y_true, mask),
+                    val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
+                    val_mape=numpy_metrics.mape(y_hat, y_true, mask)))
 
     return res
 

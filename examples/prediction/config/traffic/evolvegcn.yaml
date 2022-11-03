@@ -9,7 +9,7 @@ model:
   hparams:
     hidden_size: 64
     n_layers: 2
-    directed: True
+    asymmetric_norm: True
     cached: True
     variant: O
     root_weight: True

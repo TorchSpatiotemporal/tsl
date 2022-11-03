@@ -6,7 +6,7 @@ import tsl
 from tsl.nn.base import TemporalConv2d
 
 
-class SpatialConvOrderK(nn.Module):
+class DenseGraphConvOrderK(nn.Module):
     """
     Dense implementation the spatial diffusion of order K.
     Adapted from: https://github.com/nnzhan/Graph-WaveNet
@@ -21,7 +21,7 @@ class SpatialConvOrderK(nn.Module):
     """
 
     def __init__(self, input_size, output_size, support_len=3, order=2, include_self=True, channel_last=False):
-        super(SpatialConvOrderK, self).__init__()
+        super(DenseGraphConvOrderK, self).__init__()
         self.channel_last = channel_last
         self.include_self = include_self
         input_size = (order * support_len + (1 if include_self else 0)) * input_size
@@ -43,7 +43,7 @@ class SpatialConvOrderK(nn.Module):
         if isinstance(adj, (list, tuple)):
             support = adj
         else:
-            support = SpatialConvOrderK.compute_support(adj, device)
+            support = DenseGraphConvOrderK.compute_support(adj, device)
         supp_k = []
         for a in support:
             ak = a
@@ -90,37 +90,40 @@ class SpatialConvOrderK(nn.Module):
         return out
 
 
-class SpatialConv(nn.Module):
+class DenseGraphConv(nn.Module):
     """
-    Simple Graph Convolution. Expects data to have layout B C N S.
+    Simple Dense Graph Convolution performing X' = AXW + b.
 
     Args:
-        input_size: Size fo the input.
+        input_size: Size of the input.
         output_size: Output size.
         bias: Whether to add a learnable bias.
     """
     def __init__(self, input_size, output_size, bias=True):
-        super(SpatialConv, self).__init__()
-        self.c_in = input_size
-        self.c_out = output_size
-        self.linear = TemporalConv2d(self.c_in, self.c_out, kernel_size=1, bias=False)
+        super(DenseGraphConv, self).__init__()
+        self.linear = nn.Linear(input_size, output_size, bias=False)
         if bias:
-            self.b = nn.Parameter(torch.zeros(self.c_out))
+            self.b = nn.Parameter(torch.Tensor(self.c_out))
         else:
             self.register_parameter('b', None)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.linear.reset_parameters()
+        if self.b is not None:
+            self.b.data.zero_()
 
     def forward(self, x, adj):
         """"""
-        b, c, n, s = x.size()
+        b, s, n, f = x.size()
         # linear transformation
         x = self.linear(x)
 
         # reshape to have features+T as last dim
-        x = rearrange(x, 'b c n s -> b n (s c)')
+        x = rearrange(x, 'b s n f -> b n (s f)')
         # message passing
         x = torch.matmul(adj, x)
-        x = rearrange(x, 'b n (s c) -> b n s c', s=s, c=c)
+        x = rearrange(x, 'b n (s c) -> b n s f', s=s, f=f)
         if self.b is not None:
             x = x + self.b
-        x = rearrange(x, 'b n s c -> b x n s')
         return x

@@ -68,10 +68,10 @@ class TransformerModel(BaseModel):
                 hidden_size=ff_size,
                 output_size=output_size * horizon,
                 dropout=dropout),
-            Rearrange('b n (h f) -> b h n f', c=output_size, h=horizon)
+            Rearrange('b n (h f) -> b h n f', f=output_size, h=horizon)
         )
 
-    def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
+    def forward(self, x: Tensor, u: Optional[Tensor] = None, **kwargs) -> Tensor:
         """"""
         # x: [batches steps nodes features]
         # u: [batches steps (nodes) features]

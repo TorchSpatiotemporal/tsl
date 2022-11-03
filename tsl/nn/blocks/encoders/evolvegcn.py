@@ -12,16 +12,9 @@ from tsl.nn.blocks.encoders.gcrnn import _GraphGRUCell, _GraphRNN
 
 from torch import nn, Tensor
 
+from tsl.nn.layers.graph_convs.mixin import NormalizedAdjacencyMixin
 from tsl.nn.utils import get_functional_activation
 from tsl.ops.connectivity import normalize_connectivity
-
-
-def _pad_with_last_val(tensor, k):
-    pad = torch.ones(k - tensor.size(0),
-                     dtype=torch.long,
-                     device=tensor.device) * tensor[-1]
-    tensor = torch.cat([tensor, pad])
-    return tensor
 
 
 class _TopK(torch.nn.Module):
@@ -47,16 +40,15 @@ class _TopK(torch.nn.Module):
         return out
 
 
-class _EvolveGCNCell(MessagePassing):
+class _EvolveGCNCell(MessagePassing, NormalizedAdjacencyMixin):
     r"""
     """
-    _cached_edge_index: Optional[Tuple[Tensor, Tensor]] = None
 
-    def __init__(self, in_size, out_size, directed, activation='relu', root_weight=False, bias=True, cached=False):
+    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu', root_weight=False, bias=True, cached=False):
         super(_EvolveGCNCell, self).__init__(aggr='add')
         self.in_size = in_size
         self.out_size = out_size
-        self.directed = directed
+        self.asymmetric_norm = asymmetric_norm
         self.cached = cached
 
         self.activation_fn = get_functional_activation(activation)
@@ -81,20 +73,6 @@ class _EvolveGCNCell(MessagePassing):
         if self.skip_con is not None:
             self.skip_con.reset_parameters()
 
-    def _normalize_edge_index(self, x, edge_index, edge_weight, use_cached):
-        if use_cached:
-            if self._cached_edge_index is None:
-                return self._normalize_edge_index(x, edge_index, edge_weight, False)
-            return self._cached_edge_index
-        edge_index, edge_weight = normalize_connectivity(edge_index,
-                                                         edge_weight,
-                                                         symmetric=not self.directed,
-                                                         add_self_loops=not self.directed,
-                                                         num_nodes=x.size(-2))
-        if self.cached:
-            self._cached_edge_index = (edge_index, edge_weight)
-        return edge_index, edge_weight
-
 
 class EvolveGCNHCell(_EvolveGCNCell):
     r"""
@@ -105,7 +83,7 @@ class EvolveGCNHCell(_EvolveGCNCell):
     Args:
         in_size (int): Size of the input.
         out_size (int): Number of units in the hidden state.
-        directed (bool): Whether to consider the graph as directed when normalizaing weights.
+        asymmetric_norm (bool): Whether to consider the graph as directed when normalizaing weights.
         activation (str): Activation function after the GCN layer.
         root_weight (bool): Whether to add a parametrized skip connection.
         bias (bool): Whether to learn a bias.
@@ -114,10 +92,10 @@ class EvolveGCNHCell(_EvolveGCNCell):
     _cached_edge_index: Optional[Tuple[Tensor, Tensor]]
     _cached_adj_t: Optional[SparseTensor]
 
-    def __init__(self, in_size, out_size, directed, activation='relu', root_weight=False, bias=True, cached=False):
+    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu', root_weight=False, bias=True, cached=False):
         super(EvolveGCNHCell, self).__init__(in_size,
                                              out_size,
-                                             directed,
+                                             asymmetric_norm=asymmetric_norm,
                                              activation=activation,
                                              root_weight=root_weight,
                                              bias=bias,
@@ -133,7 +111,10 @@ class EvolveGCNHCell(_EvolveGCNCell):
 
     def forward(self, x, h, edge_index, edge_weight=None):
         """"""
-        edge_index, edge_weight = self._normalize_edge_index(x, edge_index, edge_weight, use_cached=self.cached)
+        edge_index, edge_weight = self._normalize_edge_index(x,
+                                                             edge_index,
+                                                             edge_weight,
+                                                             use_cached=self.cached)
 
         if h is None:
             W = repeat(self.W0, 'din dout -> b din dout', b=x.size(0))
@@ -173,7 +154,7 @@ class EvolveGCNOCell(_EvolveGCNCell):
     Args:
         in_size (int): Size of the input.
         out_size (int): Number of units in the hidden state.
-        directed (bool): Whether to consider the graph as directed when normalizaing weights.
+        asymmetric_norm (bool): Whether to consider the graph as directed when normalizaing weights.
         activation (str): Activation function after the GCN layer.
         root_weight (bool): Whether to add a parametrized skip connection.
         bias (bool): Whether to learn a bias.
@@ -182,10 +163,10 @@ class EvolveGCNOCell(_EvolveGCNCell):
     _cached_edge_index: Optional[Tuple[Tensor, Tensor]]
     _cached_adj_t: Optional[SparseTensor]
 
-    def __init__(self, in_size, out_size, directed, activation='relu', root_weight=False, bias=True, cached=False):
+    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu', root_weight=False, bias=True, cached=False):
         super(EvolveGCNOCell, self).__init__(in_size,
                                              out_size,
-                                             directed,
+                                             asymmetric_norm=asymmetric_norm,
                                              activation=activation,
                                              root_weight=root_weight,
                                              bias=bias,
@@ -231,7 +212,7 @@ class EvolveGCN(nn.Module):
         input_size (int): Size of the input.
         hidden_size (int): Number of hidden units in each hidden layer.
         n_layers (int): Number of layers in the encoder.
-        directed (bool): Whether to consider the input graph as directed.
+        asymmetric_norm (bool): Whether to consider the input graph as directed.
         variant (str): Variant of EvolveGCN to use (options: 'H' or 'O')
         root_weight (bool): Whether to add a parametrized skip connection.
         cached (bool): Whether to cache normalized edge_weights.
@@ -242,7 +223,7 @@ class EvolveGCN(nn.Module):
                  input_size,
                  hidden_size,
                  n_layers,
-                 directed,
+                 asymmetric_norm,
                  variant='H',
                  root_weight=False,
                  cached=False,
@@ -262,7 +243,7 @@ class EvolveGCN(nn.Module):
         for i in range(self.n_layers):
             self.rnn_cells.append(cell(in_size=self.input_size if i == 0 else self.hidden_size,
                                        out_size=self.hidden_size,
-                                       directed=directed,
+                                       asymmetric_norm=asymmetric_norm,
                                        activation=activation,
                                        root_weight=root_weight,
                                        cached=cached))

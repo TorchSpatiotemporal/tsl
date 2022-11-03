@@ -1,5 +1,5 @@
 from .rnn_model import RNNModel, FCRNNModel
-from .rnni_models import RNNImputerModel, BiRNNImputerModel
+from .rnn_imputers_models import RNNImputerModel, BiRNNImputerModel
 from .tcn_model import TCNModel
 from .transformer_model import TransformerModel
 

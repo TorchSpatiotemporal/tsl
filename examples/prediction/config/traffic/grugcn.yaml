@@ -2,7 +2,7 @@ defaults:
   - default
   - _self_
 
-batch_size: 64
+batch_size: 256
 
 model:
   name: grugcn

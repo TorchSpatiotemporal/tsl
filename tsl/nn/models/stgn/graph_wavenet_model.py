@@ -9,7 +9,7 @@ from torch_geometric.typing import Adj, OptTensor
 from tsl.nn.base.embedding import StaticGraphEmbedding
 from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
 from tsl.nn.blocks.encoders.tcn import TemporalConvNet
-from tsl.nn.layers.graph_convs.dense_spatial_conv import SpatialConvOrderK
+from tsl.nn.layers.graph_convs.dense_graph_conv import DenseGraphConvOrderK
 from tsl.nn.layers.graph_convs.diff_conv import DiffConv
 from tsl.nn.layers.norm.norm import Norm
 from ..base_model import BaseModel
@@ -118,12 +118,12 @@ class GraphWaveNetModel(BaseModel):
         if learned_adjacency:
             for _ in range(n_layers):
                 dense_sconvs.append(
-                    SpatialConvOrderK(input_size=hidden_size,
-                                      output_size=hidden_size,
-                                      support_len=1,
-                                      order=spatial_kernel_size,
-                                      include_self=False,
-                                      channel_last=True)
+                    DenseGraphConvOrderK(input_size=hidden_size,
+                                         output_size=hidden_size,
+                                         support_len=1,
+                                         order=spatial_kernel_size,
+                                         include_self=False,
+                                         channel_last=True)
                 )
         self.dense_sconvs = nn.ModuleList(dense_sconvs)
         self.readout = nn.Sequential(nn.ReLU(),

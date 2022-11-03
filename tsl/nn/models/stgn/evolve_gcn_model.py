@@ -18,7 +18,7 @@ class EvolveGCNModel(BaseModel):
         horizon (int): Forecasting steps.
         exog_size (int): Size of the optional exogenous variables.
         n_layers (int): Number of layers in the encoder.
-        directed (bool): Whether to consider the input graph as directed.
+        asymmetric_norm (bool): Whether to consider the input graph as directed.
         root_weight (bool): Whether to add a parametrized skip connection.
         cached (bool): Whether to cache normalized edge_weights.
         variant (str): Variant of EvolveGCN to use (options: 'H' or 'O')
@@ -31,7 +31,7 @@ class EvolveGCNModel(BaseModel):
                  horizon,
                  exog_size,
                  n_layers,
-                 directed,
+                 asymmetric_norm,
                  root_weight,
                  cached,
                  variant='H',
@@ -47,7 +47,7 @@ class EvolveGCNModel(BaseModel):
             input_size=hidden_size,
             hidden_size=hidden_size,
             n_layers=n_layers,
-            directed=directed,
+            asymmetric_norm=asymmetric_norm,
             variant=variant,
             activation=activation,
             root_weight=root_weight,

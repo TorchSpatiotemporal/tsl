@@ -1,4 +1,3 @@
-import torch
 from torch import nn
 
 from tsl.nn.base import GraphConv
@@ -6,8 +5,6 @@ from tsl.nn.blocks.decoders import MLPDecoder
 from tsl.nn.layers import Select
 from tsl.nn.models import BaseModel
 
-
-from einops import rearrange
 from einops.layers.torch import Rearrange
 
 from tsl.nn.blocks.encoders import RNN
