@@ -6,15 +6,14 @@ from einops import rearrange, repeat
 from torch.nn import Parameter
 import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
-from torch_geometric.nn.conv.gcn_conv import gcn_norm
-from torch_sparse import SparseTensor
+from torch_sparse import SparseTensor, matmul
 
 from tsl.nn.blocks.encoders.gcrnn import _GraphGRUCell, _GraphRNN
 
 from torch import nn, Tensor
 
 from tsl.nn.utils import get_functional_activation
-from tsl.ops.connectivity import normalize
+from tsl.ops.connectivity import normalize_connectivity
 
 
 def _pad_with_last_val(tensor, k):
@@ -87,14 +86,11 @@ class _EvolveGCNCell(MessagePassing):
             if self._cached_edge_index is None:
                 return self._normalize_edge_index(x, edge_index, edge_weight, False)
             return self._cached_edge_index
-        if self.directed:
-            _, edge_weight = normalize(edge_index, edge_weight, dim=1, num_nodes=x.size(-2))
-        else:
-            edge_index, edge_weight = gcn_norm(edge_index,
-                                               edge_weight,
-                                               x.size(-2),
-                                               improved=False,
-                                               add_self_loops=True)
+        edge_index, edge_weight = normalize_connectivity(edge_index,
+                                                         edge_weight,
+                                                         symmetric=not self.directed,
+                                                         add_self_loops=not self.directed,
+                                                         num_nodes=x.size(-2))
         if self.cached:
             self._cached_edge_index = (edge_index, edge_weight)
         return edge_index, edge_weight
@@ -163,6 +159,11 @@ class EvolveGCNHCell(_EvolveGCNCell):
     def message(self, x_j: Tensor, edge_weight) -> Tensor:
         return edge_weight.view(-1, 1) * x_j
 
+    def message_and_aggregate(self, adj_t: SparseTensor, x: Tensor) -> Tensor:
+        """"""
+        # adj_t: SparseTensor [nodes, nodes]
+        # x: [(batch,) nodes, channels]
+        return matmul(adj_t, x, reduce=self.aggr)
 
 class EvolveGCNOCell(_EvolveGCNCell):
     r"""

@@ -6,7 +6,7 @@ from torch_geometric.nn import MessagePassing
 from torch_geometric.typing import Adj, OptTensor
 from torch_sparse import SparseTensor, matmul
 
-from tsl.ops.connectivity import transpose, normalize
+from tsl.ops.connectivity import transpose, asymmetric_norm
 
 
 class DiffConv(MessagePassing):
@@ -55,8 +55,8 @@ class DiffConv(MessagePassing):
         """Normalize the connectivity weights and (optionally) add normalized
         backward weights."""
         norm_edge_index, \
-        norm_edge_weight = normalize(edge_index, edge_weight,
-                                     dim=1, num_nodes=num_nodes)
+        norm_edge_weight = asymmetric_norm(edge_index, edge_weight,
+                                           dim=1, num_nodes=num_nodes)
         # Add backward matrices
         if add_backward:
             return [(norm_edge_index, norm_edge_weight)] + \

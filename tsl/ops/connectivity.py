@@ -6,7 +6,9 @@ import torch
 import torch_sparse
 from scipy.sparse import coo_matrix
 from torch import Tensor
-from torch_sparse import SparseTensor
+from torch_geometric.nn.conv.gcn_conv import gcn_norm
+from torch_geometric.utils import add_remaining_self_loops
+from torch_sparse import SparseTensor, fill_diag
 from tsl.typing import TensArray, OptTensArray, SparseTensArray
 
 
@@ -197,8 +199,8 @@ def weighted_degree(index: TensArray, weights: OptTensArray = None,
     return out
 
 
-def normalize(edge_index: SparseTensArray, edge_weights: OptTensArray = None,
-              dim: int = 0, num_nodes: Optional[int] = None) \
+def asymmetric_norm(edge_index: SparseTensArray, edge_weight: OptTensArray = None,
+                    dim: int = 0, num_nodes: Optional[int] = None, add_self_loops: bool = False) \
         -> Tuple[SparseTensArray, OptTensArray]:
     r"""Normalize edge weights across dimension :obj:`dim`.
 
@@ -207,25 +209,48 @@ def normalize(edge_index: SparseTensArray, edge_weights: OptTensArray = None,
 
     Args:
         edge_index (LongTensor): Edge index tensor.
-        edge_weights (Tensor): Edge weights tensor.
+        edge_weight (Tensor): Edge weights tensor.
         dim (int): Dimension over which to compute normalization.
         num_nodes (int, optional): The number of nodes, *i.e.*
             :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
+        add_self_loops: Whether to add self loops to the adjacency matrix.
     """
     backend = infer_backend(edge_index)
 
     if backend is torch_sparse:
-        assert edge_weights is None
+        assert edge_weight is None
+        if add_self_loops:
+            edge_index = fill_diag(edge_index, 1)
         deg = edge_index.sum(dim=dim).to(torch.float)
         deg_inv = deg.pow(-1.0)
         deg_inv[deg_inv == float('inf')] = 0
         edge_index = deg_inv.view(-1, 1) * edge_index
         return edge_index, None
 
+    if add_self_loops:
+        edge_index, tmp_edge_weight = add_remaining_self_loops(edge_index, edge_weight, 1, num_nodes)
+        assert tmp_edge_weight is not None
+        edge_weight = tmp_edge_weight
+
     index = edge_index[dim]
-    degree = weighted_degree(index, edge_weights, num_nodes=num_nodes)
-    norm_weight = (1 if edge_weights is None else edge_weights) / degree[index]
+    degree = weighted_degree(index, edge_weight, num_nodes=num_nodes)
+    norm_weight = (1 if edge_weight is None else edge_weight) / degree[index]
     return edge_index, norm_weight
+
+
+def normalize_connectivity(edge_index, edge_weight, symmetric, num_nodes, add_self_loops=False):
+    if symmetric:
+        edge_index, edge_weight = gcn_norm(edge_index,
+                                           edge_weight,
+                                           num_nodes,
+                                           add_self_loops=add_self_loops)
+    else:
+        edge_index, edge_weight = asymmetric_norm(edge_index,
+                                                  edge_weight,
+                                                  dim=1,
+                                                  num_nodes=num_nodes,
+                                                  add_self_loops=add_self_loops)
+    return edge_index, edge_weight
 
 
 def power_series(edge_index: TensArray, edge_weights: OptTensArray = None,

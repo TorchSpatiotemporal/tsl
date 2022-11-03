@@ -2,6 +2,8 @@ import os
 import pickle
 import urllib.request
 import zipfile
+import tarfile
+
 from typing import Any, Optional
 
 from tqdm import tqdm
@@ -22,6 +24,22 @@ def extract_zip(path: str, folder: str, log: bool = True):
         logger.info(f"Extracting {path}")
     with zipfile.ZipFile(path, 'r') as f:
         f.extractall(folder)
+
+
+def extract_tar(path: str, folder: str, log: bool = True):
+    r"""Extracts a tar (or tar.gz) archive to a specific folder.
+
+    Args:
+        path (string): The path to the tar(gz) archive.
+        folder (string): The destination folder.
+        log (bool, optional): If :obj:`False`, will not log anything.
+            (default: :obj:`True`)
+    """
+    if log:
+        logger.info(f"Extracting {path}")
+    with tarfile.open(path, 'r') as tar:
+        for member in tqdm(iterable=tar.getmembers(), total=len(tar.getmembers())):
+            tar.extract(member=member, path=folder)
 
 
 def save_pickle(obj: Any, filename: str) -> str:

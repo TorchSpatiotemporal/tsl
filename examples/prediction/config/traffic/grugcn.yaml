@@ -1,0 +1,23 @@
+defaults:
+  - default
+  - _self_
+
+batch_size: 64
+
+model:
+  name: grugcn
+  hparams:
+    hidden_size: 32
+    enc_layers: 1
+    gcn_layers: 2
+    asymmetric_norm: True
+
+optimizer:
+  hparams:
+    lr: 0.003
+
+lr_scheduler:
+  name: MultiStepLR
+  hparams:
+    gamma: 0.25
+    milestones: [ 25, 50, 100 ]

@@ -34,6 +34,8 @@ def get_model_class(model_str):
         model = models.GatedGraphNetworkModel
     elif model_str == 'evolvegcn':
         model = models.EvolveGCNModel
+    elif model_str == 'grugcn':
+        model = models.GRUGCNModel
     else:
         raise NotImplementedError(f'Model "{model_str}" not available.')
     return model

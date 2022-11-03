@@ -1,5 +1,6 @@
 from .experiment import TslExperiment
 from .io import (extract_zip,
+                 extract_tar,
                  download_url,
                  save_pickle,
                  load_pickle,
