@@ -54,7 +54,6 @@ class _MTSBenchmarkDataset(PandasDataset):
         path = os.path.join(self.root_dir, f'{self.__class__.__name__}.h5')
         df.to_hdf(path, key='raw')
         self.clean_downloads()
-        return df
 
     def load_raw(self) -> pd.DataFrame:
         self.maybe_build()

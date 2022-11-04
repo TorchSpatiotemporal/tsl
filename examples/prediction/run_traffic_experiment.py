@@ -8,6 +8,7 @@ from tsl import logger
 from tsl.data import SpatioTemporalDataset, SpatioTemporalDataModule
 from tsl.data.preprocessing import StandardScaler
 from tsl.datasets import MetrLA, PemsBay
+from tsl.datasets.pems_benchmarks import PeMS03, PeMS04, PeMS07, PeMS08
 from tsl.experiment import Experiment
 from tsl.inference import Predictor
 from tsl.metrics import torch as torch_metrics, numpy as numpy_metrics
@@ -48,6 +49,14 @@ def get_dataset(dataset_name):
         dataset = MetrLA(impute_zeros=True)
     elif dataset_name == 'bay':
         dataset = PemsBay()
+    elif dataset_name == 'pems3':
+        dataset = PeMS03()
+    elif dataset_name == 'pems4':
+        dataset = PeMS04()
+    elif dataset_name == 'pems7':
+        dataset = PeMS07()
+    elif dataset_name == 'pems8':
+        dataset = PeMS08()
     else:
         raise ValueError(f"Dataset {dataset_name} not available.")
     return dataset
@@ -184,7 +193,7 @@ def run_traffic(cfg: DictConfig):
     output = casting.numpy(output)
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
-                          output['mask']
+                          output.get('mask', None)
     res = dict(test_mae=numpy_metrics.mae(y_hat, y_true, mask),
                test_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
                test_mape=numpy_metrics.mape(y_hat, y_true, mask))
@@ -193,7 +202,7 @@ def run_traffic(cfg: DictConfig):
     output = casting.numpy(output)
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
-                          output['mask']
+                          output.get('mask', None)
     res.update(dict(val_mae=numpy_metrics.mae(y_hat, y_true, mask),
                     val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
                     val_mape=numpy_metrics.mape(y_hat, y_true, mask)))
