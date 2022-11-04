@@ -36,6 +36,8 @@ def get_model_class(model_str):
         model = models.EvolveGCNModel
     elif model_str == 'grugcn':
         model = models.GRUGCNModel
+    elif model_str == 'agcrn':
+        model = models.AGCRNModel
     else:
         raise NotImplementedError(f'Model "{model_str}" not available.')
     return model
