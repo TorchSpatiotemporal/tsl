@@ -5,6 +5,7 @@ from .gat_conv import GATConv
 from .grin_cell import GRIL
 from .spatio_temporal_att import SpatioTemporalAtt
 from .gated_gn import GatedGraphNetwork
+from .adap_graph_conv import AdaptiveGraphConv
 
 __all__ = [
     'DenseGraphConv',
@@ -15,7 +16,8 @@ __all__ = [
     'GATLayer',
     'GRIL',
     'SpatioTemporalAtt',
-    'GatedGraphNetwork'
+    'GatedGraphNetwork',
+    'AdaptiveGraphConv'
 ]
 
 classes = __all__

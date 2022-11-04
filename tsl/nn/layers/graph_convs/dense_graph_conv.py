@@ -103,7 +103,7 @@ class DenseGraphConv(nn.Module):
         super(DenseGraphConv, self).__init__()
         self.linear = nn.Linear(input_size, output_size, bias=False)
         if bias:
-            self.b = nn.Parameter(torch.Tensor(self.c_out))
+            self.b = nn.Parameter(torch.Tensor(output_size))
         else:
             self.register_parameter('b', None)
         self.reset_parameters()
