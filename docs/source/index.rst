@@ -117,6 +117,7 @@ Get started
    :hidden:
 
    notes/quickstart
+   notes/data_structures
    notes/spatiotemporal_data_representation
    notes/notebooks
 

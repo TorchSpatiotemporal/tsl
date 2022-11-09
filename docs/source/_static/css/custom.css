@@ -50,3 +50,17 @@ section#torch-spatiotemporal h1 {
     filter: unset;
     transform: unset;
 }
+
+table.docutils {
+    box-shadow: unset;
+}
+
+table.docutils caption {
+    font-size: var(--font-size--normal);
+    caption-side: bottom;
+    margin-top: 0.5em;
+}
+
+code.literal {
+    font-weight: 600;
+}
