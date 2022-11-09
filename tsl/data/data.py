@@ -18,7 +18,7 @@ class StorageView(BaseStorage):
         self.__keys = tuple()
         super(StorageView, self).__init__()
         self._mapping = store
-        self._keys = keys
+        self._keys = keys  # noqa
 
     def __len__(self) -> int:
         return len(self._keys)
@@ -106,10 +106,6 @@ class StorageView(BaseStorage):
     def _keys(self) -> tuple:
         return tuple(k for k in self.__keys if k in self._mapping)
 
-    @_keys.setter
-    def _keys(self, value):
-        pass
-
     def add_keys(self, *keys):
         keys = set(keys).difference(self.__keys)
         self.__keys = tuple([*self.__keys, *keys])
@@ -164,13 +160,13 @@ class Data(PyGData):
         super(Data, self).__init__(**input, **target, **kwargs)
         # Set 'input' as view on input keys
         self.__dict__['input'] = StorageView(self._store, input.keys())
-        # Set 'target' as view on input keys
+        # Set 'target' as view on target keys
         self.__dict__['target'] = StorageView(self._store, target.keys())
         # Add mask
-        self.mask = mask
+        self.mask = mask  # noqa
         # Add transform modules
         transform = transform if transform is not None else dict()
-        self.transform: dict = transform
+        self.transform: dict = transform  # noqa
         # Add patterns
         pattern = pattern if pattern is not None else dict()
         self.__dict__['pattern'] = pattern
@@ -186,33 +182,43 @@ class Data(PyGData):
             info += ["transform=[{}]".format(', '.join(self.transform.keys()))]
         return '{}({})'.format(cls, ', '.join(info))
 
-    #
-    # def __cat_dim__(self, key: str, value: Any, *args, **kwargs) -> Any:
-    #     if isinstance(value, SparseTensor) and 'adj' in key:
-    #         return (0, 1)
-    #     elif 'index' in key or 'face' in key:
-    #         return -1
-    #     elif key.startswith('edge_'):
-    #         return 0
-    #     else:
-    #         return -2
+    def __cat_dim__(self, key: str, value: Any, *args, **kwargs) -> Any:
+        if key in self.pattern:
+            if 'n' in self.pattern[key]:  # cat along node dimension
+                return self.pattern[key].split(' ').index('n')
+            elif 'e' in self.pattern[key]:  # cat along edge dimension
+                return self.pattern[key].split(' ').index('e')
+            else:  # stack on batch dimension
+                return None
+        return super(Data, self).__cat_dim__(key, value, *args, **kwargs)
 
     def stores_as(self, data: 'Data'):
-        self.input._keys = list(data.input.keys())
-        self.target._keys = list(data.target.keys())
+        # copy input and target keys in self with no check that keys are in self
+        # used when batching Data objects
+        self.input._keys = data.input._keys  # noqa
+        self.target._keys = data.target._keys  # noqa
+        self.__dict__['pattern'] = data.pattern
         return self
 
     @property
+    def edge_weight(self) -> Any:
+        return self['edge_weight'] if 'edge_weight' in self._store else None
+
+    @property
+    def mask(self) -> Any:
+        return self['mask'] if 'mask' in self._store else None
+
+    @property
+    def transform(self) -> Any:
+        return self['transform'] if 'transform' in self._store else None
+
+    @property
     def has_transform(self):
-        return 'transform' in self and len(self.transform) > 0
+        return 'transform' in self._store and len(self.transform) > 0
 
     @property
     def has_mask(self):
-        return self.get('mask') is not None
-
-    # @property
-    # def edge_weight(self) -> Any:
-    #     return self.get('edge_weight')
+        return self['mask'] is not None if 'mask' in self._store else False
 
     def numpy(self, *args: List[str]):
         r"""Transform all tensors to numpy arrays, either for all
@@ -220,7 +226,7 @@ class Data(PyGData):
         self.detach().cpu()
         return self.apply(lambda x: x.numpy(), *args)
 
-    def rearrange_key(self, key: str, pattern: str, **axes_lengths):
+    def rearrange_element(self, key: str, pattern: str, **axes_lengths):
         r"""Rearrange key in Data according to the provided patter
          using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
         key_pattern = self.pattern[key]
@@ -243,5 +249,5 @@ class Data(PyGData):
         r"""Rearrange all keys in Data according to the provided patter
          using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
         for key, pattern in patterns.items():
-            self.rearrange_key(key, pattern)
+            self.rearrange_element(key, pattern)
         return self

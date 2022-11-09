@@ -1,1 +1,2 @@
-from .dataloader import StaticGraphLoader
+from .static_graph_loader import StaticGraphLoader
+from .dynamic_graph_loader import DynamicGraphLoader

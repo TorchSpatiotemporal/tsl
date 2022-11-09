@@ -1,11 +1,11 @@
 from typing import Optional, Mapping, Literal
 
 from pytorch_lightning import LightningDataModule
-from torch.utils.data import Dataset, Subset, DataLoader, RandomSampler, \
-    SequentialSampler, BatchSampler
+from torch.utils.data import Dataset, Subset, DataLoader
 
 import tsl
 from .splitters import Splitter
+from ..loader import StaticGraphLoader
 from ..spatiotemporal_dataset import SpatioTemporalDataset
 from ...typing import Index
 
@@ -170,16 +170,12 @@ class SpatioTemporalDataModule(LightningDataModule):
         if dataset is None:
             return None
         pin_memory = self.pin_memory if split == 'train' else None
-        sampler_cls = RandomSampler if shuffle else SequentialSampler
-        sampler = BatchSampler(sampler_cls(dataset),
-                               batch_size=batch_size or self.batch_size,
-                               drop_last=split == 'train')
-        return DataLoader(dataset,
-                          sampler=sampler,
-                          batch_size=None,
-                          collate_fn=lambda x: x,
-                          num_workers=self.workers,
-                          pin_memory=pin_memory)
+        return StaticGraphLoader(dataset,
+                                 batch_size=batch_size or self.batch_size,
+                                 shuffle=shuffle,
+                                 drop_last=split == 'train',
+                                 num_workers=self.workers,
+                                 pin_memory=pin_memory)
 
     def train_dataloader(self, shuffle: bool = True,
                          batch_size: Optional[int] = None) \
