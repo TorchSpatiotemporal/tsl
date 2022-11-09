@@ -78,7 +78,7 @@ class BatchMap(Mapping):
 
     def __repr__(self):
         s = ["'{}': {}".format(key, repr(value)) for key, value in self.items()]
-        return "{}{{\n\t{}\n}}".format(self.__class__.__name__, ',\n\t'.join(s))
+        return "{}(\n  {}\n)".format(self.__class__.__name__, ',\n  '.join(s))
 
     def update(self, **kwargs):
         for k, v in kwargs.items():

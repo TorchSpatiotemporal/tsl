@@ -3,11 +3,14 @@ from typing import Iterator, Callable, Dict
 from typing import (Optional, Any, List, Iterable, Tuple,
                     Mapping)
 
+import torch
 from einops import rearrange
 from torch import Tensor
 from torch_geometric.data.data import Data as PyGData, size_repr
 from torch_geometric.data.storage import BaseStorage
 from torch_geometric.data.view import KeysView, ValuesView, ItemsView
+from torch_geometric.utils import subgraph
+from torch_sparse import SparseTensor
 
 from tsl.utils.python_utils import ensure_list
 
@@ -174,13 +177,13 @@ class Data(PyGData):
     def __repr__(self) -> str:
         cls = self.__class__.__name__
         inputs = [size_repr(k, v) for k, v in self.input.items()]
-        inputs = 'input:{{{}}}'.format(', '.join(inputs))
+        inputs = 'input=({})'.format(', '.join(inputs))
         targets = [size_repr(k, v) for k, v in self.target.items()]
-        targets = 'target:{{{}}}'.format(', '.join(targets))
+        targets = 'target=({})'.format(', '.join(targets))
         info = [inputs, targets, "has_mask={}".format(self.has_mask)]
         if self.has_transform:
             info += ["transform=[{}]".format(', '.join(self.transform.keys()))]
-        return '{}({})'.format(cls, ', '.join(info))
+        return '{}(\n  {}\n)'.format(cls, ',\n  '.join(info))
 
     def __cat_dim__(self, key: str, value: Any, *args, **kwargs) -> Any:
         if key in self.pattern:
@@ -251,3 +254,22 @@ class Data(PyGData):
         for key, pattern in patterns.items():
             self.rearrange_element(key, pattern)
         return self
+
+    def subgraph(self, node_index):
+        if isinstance(self.edge_index, SparseTensor):
+            self.edge_index = self.edge_index[node_index, node_index]
+        elif isinstance(self.edge_index, Tensor):
+            node_subgraph = subgraph(node_index, self.edge_index,
+                                     self.edge_weight,
+                                     num_nodes=self.num_nodes,
+                                     relabel_nodes=True)
+            self.edge_index, self.edge_weight = node_subgraph
+        for key, value in self.items():
+            if key == 'edge_index' or key == 'edge_weight':
+                continue
+            if key in self.pattern and 'n' in self.pattern[key]:
+                node_dim = self.pattern[key].split(' ').index('n')
+                self[key] = torch.index_select(value, node_dim, node_index)
+                if key in self.transform:
+                    scaler = self.transform[key]
+                    self.transform[key] = scaler.slice(node_index=node_index)
