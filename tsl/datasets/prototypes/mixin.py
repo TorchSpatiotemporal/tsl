@@ -38,19 +38,27 @@ class TabularParsingMixin:
         if pattern is None:
             pattern = infer_pattern(shape, t=self.length, n=self.n_nodes)
         else:
+            # check that pattern and shape match
             pattern = check_pattern(pattern, ndim=len(shape))
 
-        # check that pattern and shape match
-        dims = pattern.strip().split(' ')
+        dims = pattern.split(' ')  # 't n f' -> ['t', 'n', 'f']
 
         if isinstance(obj, pd.DataFrame):
             assert self.is_target_dataframe, \
                 "Cannot add DataFrame covariates if target is ndarray."
+            # check covariate index matches steps or nodes in the dataset
+            # according to the dim token
             index = self._token_to_index(dims[0], obj.index)
             obj = obj.reindex(index=index)
+
+            # todo check when columns is not multiindex
+            #  add 1 dummy feature dim always?
             for lvl, tkn in enumerate(dims[1:]):
                 columns = self._token_to_index(tkn, obj.columns.unique(lvl))
-                obj.reindex(columns=columns, level=lvl)
+                if isinstance(obj.columns, pd.MultiIndex):
+                    obj.reindex(columns=columns, level=lvl)
+                else:
+                    obj.reindex(columns=columns)
             obj = casting.convert_precision_df(obj, precision=self.precision)
         else:
             obj = np.asarray(obj)

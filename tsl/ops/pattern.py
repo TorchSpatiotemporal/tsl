@@ -8,15 +8,12 @@ from numpy import ndarray
 from torch import Tensor
 
 _PATTERNS = {
-    'tnf': re.compile('^[1-2]?t?n{0,2}f*$'),
     'tnef': re.compile('^[1-2]?t?(n{0,2}|e?)f*$'),
-    'btnf': re.compile('^b?t?n{0,2}f*$'),
     'btnef': re.compile('^b?t?(n{0,2}|e?)f*$'),
 }
 
 
 def check_pattern(pattern: str, split: bool = False, ndim: int = None,
-                  include_edges: bool = False,
                   include_batch: bool = False) -> Union[str, list]:
     r"""Check that :attr:`pattern` is allowed. A pattern is a string of tokens
     interleaved with blank spaces, where each token specifies what an axis in a
@@ -24,18 +21,17 @@ def check_pattern(pattern: str, split: bool = False, ndim: int = None,
 
     * 't', for the time dimension
     * 'n', for the node dimension
+    * 'e', for the edge dimension
     * 'f' or 'c', for the feature/channel dimension ('c' token is automatically
       converted to 'f')
-    * 'e', for the edge dimension
 
     In order to be valid, a pattern must have:
 
     1. at most one 't' dimension, as the first token;
     2. at most two (consecutive) 'n' dimensions, right after the 't' token or
        at the beginning of the pattern;
-    3. if :attr:`include_edges`, then a single 'e' can be the first token or
-       follow 't', and there must not be 'n' dimensions
-       at the beginning of the pattern;
+    3. at most one 'e' dimension, either as the first token or after a 't';
+    3. either 'n' or 'e' dimensions, but not both together;
     4. all further tokens must be 'c' or 'f'.
 
     Args:
@@ -44,9 +40,9 @@ def check_pattern(pattern: str, split: bool = False, ndim: int = None,
 
             * 't', for the time dimension
             * 'n', for the node dimension
+            * 'e', for the edge dimension
             * 'f' or 'c', for the feature/channel dimension ('c' token is
               automatically converted to 'f')
-            * 'e', for the edge dimension
 
         split (bool): If :obj:`True`, then return an ordered list of the tokens
             in the sanitized pattern.
@@ -54,8 +50,6 @@ def check_pattern(pattern: str, split: bool = False, ndim: int = None,
         ndim (int, optional): If it is not :obj:`None`, then check that
             :attr:`pattern` has :attr:`ndim` tokens.
             (default: :obj:`None`)
-        include_edges (bool): If :obj:`True`, then allows the token :obj:`e`.
-            (default: :obj:`False`)
         include_batch (bool): If :obj:`True`, then allows the token :obj:`b`.
             (default: :obj:`False`)
 
@@ -67,11 +61,8 @@ def check_pattern(pattern: str, split: bool = False, ndim: int = None,
     # check 'c'/'f' follows 'n', 'n' follows 't'
     # allow for duplicate 'n' dims (e.g., 'n n', 't n n f')
     # allow for limitless 'c'/'f' dims (e.g., 't n f f')
-    regex = 'tnef' if include_edges else 'tnf'
-    # allow for batch dimension
-    if include_batch:
-        regex = 'b' + regex
-    match_with = _PATTERNS[regex]
+    #  if include_batch, then allow for batch dimension
+    match_with = _PATTERNS['btnef' if include_batch else 'tnef']
     if not match_with.match(pattern_squeezed):
         raise RuntimeError(f'Pattern "{pattern}" not allowed.')
     elif ndim is not None and len(pattern_squeezed) != ndim:
@@ -81,12 +72,13 @@ def check_pattern(pattern: str, split: bool = False, ndim: int = None,
     return ' '.join(pattern_squeezed)
 
 
-def infer_pattern(shape: tuple, t: int, n: int, e: Optional[int] = None):
+def infer_pattern(shape: tuple, t: Optional[int] = None,
+                  n: Optional[int] = None, e: Optional[int] = None) -> str:
     out = []
     for dim in shape:
-        if dim == t:
+        if t is not None and dim == t:
             out.append('t')
-        elif dim == n:
+        elif n is not None and dim == n:
             out.append('n')
         elif e is not None and dim == e:
             out.append('e')
@@ -94,7 +86,7 @@ def infer_pattern(shape: tuple, t: int, n: int, e: Optional[int] = None):
             out.append('f')
     pattern = ' '.join(out)
     try:
-        pattern = check_pattern(pattern, include_edges=True)
+        pattern = check_pattern(pattern)
     except RuntimeError:
         raise RuntimeError(f"Cannot infer pattern from shape: {shape}.")
     return pattern
@@ -103,8 +95,7 @@ def infer_pattern(shape: tuple, t: int, n: int, e: Optional[int] = None):
 def outer_pattern(patterns: Iterable[str]):
     dims = dict(t=0, n=0, f=0)
     for pattern in patterns:
-        dim_count = Counter(check_pattern(pattern, split=True,
-                                          include_edges=True))
+        dim_count = Counter(check_pattern(pattern, split=True))
         for dim, count in dim_count.items():
             dims[dim] = max(dims[dim], count)
     dims = [d for dim, count in dims.items() for d in [dim] * count]
@@ -114,7 +105,7 @@ def outer_pattern(patterns: Iterable[str]):
 def take(x: Union[np.ndarray, torch.Tensor], pattern: str,
          time_index: Union[List, ndarray, Tensor] = None,
          node_index: Union[List, ndarray, Tensor] = None):
-    dims = check_pattern(pattern, split=True, include_edges=True)
+    dims = check_pattern(pattern, split=True)
 
     # select backend
     if isinstance(x, np.ndarray):
@@ -157,8 +148,8 @@ def broadcast(x: Union[np.ndarray, torch.Tensor], pattern: str,
               node_index: Union[List, ndarray, Tensor] = None):
     # check patterns
     left, rght = pattern.split('->')
-    left_dims = check_pattern(left, split=True, include_edges=True)
-    rght_dims = check_pattern(rght, split=True, include_edges=True)
+    left_dims = check_pattern(left, split=True)
+    rght_dims = check_pattern(rght, split=True)
     if not set(left_dims).issubset(rght_dims):
         raise RuntimeError(f"Shape {left_dims} cannot be "
                            f"broadcasted to {rght.strip()}.")

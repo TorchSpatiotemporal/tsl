@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from copy import deepcopy
-from typing import Optional, Mapping, List, Union, Iterable, Tuple
+from typing import Optional, Mapping, List, Union, Iterable, Tuple, Literal
 
 import numpy as np
 import pandas as pd
@@ -70,12 +70,17 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             dataset sample. Keys in the mapping are keys only in :obj:`item`,
             while values are :obj:`~tsl.data.new.BatchMapItem`.
             (default: :obj:`None`)
-        trend (DataArray, optional): Trend paired with main signal. Must be of
-            the same shape of `data`.
-            (default: :obj:`None`)
         scalers (Mapping or None): Dictionary of scalers that must be used for
             data preprocessing.
             (default: :obj:`None`)
+        trend (DataArray, optional): Trend paired with main signal. Must be of
+            the same shape of `data`.
+            (default: :obj:`None`)
+        item_pattern_layout (str): Specify the pattern convention when getting
+            dataset samples. Possible options are :obj:`'time_then_node'`, if
+            the time dimension precedes the nodes' one, or
+            :obj:`'node_then_time`' otherwise.
+            (default: :obj:`'time_then_node'`)
         window (int): Length (in number of steps) of the lookback window.
             (default: 12)
         horizon (int): Length (in number of steps) of the prediction horizon.
@@ -289,6 +294,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     @property
     def shape(self) -> tuple:
+        """Shape of the target tensor."""
         return tuple(self.target.size())
 
     @property
@@ -416,14 +422,17 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     @property
     def has_connectivity(self) -> bool:
+        """Whether the dataset has a connectivity."""
         return self.edge_index is not None
 
     @property
     def has_mask(self) -> bool:
+        """Whether the dataset has a mask denoting valid values in target."""
         return self.mask is not None
 
     @property
     def has_covariates(self) -> bool:
+        """Whether the dataset has covariates to the target tensor."""
         return self.n_covariates > 0
 
     # Map Dataset to item #####################################################
@@ -666,9 +675,24 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             mask = mask.to(dtype)
         return mask
 
+    def item_node_index(self, item: int) -> Tensor:
+        """Get node index associated with item :attr:`item`."""
+        # todo
+        raise NotImplementedError
+
+    def item_edge_index(self, item: int) -> Adj:
+        """Get edge index associated with item :attr:`item`."""
+        # todo
+        if self.edge_index_per_item:
+            return self.edge_index_map[item]
+        if self.edge_index_per_timestep:
+            raise NotImplementedError
+        return self.edge_index
+
     # Getters helpers
 
-    def _get_time_index(self, time_index=None, layout='index'):
+    def _get_time_index(self, time_index: IndexSlice = None,
+                        layout: Literal['index', 'slice', 'mask'] = 'index'):
         if time_index is None:
             return slice(None) if layout == 'slice' else None
         if isinstance(time_index, slice):
@@ -686,7 +710,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             return mask
         return time_index
 
-    def _get_node_index(self, node_index=None, layout='index'):
+    def _get_node_index(self, node_index: IndexSlice = None,
+                        layout: Literal['index', 'slice', 'mask'] = 'index'):
         if node_index is None:
             return slice(None) if layout == 'slice' else None
         if isinstance(node_index, slice):
@@ -874,8 +899,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             value, pattern = self._parse_covariate(value, pattern, name=name)
         # override pattern, rearranging the stored covariate
         elif pattern is not None:
-            pattern = check_pattern(pattern, ndim=value.ndim,
-                                    include_edges=True)
+            pattern = check_pattern(pattern, ndim=value.ndim)
             from einops import rearrange
             old_value = self._covariates[name]['value']
             old_pattern = self._covariates[name]['pattern']
@@ -1171,6 +1195,45 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         if not isinstance(obj, cls):
             raise TypeError(f"Loaded file is not of class {cls}.")
         return obj
+
+    @classmethod
+    def from_dataset(cls, dataset,
+                     connectivity: Optional[
+                         Union[SparseTensArray, Tuple[DataArray]]] = None,
+                     input_map: Optional[Union[Mapping, BatchMap]] = None,
+                     target_map: Optional[Union[Mapping, BatchMap]] = None,
+                     auxiliary_map: Optional[Union[Mapping, BatchMap]] = None,
+                     scalers: Optional[Mapping[str, Scaler]] = None,
+                     trend: Optional[DataArray] = None,
+                     item_pattern_layout: str = 'time_then_node',
+                     window: int = 12,
+                     horizon: int = 1,
+                     delay: int = 0,
+                     stride: int = 1,
+                     window_lag: int = 1,
+                     horizon_lag: int = 1) -> "SpatioTemporalDataset":
+        """Create a :class:`~tsl.data.SpatioTemporalDataset` from a
+        :class:`~tsl.datasets.prototypes.TabularDataset`.
+        """
+        return cls(target=dataset.target,
+                   index=dataset.index,
+                   mask=dataset.mask,
+                   covariates=dataset.covariates,
+                   name=dataset.name,
+                   precision=dataset.precision,
+                   connectivity=connectivity,
+                   input_map=input_map,
+                   target_map=target_map,
+                   auxiliary_map=auxiliary_map,
+                   scalers=scalers,
+                   trend=trend,
+                   item_pattern_layout=item_pattern_layout,
+                   window=window,
+                   horizon=horizon,
+                   delay=delay,
+                   stride=stride,
+                   window_lag=window_lag,
+                   horizon_lag=horizon_lag)
 
     @staticmethod
     def add_argparse_args(parser, **kwargs):

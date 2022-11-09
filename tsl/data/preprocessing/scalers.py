@@ -357,7 +357,7 @@ class ScalerModule(Module):
 
     @property
     def n(self) -> int or None:
-        """Size of temporal dimension (:obj:`None` if time-invariant)."""
+        """Size of node dimension (:obj:`None` if node-invariant)."""
         if self.pattern is not None and 'n' in self.pattern:
             return max(self.scale.size(0), self.bias.size(0))
 
@@ -369,7 +369,7 @@ class ScalerModule(Module):
                                    "multiple 'n' dimensions.")
             if check:
                 value = check_pattern(value, ndim=self.bias.ndim,
-                                      include_edges=True, include_batch=True)
+                                      include_batch=True)
             self.t_axis = 0 if 't' in value else None
             if 'n' in value:
                 self.n_axis = value.split(' ').index('n')

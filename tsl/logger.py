@@ -28,4 +28,4 @@ if not _HYDRA_AVAILABLE:
         }
     }
     logging.config.dictConfig(DEFAULT_LOGGING)
-logger = logging.getLogger('log')
+logger = logging.getLogger('tsl')

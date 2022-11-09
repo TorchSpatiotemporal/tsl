@@ -32,7 +32,7 @@ class DataParsingMixin:
             pattern = infer_pattern(obj.shape, t=self.n_steps, n=self.n_nodes,
                                     e=self.n_edges)
         else:
-            pattern = check_pattern(pattern, ndim=obj.ndim, include_edges=True)
+            pattern = check_pattern(pattern, ndim=obj.ndim)
 
         # check that pattern and shape match
         self._check_pattern(obj, pattern, name,
