@@ -1,5 +1,5 @@
 from types import ModuleType
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 
 import numpy as np
 import torch
@@ -7,8 +7,9 @@ import torch_sparse
 from scipy.sparse import coo_matrix
 from torch import Tensor
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
-from torch_geometric.utils import add_remaining_self_loops
+from torch_geometric.utils import add_remaining_self_loops, subgraph
 from torch_sparse import SparseTensor, fill_diag
+
 from tsl.typing import TensArray, OptTensArray, SparseTensArray
 
 
@@ -174,6 +175,25 @@ def transpose(edge_index: SparseTensArray, edge_weights: OptTensArray = None) \
     return edge_index[[1, 0]]
 
 
+def reduce_graph(subset: Union[Tensor, List[int]],
+                 edge_index: SparseTensArray,
+                 edge_attr: OptTensArray = None,
+                 num_nodes: Optional[int] = None) \
+        -> Tuple[TensArray, OptTensArray]:
+    # TODO update with new version of PyG with option to return edge_mask
+    if isinstance(edge_index, Tensor):
+        return subgraph(subset, edge_index,
+                        edge_attr=edge_attr,
+                        relabel_nodes=True,
+                        num_nodes=num_nodes)
+    else:
+        if edge_attr is not None:
+            raise RuntimeError("Cannot reduce graph with N x N connectivity "
+                               "and edge_attr.")
+        edge_index = edge_index[subset, subset]
+        return edge_index, None
+
+
 def weighted_degree(index: TensArray, weights: OptTensArray = None,
                     num_nodes: Optional[int] = None) -> TensArray:
     r"""Computes the weighted degree of a given one-dimensional index tensor.
@@ -199,8 +219,10 @@ def weighted_degree(index: TensArray, weights: OptTensArray = None,
     return out
 
 
-def asymmetric_norm(edge_index: SparseTensArray, edge_weight: OptTensArray = None,
-                    dim: int = 0, num_nodes: Optional[int] = None, add_self_loops: bool = False) \
+def asymmetric_norm(edge_index: SparseTensArray,
+                    edge_weight: OptTensArray = None,
+                    dim: int = 0, num_nodes: Optional[int] = None,
+                    add_self_loops: bool = False) \
         -> Tuple[SparseTensArray, OptTensArray]:
     r"""Normalize edge weights across dimension :obj:`dim`.
 
@@ -228,7 +250,9 @@ def asymmetric_norm(edge_index: SparseTensArray, edge_weight: OptTensArray = Non
         return edge_index, None
 
     if add_self_loops:
-        edge_index, tmp_edge_weight = add_remaining_self_loops(edge_index, edge_weight, 1, num_nodes)
+        edge_index, tmp_edge_weight = add_remaining_self_loops(edge_index,
+                                                               edge_weight, 1,
+                                                               num_nodes)
         assert tmp_edge_weight is not None
         edge_weight = tmp_edge_weight
 
@@ -238,7 +262,8 @@ def asymmetric_norm(edge_index: SparseTensArray, edge_weight: OptTensArray = Non
     return edge_index, norm_weight
 
 
-def normalize_connectivity(edge_index, edge_weight, symmetric, num_nodes, add_self_loops=False):
+def normalize_connectivity(edge_index, edge_weight, symmetric, num_nodes,
+                           add_self_loops=False):
     if symmetric:
         edge_index, edge_weight = gcn_norm(edge_index,
                                            edge_weight,

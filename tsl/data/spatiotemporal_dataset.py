@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from copy import deepcopy
-from typing import Optional, Mapping, List, Union, Iterable, Tuple, Literal
+from typing import Optional, Mapping, List, Union, Iterable, Tuple, Literal, \
+    Callable
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,6 @@ from pandas import DatetimeIndex
 from torch import Tensor
 from torch.utils.data import Dataset
 from torch_geometric.typing import Adj
-from torch_geometric.utils import subgraph
 from torch_sparse import SparseTensor
 
 from tsl.typing import DataArray, TemporalIndex, IndexSlice, TensArray, \
@@ -20,9 +20,16 @@ from .data import Data
 from .mixin import DataParsingMixin
 from .preprocessing.scalers import Scaler, ScalerModule
 from .synch_mode import SynchMode, WINDOW, HORIZON, STATIC
+from ..ops.connectivity import reduce_graph
 from ..ops.pattern import outer_pattern, broadcast, take, check_pattern
 
-_WINDOWING_KEYS = ['target', 'window', 'delay', 'horizon', 'stride']
+_WINDOWING_ = {
+    'window': ['window', 'window_lag'],
+    'horizon': ['window', 'delay', 'horizon', 'horizon_lag'],
+    'indices': ['target', 'window', 'delay', 'horizon', 'stride'],
+    'all': ['target', 'window', 'delay', 'horizon', 'stride',
+            'horizon_lag', 'window_lag']
+}
 
 
 class SpatioTemporalDataset(Dataset, DataParsingMixin):
@@ -76,6 +83,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         trend (DataArray, optional): Trend paired with main signal. Must be of
             the same shape of `data`.
             (default: :obj:`None`)
+        transform (callable, optional): A function/transform that takes in a
+            :class:`tsl.data.Data` object and returns a transformed version.
+            The data object will be transformed before every access.
+            (default: :obj:`None`)
         item_pattern_layout (str): Specify the pattern convention when getting
             dataset samples. Possible options are :obj:`'time_then_node'`, if
             the time dimension precedes the nodes' one, or
@@ -115,6 +126,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                  auxiliary_map: Optional[Union[Mapping, BatchMap]] = None,
                  scalers: Optional[Mapping[str, Scaler]] = None,
                  trend: Optional[DataArray] = None,
+                 transform: Optional[Callable] = None,
                  item_pattern_layout: str = 'time_then_node',
                  window: int = 12,
                  horizon: int = 1,
@@ -154,6 +166,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # Store preprocessing modules
         self.scalers: dict = dict()
         self.trend: Optional[Tensor] = None
+        self.transform = transform
         # cache scalers for composed batch items
         self._batch_scalers: dict = dict()
         # handle trend as bias in target scaler, so cache actual one (if any)
@@ -224,6 +237,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             # convert slice to indexes
             item = self._get_time_index(item, layout='index')
         item = self.get(item)
+        if self.transform is not None:
+            item = self.transform(item)
         if self.item_pattern_layout == 'node_then_time':
             patterns = self.batch_patterns_rearrange
             if isinstance(item, Batch):
@@ -247,22 +262,29 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     def __setattr__(self, key, value):
         super(SpatioTemporalDataset, self).__setattr__(key, value)
-        if key in _WINDOWING_KEYS and all([hasattr(self, attr)
-                                           for attr in _WINDOWING_KEYS]):
+        if key in _WINDOWING_['window'] and \
+                all([hasattr(self, attr) for attr in _WINDOWING_['window']]):
+            self._window_range = torch.arange(0, self.window, self.window_lag)
+        if key in _WINDOWING_['horizon'] and \
+                all([hasattr(self, attr) for attr in _WINDOWING_['horizon']]):
+            self._horizon_range = torch.arange(self.horizon_offset,
+                                               self.horizon_offset +
+                                               self.horizon,
+                                               self.horizon_lag)
+        if key in _WINDOWING_['indices'] and \
+                all([hasattr(self, attr) for attr in _WINDOWING_['indices']]):
             self._indices = torch.arange(0, self.n_steps - self.sample_span + 1,
                                          self.stride)
 
     def __delattr__(self, item):
-        if item in _WINDOWING_KEYS:
+        if item in _WINDOWING_['all']:
             raise AttributeError(f"Cannot delete attribute '{item}'.")
         elif item == 'mask':
             self.set_mask(None)
         elif item == 'trend':
             self.set_trend(None)
         elif item in self._covariates:
-            del self._covariates[item]
-            if item in self.scalers:
-                del self.scalers[item]
+            self.remove_covariate(item)
         else:
             super(SpatioTemporalDataset, self).__delattr__(item)
 
@@ -318,7 +340,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             patterns['edge_index'] = '2 e' if isinstance(self.edge_index,
                                                          Tensor) else 'n n'
             if self.edge_weight is not None:
-                patterns['edge_weight'] = 'e f'
+                patterns['edge_weight'] = 'e'
         # add covariates patterns
         patterns.update({name: attr['pattern']
                          for name, attr in self._covariates.items()})
@@ -347,7 +369,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             patterns['edge_index'] = '2 e' if isinstance(self.edge_index,
                                                          Tensor) else 'n n'
             if self.edge_weight is not None:
-                patterns['edge_weight'] = 'e f'
+                patterns['edge_weight'] = 'e'
         # add target map patterns
         patterns.update({name: attr.pattern
                          for name, attr in self.target_map.items()})
@@ -451,7 +473,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             self.input_map[name] = BatchMapItem(name, SynchMode.WINDOW,
                                                 preprocess=True, cat_dim=None,
                                                 pattern=attr['pattern'],
-                                                shape=attr.size())
+                                                shape=attr['value'].size())
 
     def reset_target_map(self):
         self._clear_batch_map('target')
@@ -674,20 +696,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             assert dtype in ['bool', 'uint8', bool, torch.bool, torch.uint8]
             mask = mask.to(dtype)
         return mask
-
-    def item_node_index(self, item: int) -> Tensor:
-        """Get node index associated with item :attr:`item`."""
-        # todo
-        raise NotImplementedError
-
-    def item_edge_index(self, item: int) -> Adj:
-        """Get edge index associated with item :attr:`item`."""
-        # todo
-        if self.edge_index_per_item:
-            return self.edge_index_map[item]
-        if self.edge_index_per_timestep:
-            raise NotImplementedError
-        return self.edge_index
 
     # Getters helpers
 
@@ -922,6 +930,26 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             self.input_map[name] = BatchMapItem(name, **kwargs, cat_dim=None,
                                                 pattern=pattern, shape=shape)
 
+    def remove_covariate(self, name: str):
+        r"""Delete covariate from the dataset.
+
+        Args:
+            name (str): the name of the covariate to be deleted.
+        """
+        try:
+            # remove covariate
+            del self._covariates[name]
+            # remove associated scaler
+            if name in self.scalers:
+                del self.scalers[name]
+            # ATTENTION! remove entirely map item with covariate in keys
+            for _map in [self.input_map, self.target_map, self.auxiliary_map]:
+                for _map_item in _map:
+                    if name in _map_item.keys:
+                        del _map[_map_item]
+        except Exception as e:
+            raise e
+
     def add_exogenous(self, name: str, value: DataArray,
                       node_level: bool = True,
                       add_to_input_map: bool = True,
@@ -1062,14 +1090,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         node_index = self._get_node_index(node_index, layout='index')
         try:
             if self.edge_index is not None and node_index is not None:
-                if isinstance(self.edge_index, SparseTensor):
-                    self.edge_index = self.edge_index[node_index, node_index]
-                else:
-                    node_subgraph = subgraph(node_slice, self.edge_index,
-                                             self.edge_weight,
-                                             num_nodes=self.n_nodes,
-                                             relabel_nodes=True)
-                    self.edge_index, self.edge_weight = node_subgraph
+                self.edge_index, self.edge_weight = reduce_graph(
+                    node_index, self.edge_index, self.edge_weight,
+                    num_nodes=self.n_nodes)
             self.target = self.target[time_slice, node_slice]
             if self.index is not None:
                 self.index = self.index[time_index.numpy()]
@@ -1091,7 +1114,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     def change_windowing(self, **kwargs):
         default, indices = dict(), self._indices
         try:
-            assert all([k in _WINDOWING_KEYS[1:] for k in kwargs])
+            assert all([k in _WINDOWING_['all'][1:] for k in kwargs])
             for k, v in kwargs.items():
                 default[k] = getattr(self, k)
                 setattr(self, k, v)
@@ -1105,14 +1128,17 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     def get_window_indices(self, item):
         idx = self._indices[item]
-        window_range = range(0, self.window, self.window_lag)
-        return torch.stack([idx + t for t in window_range]).T
+        if idx.dim():  # idx is list of indices
+            return idx[:, None] + self._window_range[None]
+        else:  # idx is one index
+            return idx + self._window_range
 
     def get_horizon_indices(self, item):
         idx = self._indices[item]
-        horizon_range = range(self.horizon_offset, self.horizon_offset +
-                              self.horizon, self.horizon_lag)
-        return torch.stack([idx + t for t in horizon_range]).T
+        if idx.dim():  # idx is list of indices
+            return idx[:, None] + self._horizon_range[None]
+        else:  # idx is one index
+            return idx + self._horizon_range
 
     def set_indices(self, indices: TensArray):
         indices = torch.as_tensor(indices, dtype=torch.long)

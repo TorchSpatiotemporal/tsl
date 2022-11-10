@@ -9,9 +9,9 @@ from torch import Tensor
 from torch_geometric.data.data import Data as PyGData, size_repr
 from torch_geometric.data.storage import BaseStorage
 from torch_geometric.data.view import KeysView, ValuesView, ItemsView
-from torch_geometric.utils import subgraph
-from torch_sparse import SparseTensor
 
+from tsl.ops.connectivity import reduce_graph
+from tsl.ops.pattern import take
 from tsl.utils.python_utils import ensure_list
 
 
@@ -200,7 +200,8 @@ class Data(PyGData):
         # used when batching Data objects
         self.input._keys = data.input._keys  # noqa
         self.target._keys = data.target._keys  # noqa
-        self.__dict__['pattern'] = data.pattern
+        self.pattern.clear()
+        self.pattern.update(data.pattern)
         return self
 
     @property
@@ -255,21 +256,43 @@ class Data(PyGData):
             self.rearrange_element(key, pattern)
         return self
 
-    def subgraph(self, node_index):
-        if isinstance(self.edge_index, SparseTensor):
-            self.edge_index = self.edge_index[node_index, node_index]
-        elif isinstance(self.edge_index, Tensor):
-            node_subgraph = subgraph(node_index, self.edge_index,
-                                     self.edge_weight,
-                                     num_nodes=self.num_nodes,
-                                     relabel_nodes=True)
-            self.edge_index, self.edge_weight = node_subgraph
-        for key, value in self.items():
-            if key == 'edge_index' or key == 'edge_weight':
-                continue
-            if key in self.pattern and 'n' in self.pattern[key]:
-                node_dim = self.pattern[key].split(' ').index('n')
-                self[key] = torch.index_select(value, node_dim, node_index)
-                if key in self.transform:
-                    scaler = self.transform[key]
-                    self.transform[key] = scaler.slice(node_index=node_index)
+    def subgraph_(self, subset: Tensor):
+        # TODO update with new version of PyG with option to return edge_mask
+        edge_index, edge_weight = reduce_graph(subset,
+                                               edge_index=self.edge_index,
+                                               edge_attr=self.edge_weight,
+                                               num_nodes=self.num_nodes)
+
+        if subset.dtype == torch.bool:
+            num_nodes = int(subset.sum())
+        else:
+            num_nodes = subset.size(0)
+
+        for key, value in self:
+            if key == 'edge_index':
+                self.edge_index = edge_index
+            elif key == 'edge_weight':
+                self.edge_weight = edge_weight
+            elif key == 'num_nodes':
+                self.num_nodes = num_nodes
+            elif key in self.pattern:
+                self[key] = take(value, self.pattern[key], node_index=subset)
+                # elif 'e' in self.pattern[key]:
+                #     edge_dim = self.pattern[key].split(' ').index('e')
+                #     self[key] = torch.index_select(value, edge_dim, edge_mask)
+            elif isinstance(value, Tensor):
+                if self.is_node_attr(key):
+                    node_dim = self.__cat_dim__(key, value, self._store)
+                    self[key] = torch.index_select(value, node_dim, subset)
+                # elif self.is_edge_attr(key):
+                #     edge_dim = self.__cat_dim__(key, value, self._store)
+                #     self[key] = torch.index_select(value, edge_dim, edge_mask)
+            if key in self.transform:
+                scaler = self.transform[key]
+                self.transform[key] = scaler.slice(node_index=subset)
+
+        return self
+
+    def subgraph(self, subset: Tensor):
+        data = copy.copy(self)
+        return data.subgraph_(subset)
