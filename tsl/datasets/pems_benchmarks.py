@@ -271,4 +271,16 @@ class PeMS08(_PeMS):
 
 
 if __name__ == '__main__':
-    dataset = PeMS08()
+    import matplotlib.pyplot as plt
+    datasets = [PeMS03(), PeMS04(), PeMS07(), PeMS08()]
+    for d in datasets:
+        adj = d.get_connectivity(
+            method='binary',
+            threshold=0.1,
+            include_self=False,
+            layout='dense',
+            force_symmetric=True
+        )
+        plt.matshow(adj)
+        plt.show()
+

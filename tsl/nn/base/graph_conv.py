@@ -73,10 +73,10 @@ class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
         """"""
         out = self.lin(x)
 
-        edge_index, edge_weight = self._normalize_edge_index(x,
-                                                             edge_index=edge_index,
-                                                             edge_weight=edge_weight,
-                                                             use_cached=self.cached)
+        edge_index, edge_weight = self.normalize_edge_index(x,
+                                                            edge_index=edge_index,
+                                                            edge_weight=edge_weight,
+                                                            use_cached=self.cached)
 
         out = self.propagate(edge_index, x=out, edge_weight=edge_weight)
 

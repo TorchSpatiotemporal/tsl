@@ -15,10 +15,10 @@ class NormalizedAdjacencyMixin:
     cached: bool = False
     asymmetric_norm: bool = False
 
-    def _normalize_edge_index(self, x, edge_index, edge_weight, use_cached):
+    def normalize_edge_index(self, x, edge_index, edge_weight, use_cached):
         if use_cached:
             if self._cached_edge_index is None:
-                return self._normalize_edge_index(x, edge_index, edge_weight, False)
+                return self.normalize_edge_index(x, edge_index, edge_weight, False)
             return self._cached_edge_index
         edge_index, edge_weight = normalize_connectivity(edge_index,
                                                          edge_weight,

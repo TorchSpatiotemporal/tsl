@@ -111,10 +111,10 @@ class EvolveGCNHCell(_EvolveGCNCell):
 
     def forward(self, x, h, edge_index, edge_weight=None):
         """"""
-        edge_index, edge_weight = self._normalize_edge_index(x,
-                                                             edge_index,
-                                                             edge_weight,
-                                                             use_cached=self.cached)
+        edge_index, edge_weight = self.normalize_edge_index(x,
+                                                            edge_index,
+                                                            edge_weight,
+                                                            use_cached=self.cached)
 
         if h is None:
             W = repeat(self.W0, 'din dout -> b din dout', b=x.size(0))
@@ -180,7 +180,7 @@ class EvolveGCNOCell(_EvolveGCNCell):
 
     def forward(self, x, hs, edge_index, edge_weight=None):
         """"""
-        edge_index, edge_weight = self._normalize_edge_index(x, edge_index, edge_weight, use_cached=self.cached)
+        edge_index, edge_weight = self.normalize_edge_index(x, edge_index, edge_weight, use_cached=self.cached)
 
         if hs is None:
             W = repeat(self.W0, 'din dout -> b din dout', b=x.size(0))

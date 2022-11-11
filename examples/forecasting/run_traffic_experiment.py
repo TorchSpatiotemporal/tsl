@@ -111,15 +111,12 @@ def run_traffic(cfg: DictConfig):
 
     loss_fn = torch_metrics.MaskedMAE(compute_on_step=True)
 
-    log_metrics = {'mae': torch_metrics.MaskedMAE(compute_on_step=False),
-                   'mse': torch_metrics.MaskedMSE(compute_on_step=False),
-                   'mape': torch_metrics.MaskedMAPE(compute_on_step=False),
-                   'mae_at_15': torch_metrics.MaskedMAE(compute_on_step=False,
-                                                        at=2),  # 3rd is 15 min
-                   'mae_at_30': torch_metrics.MaskedMAE(compute_on_step=False,
-                                                        at=5),  # 6th is 30 min
-                   'mae_at_60': torch_metrics.MaskedMAE(compute_on_step=False,
-                                                        at=11)}  # 12th is 1 h
+    log_metrics = {'mae': torch_metrics.MaskedMAE(),
+                   'mse': torch_metrics.MaskedMSE(),
+                   'mape': torch_metrics.MaskedMAPE(),
+                   'mae_at_15': torch_metrics.MaskedMAE(at=2),  # 3rd is 15 min
+                   'mae_at_30': torch_metrics.MaskedMAE(at=5),  # 6th is 30 min
+                   'mae_at_60': torch_metrics.MaskedMAE(at=11)}  # 12th is 1 h
     if cfg.lr_scheduler is not None:
         scheduler_class = getattr(torch.optim.lr_scheduler, cfg.lr_scheduler.name)
         scheduler_kwargs = dict(cfg.lr_scheduler.hparams)

@@ -1,4 +1,8 @@
 #### Experiment params ########################################################
+hydra:
+  run:
+    dir: logs/${model.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
 seed: 42
 tags:
   - 'traffic'
