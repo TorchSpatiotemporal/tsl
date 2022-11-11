@@ -124,13 +124,12 @@ class Predictor(pl.LightningModule):
         return metric
 
     def _set_metrics(self, metrics):
-        self.train_metrics = MetricCollection(
-            {f'train_{k}': self._check_metric(m, on_step=True) for k, m in
-             metrics.items()})
-        self.val_metrics = MetricCollection(
-            {f'val_{k}': self._check_metric(m) for k, m in metrics.items()})
-        self.test_metrics = MetricCollection(
-            {f'test_{k}': self._check_metric(m) for k, m in metrics.items()})
+        self.train_metrics = MetricCollection(metrics={k: self._check_metric(m) for k, m in metrics.items()},
+                                              prefix='train')
+        self.val_metrics = MetricCollection(metrics={k: self._check_metric(m) for k, m in metrics.items()},
+                                            prefix='val')
+        self.test_metrics = MetricCollection(metrics={k: self._check_metric(m) for k, m in metrics.items()},
+                                             prefix='test')
 
     def log_metrics(self, metrics, **kwargs):
         """"""
@@ -199,35 +198,6 @@ class Predictor(pl.LightningModule):
             y = targets.get('y')
             return y, y_hat, mask
         return y_hat
-
-    def predict_loader(self, loader, preprocess=False, postprocess=True,
-                       return_mask=True):
-        """
-        Makes predictions for an input dataloader. Returns both the predictions and the predictions targets.
-
-        :param loader: torch dataloader
-        :param preprocess: whether to preprocess the data
-        :param postprocess: whether to postprocess the data
-        :param return_mask: whether to return the valid mask (if it exists)
-        :return: y_true, y_hat
-        """
-        targets, preds, masks = [], [], []
-        for batch in loader:
-            batch = move_data_to_device(batch, self.device)
-            y, y_hat, mask = self.predict_batch(batch,
-                                                preprocess=preprocess,
-                                                postprocess=postprocess,
-                                                return_target=True)
-            targets.append(y)
-            preds.append(y_hat)
-            masks.append(mask)
-
-        y = torch.cat(targets, 0)
-        y_hat = torch.cat(preds, 0)
-        if return_mask:
-            mask = torch.cat(masks, 0) if masks[0] is not None else None
-            return y, y_hat, mask
-        return y, y_hat
 
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
         """"""
