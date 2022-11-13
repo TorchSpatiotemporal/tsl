@@ -1,3 +1,6 @@
+import pandas as pd
+from torch_geometric.data.storage import recursive_apply
+from torch_geometric.typing import Adj
 from types import ModuleType
 from typing import Optional, Tuple, Union, List
 
@@ -10,7 +13,8 @@ from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.utils import add_remaining_self_loops, subgraph
 from torch_sparse import SparseTensor, fill_diag
 
-from tsl.typing import TensArray, OptTensArray, SparseTensArray
+from tsl.utils import casting
+from tsl.typing import TensArray, OptTensArray, SparseTensArray, DataArray, ScipySparseMatrix
 
 
 def maybe_num_nodes(edge_index, num_nodes=None):
@@ -339,3 +343,27 @@ def get_dummy_edge_index(dummy: str, num_nodes: int,
     else:
         raise NotImplementedError
     return edge_index
+
+
+def parse_connectivity(connectivity: Union[SparseTensArray, Tuple[DataArray]],
+                       target_layout: Optional[str] = None,
+                       num_nodes: Optional[int] = None
+                       ) -> Tuple[Optional[Adj], Optional[Tensor]]:
+    # Convert to torch
+    # from np.ndarray, pd.DataFrame or torch.Tensor
+    if isinstance(connectivity, (pd.DataFrame, np.ndarray, Tensor)):
+        connectivity = casting.copy_to_tensor(connectivity)
+    elif isinstance(connectivity, (list, tuple)):
+        connectivity = recursive_apply(connectivity, casting.copy_to_tensor)
+    # from scipy sparse matrix
+    elif isinstance(connectivity, ScipySparseMatrix.__args__):
+        connectivity = SparseTensor.from_scipy(connectivity)
+    elif not isinstance(connectivity, SparseTensor):
+        raise TypeError("`connectivity` must be a dense matrix or in "
+                        "COO format (i.e., an `edge_index`).")
+
+    if target_layout is not None:
+        connectivity = convert_torch_connectivity(connectivity,
+                                                  target_layout,
+                                                  num_nodes=num_nodes)
+    return connectivity

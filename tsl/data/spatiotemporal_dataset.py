@@ -806,8 +806,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                 inferred from the input.
                 (default: :obj:`None`)
         """
-        self.edge_index, self.edge_weight = self._parse_adj(connectivity,
-                                                            target_layout)
+        self.edge_index, self.edge_weight = self._parse_connectivity(connectivity,
+                                                                     target_layout)
 
     # Setter for covariates
 

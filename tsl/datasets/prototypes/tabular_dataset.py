@@ -139,14 +139,14 @@ class TabularDataset(Dataset, TabularParsingMixin):
         """Number of nodes in the dataset."""
         if self.is_target_dataframe:
             return len(self.nodes)
-        return self.shape[1]
+        return self.target.shape[1]
 
     @property
     def n_channels(self) -> int:
         """Number of channels in dataset's target."""
         if self.is_target_dataframe:
             return len(self.channels)
-        return self.shape[2]
+        return self.target.shape[2]
 
     @property
     def shape(self) -> tuple:

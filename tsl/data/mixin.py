@@ -3,13 +3,11 @@ from typing import Optional, Union, Tuple, Mapping, List
 import numpy as np
 import pandas as pd
 from torch import Tensor
-from torch_geometric.data.storage import recursive_apply
 from torch_geometric.typing import Adj
-from torch_sparse import SparseTensor
 
-from tsl.ops.connectivity import convert_torch_connectivity
-from tsl.typing import DataArray, SparseTensArray, ScipySparseMatrix
-from . import casting
+from tsl.ops.connectivity import parse_connectivity
+from tsl.typing import DataArray, SparseTensArray
+from ..utils import casting
 from ..ops.pattern import check_pattern, infer_pattern
 
 
@@ -42,31 +40,19 @@ class DataParsingMixin:
 
         return obj, pattern
 
-    def _parse_adj(self, connectivity: Union[SparseTensArray, Tuple[DataArray]],
-                   target_layout: Optional[str] = None
-                   ) -> Tuple[Optional[Adj], Optional[Tensor]]:
+    def _parse_connectivity(self, connectivity: Union[SparseTensArray, Tuple[DataArray]],
+                            target_layout: Optional[str] = None
+                            ) -> Tuple[Optional[Adj], Optional[Tensor]]:
         # target_layout in [dense, sparse, edge_index, None]
         # where None means keep as input
         if connectivity is None:
             return None, None
 
-        # Convert to torch
-        # from np.ndarray, pd.DataFrame or torch.Tensor
-        if isinstance(connectivity, (pd.DataFrame, np.ndarray, Tensor)):
-            connectivity = casting.copy_to_tensor(connectivity)
-        elif isinstance(connectivity, (list, tuple)):
-            connectivity = recursive_apply(connectivity, casting.copy_to_tensor)
-        # from scipy sparse matrix
-        elif isinstance(connectivity, ScipySparseMatrix.__args__):
-            connectivity = SparseTensor.from_scipy(connectivity)
-        elif not isinstance(connectivity, SparseTensor):
-            raise TypeError("`connectivity` must be a dense matrix or in "
-                            "COO format (i.e., an `edge_index`).")
-
-        if target_layout is not None:
-            connectivity = convert_torch_connectivity(connectivity,
-                                                      target_layout,
-                                                      num_nodes=self.n_nodes)
+        connectivity = parse_connectivity(
+            connectivity=connectivity,
+            target_layout=target_layout,
+            num_nodes=self.n_nodes
+        )
 
         if isinstance(connectivity, (list, tuple)):
             edge_index, edge_weight = connectivity

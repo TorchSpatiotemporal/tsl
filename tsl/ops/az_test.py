@@ -235,7 +235,7 @@ def _az_whiteness_test(x, mask, pattern,
         mask_node[:, edge_index_spatial[1]]))
 
     # Spatial normalization factor
-    # sums over all non masked edges (it considers already the dynamic graph
+    # sums over all unmasked edges (it considers already the dynamic graph
     # with all "repeated" edges)
     W_spatial = np.sum(edge_weight_spatial[mask_edge_spatial[1]] ** 2)
 

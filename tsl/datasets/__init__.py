@@ -13,6 +13,8 @@ from .mts_benchmarks import (
     ExchangeBenchmark
 )
 
+from .synthetic import GaussianNoiseSyntheticDataset
+
 dataset_classes = [
     'AirQuality',
     'Elergone',
@@ -21,7 +23,8 @@ dataset_classes = [
     'ElectricityBenchmark',
     'TrafficBenchmark',
     'SolarBenchmark',
-    'ExchangeBenchmark'
+    'ExchangeBenchmark',
+    'GaussianNoiseSyntheticDataset'
 ]
 
 __all__ = prototype_classes + dataset_classes
