@@ -1,5 +1,6 @@
 import re
 from collections import Counter
+from types import ModuleType
 from typing import Iterable, Union, List, Optional
 
 import numpy as np
@@ -12,6 +13,8 @@ _PATTERNS = {
     'btnef': re.compile('^b?t?(n{0,2}|e?)f*$'),
 }
 
+
+#  PATTERN PARSING ############################################################
 
 def check_pattern(pattern: str, split: bool = False, ndim: int = None,
                   include_batch: bool = False) -> Union[str, list]:
@@ -93,34 +96,93 @@ def infer_pattern(shape: tuple, t: Optional[int] = None,
 
 
 def outer_pattern(patterns: Iterable[str]):
-    dims = dict(t=0, n=0, f=0)
+    dims = dict(t=0, n=0, e=0, f=0)
     for pattern in patterns:
         dim_count = Counter(check_pattern(pattern, split=True))
         for dim, count in dim_count.items():
             dims[dim] = max(dims[dim], count)
     dims = [d for dim, count in dims.items() for d in [dim] * count]
+    if 'n' in dims and 'e' in dims:
+        raise RuntimeError("Cannot join node-level and edge-level tensors.")
     return ' '.join(dims)
+
+
+#  PATTERN-BASED OPERATIONS ###################################################
+
+def _infer_backend(obj, backend: ModuleType = None):
+    if backend is not None:
+        return backend
+    elif isinstance(obj, Tensor):
+        return torch
+    elif isinstance(obj, np.ndarray):
+        return np
+    raise RuntimeError(f"Cannot infer valid backed from {type(obj)}. "
+                       "Expected backends are 'torch' and 'numpy'.")
+
+
+def _parse_indices(backend,
+                   time_index: Union[List, ndarray, Tensor] = None,
+                   node_index: Union[List, ndarray, Tensor] = None,
+                   edge_mask: Union[List, ndarray, Tensor] = None):
+    indices = [time_index, node_index, edge_mask]
+    if backend is torch:
+        for i, index in enumerate(indices):
+            if index is not None:
+                if not isinstance(index, Tensor):
+                    index = torch.as_tensor(index)
+                if index.ndim == 1 and index.dtype is torch.bool:
+                    index = index.nonzero(as_tuple=True)[0]
+            indices[i] = index
+    elif backend is np:
+        for i, index in enumerate(indices):
+            if index is not None:
+                index = np.asarray(index)
+                if index.ndim == 1 and index.dtype == bool:
+                    index = index.nonzero()[0]
+            indices[i] = index
+    return indices
+
+
+def _get_select_fn(backend):
+    select = None
+    if backend is np:
+        def select(obj, index, dim):
+            return obj.take(index, dim)
+    elif backend is torch:
+        def select(obj, index, dim):
+            return obj.index_select(dim, index)
+    return select
+
+
+def _get_expand_fn(backend):
+    expand = None
+    if backend is np:
+        def expand(obj, size, dim):
+            obj = np.expand_dims(obj, dim)
+            if size > 1:
+                obj = obj.repeat(size, dim)
+            return obj
+    elif backend is torch:
+        def expand(obj, size, dim):
+            obj = obj.unsqueeze(dim)
+            shape = [size if i == dim else -1 for i in range(obj.ndim)]
+            return obj.expand(shape)
+    return expand
 
 
 def take(x: Union[np.ndarray, torch.Tensor], pattern: str,
          time_index: Union[List, ndarray, Tensor] = None,
-         node_index: Union[List, ndarray, Tensor] = None):
+         node_index: Union[List, ndarray, Tensor] = None,
+         edge_mask: Union[List, ndarray, Tensor] = None,
+         *, backend: ModuleType = None):
+    backend = _infer_backend(x, backend)
     dims = check_pattern(pattern, split=True)
 
-    # select backend
-    if isinstance(x, np.ndarray):
-        def select(obj, index, dim):
-            return obj.take(index, dim)
-    elif isinstance(x, torch.Tensor):
-        def select(obj, index, dim):
-            return obj.index_select(dim, index)
-        if time_index is not None and not isinstance(time_index, Tensor):
-            time_index = torch.as_tensor(time_index, dtype=torch.long)
-        if node_index is not None and not isinstance(node_index, Tensor):
-            node_index = torch.as_tensor(node_index, dtype=torch.long)
-    else:
-        raise RuntimeError("Can slice only object of type "
-                           "'np.ndarray' and 'torch.Tensor'.")
+    select = _get_select_fn(backend)
+    time_index, node_index, edge_index = _parse_indices(backend,
+                                                        time_index=time_index,
+                                                        node_index=node_index,
+                                                        edge_mask=edge_mask)
 
     # assume that 't' can only be first dimension, then allow multidimensional
     # temporal indexing
@@ -138,14 +200,19 @@ def take(x: Union[np.ndarray, torch.Tensor], pattern: str,
     for pos, dim in list(enumerate(dims))[pad_dim:]:
         if dim == 'n' and node_index is not None:
             x = select(x, node_index, pos)
+        elif dim == 'e' and edge_index is not None:
+            x = select(x, edge_index, pos)
 
     return x
 
 
 def broadcast(x: Union[np.ndarray, torch.Tensor], pattern: str,
-              t: int = 1, n: int = 1, f: int = 1,
               time_index: Union[List, ndarray, Tensor] = None,
-              node_index: Union[List, ndarray, Tensor] = None):
+              node_index: Union[List, ndarray, Tensor] = None,
+              edge_mask: Union[List, ndarray, Tensor] = None,
+              *,
+              t: int = 1, n: int = 1, e: int = 1, f: int = 1,
+              backend: ModuleType = None):
     # check patterns
     left, rght = pattern.split('->')
     left_dims = check_pattern(left, split=True)
@@ -154,38 +221,18 @@ def broadcast(x: Union[np.ndarray, torch.Tensor], pattern: str,
         raise RuntimeError(f"Shape {left_dims} cannot be "
                            f"broadcasted to {rght.strip()}.")
 
-    # select backend
-    if isinstance(x, np.ndarray):
-        def select(obj, index, dim):
-            return obj.take(index, dim)
-
-        def expand(obj, size, dim):
-            obj = np.expand_dims(obj, dim)
-            if size > 1:
-                obj = obj.repeat(size, dim)
-            return obj
-    elif isinstance(x, torch.Tensor):
-        def select(obj, index, dim):
-            return obj.index_select(dim, index)
-
-        def expand(obj, size, dim):
-            obj = obj.unsqueeze(dim)
-            shape = [size if i == dim else -1 for i in range(obj.ndim)]
-            return obj.expand(shape)
-    else:
-        raise RuntimeError("Can broadcast to pattern only object of type "
-                           "'np.ndarray' and 'torch.Tensor'.")
+    select = _get_select_fn(backend)
+    expand = _get_expand_fn(backend)
+    time_index, node_index, edge_index = _parse_indices(backend,
+                                                        time_index=time_index,
+                                                        node_index=node_index,
+                                                        edge_mask=edge_mask)
 
     # build indices and default values for broadcasting
-    dim_map = dict(t=t, n=n, f=f)
-    if time_index is not None:
-        dim_map['t'] = len(time_index)
-        if isinstance(x, torch.Tensor):
-            time_index = torch.as_tensor(time_index, dtype=torch.long)
-    if node_index is not None:
-        dim_map['n'] = len(node_index)
-        if isinstance(x, torch.Tensor):
-            node_index = torch.as_tensor(node_index, dtype=torch.long)
+    dim_map = dict(t=t if time_index is None else len(time_index),
+                   n=n if node_index is None else len(node_index),
+                   e=e if edge_index is None else len(edge_index),
+                   f=f)
 
     # assume that 't' can only be first dimension, then allow multidimensional
     # temporal indexing
@@ -216,4 +263,6 @@ def broadcast(x: Union[np.ndarray, torch.Tensor], pattern: str,
             left_dims.insert(pos, rght_dim)
         elif rght_dim == 'n' and node_index is not None:
             x = select(x, node_index, pos)
+        elif rght_dim == 'e' and edge_index is not None:
+            x = select(x, edge_index, pos)
     return x

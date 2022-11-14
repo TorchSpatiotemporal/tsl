@@ -257,11 +257,9 @@ class Data(PyGData):
         return self
 
     def subgraph_(self, subset: Tensor):
-        # TODO update with new version of PyG with option to return edge_mask
-        edge_index, edge_weight = reduce_graph(subset,
-                                               edge_index=self.edge_index,
-                                               edge_attr=self.edge_weight,
-                                               num_nodes=self.num_nodes)
+        edge_index, edge_mask = reduce_graph(subset,
+                                             edge_index=self.edge_index,
+                                             num_nodes=self.num_nodes)
 
         if subset.dtype == torch.bool:
             num_nodes = int(subset.sum())
@@ -272,21 +270,21 @@ class Data(PyGData):
             if key == 'edge_index':
                 self.edge_index = edge_index
             elif key == 'edge_weight':
-                self.edge_weight = edge_weight
+                self.edge_weight = self.edge_weight[edge_mask]
             elif key == 'num_nodes':
                 self.num_nodes = num_nodes
+            # prefer pattern indexing if available
             elif key in self.pattern:
-                self[key] = take(value, self.pattern[key], node_index=subset)
-                # elif 'e' in self.pattern[key]:
-                #     edge_dim = self.pattern[key].split(' ').index('e')
-                #     self[key] = torch.index_select(value, edge_dim, edge_mask)
+                self[key] = take(value, self.pattern[key],
+                                 node_index=subset, edge_mask=edge_mask)
+            # fallback to PyG indexing (cannot index on multiple node dim)
             elif isinstance(value, Tensor):
                 if self.is_node_attr(key):
                     node_dim = self.__cat_dim__(key, value, self._store)
                     self[key] = torch.index_select(value, node_dim, subset)
-                # elif self.is_edge_attr(key):
-                #     edge_dim = self.__cat_dim__(key, value, self._store)
-                #     self[key] = torch.index_select(value, edge_dim, edge_mask)
+                elif self.is_edge_attr(key):
+                    edge_dim = self.__cat_dim__(key, value, self._store)
+                    self[key] = torch.index_select(value, edge_dim, edge_mask)
             if key in self.transform:
                 scaler = self.transform[key]
                 self.transform[key] = scaler.slice(node_index=subset)

@@ -595,10 +595,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # if there is an out-pattern, create new scaler
         scaler = ScalerModule(self.scalers[key], pattern=pattern)
         pattern = self.patterns[key] + ' -> ' + pattern
-        scaler.bias = broadcast(scaler.bias, pattern,
+        scaler.bias = broadcast(scaler.bias, pattern, backend=torch,
                                 time_index=time_index,
                                 node_index=node_index)
-        scaler.scale = broadcast(scaler.scale, pattern,
+        scaler.scale = broadcast(scaler.scale, pattern, backend=torch,
                                  time_index=time_index,
                                  node_index=node_index)
         return scaler
@@ -608,7 +608,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                       node_index: Union[List, Tensor] = None):
         x = getattr(self, key)
         pattern = self.patterns[key] + ' -> ' + pattern
-        x = broadcast(x, pattern, t=self.n_steps, n=self.n_nodes,
+        x = broadcast(x, pattern, t=self.n_steps, n=self.n_nodes, backend=torch,
                       time_index=time_index, node_index=node_index)
         return x
 
@@ -623,7 +623,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # convert indices
         time_index = self._get_time_index(time_index, layout='index')
         node_index = self._get_time_index(node_index, layout='index')
-        x = take(getattr(self, key), self.patterns[key],
+        x = take(getattr(self, key), self.patterns[key], backend=torch,
                  time_index=time_index, node_index=node_index)
 
         # get scaler (if any)
