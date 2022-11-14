@@ -27,7 +27,7 @@ def _gcn_gso(edge_index, num_nodes):
 
 
 class _GPVAR(GraphPolyVAR):
-    def forward(self, x, edge_index, edge_weight, h=None):
+    def forward(self, x, edge_index, edge_weight, h=None, t=None):
         out = super(_GPVAR, self).forward(x, edge_index, edge_weight)
         return torch.tanh(out), None
 
@@ -110,4 +110,7 @@ class GPVARDatasetAZ(GPVARDataset):
 
 if __name__ == '__main__':
     dataset = GPVARDatasetAZ()
+    f, axs = plt.subplots(20, 1, sharex=True)
+    for i, ax in enumerate(axs):
+        ax.plot(x[-100:,i])
     print('done')

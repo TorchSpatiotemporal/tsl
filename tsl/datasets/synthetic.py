@@ -100,6 +100,7 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
             for t in range(self._min_window, self._min_window + self._num_steps):
                 x_t, h_t = self.model(x[None, t - self._min_window: t],
                                       h=h_t,
+                                      t=t,
                                       edge_index=edge_index,
                                       edge_weight=edge_weight)
                 x_t += torch.zeros_like(x_t).normal_(generator=rng) * self.sigma_noise
