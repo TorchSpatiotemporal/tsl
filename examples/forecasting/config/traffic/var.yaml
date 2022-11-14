@@ -1,0 +1,14 @@
+defaults:
+  - default
+  - _self_
+
+model:
+  name: var
+  hparams:
+    temporal_order: 3
+
+optimizer:
+  hparams:
+    lr: 0.01
+
+lr_scheduler: null

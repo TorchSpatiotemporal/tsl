@@ -23,6 +23,10 @@ def get_model_class(model_str):
         model = models.STCNModel
     elif model_str == 'gwnet':
         model = models.GraphWaveNetModel
+    elif model_str == 'ar':
+        model = models.ARModel
+    elif model_str == 'var':
+        model = models.VARModel
     elif model_str == 'rnn':
         model = models.RNNModel
     elif model_str == 'fcrnn':

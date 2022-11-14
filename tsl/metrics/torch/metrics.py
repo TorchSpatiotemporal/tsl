@@ -57,6 +57,7 @@ class MaskedMAPE(MaskedMetric):
         super(MaskedMAPE, self).__init__(metric_fn=mape,
                                          mask_nans=mask_nans,
                                          mask_inf=True,
+                                         metric_fn_kwargs={'reduction': 'none'},
                                          at=at,
                                          **kwargs)
 
