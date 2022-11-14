@@ -2,6 +2,7 @@ from typing import Callable, Optional, Union, Any
 
 import numpy as np
 import pandas as pd
+import torch
 
 import tsl
 from tsl.typing import Index, FrameArray, Scalar, FillOptions
@@ -18,6 +19,10 @@ def framearray_to_numpy(x: FrameArray) -> np.ndarray:
         return x.values.reshape((-1, *cols.levshape))
     return np.asarray(x)
 
+
+def framearray_to_tensor(x: FrameArray) -> torch.Tensor:
+    x_numpy = framearray_to_numpy(x)
+    return torch.Tensor(x_numpy)
 
 def framearray_to_dataframe(x: FrameArray, index=None, columns=None) \
         -> pd.DataFrame:

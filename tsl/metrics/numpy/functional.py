@@ -26,7 +26,8 @@ def _masked_reduce(x: FrameArray, reduction: ReductionType,
         return x
     # 'mean'/'sum': return mean/sum of x[mask == True]
     if mask is not None:
-        x = x[framearray_to_numpy(mask)]
+        mask = framearray_to_numpy(mask).astype(np.bool)
+        x = x[mask]
     if reduction == 'mean':
         return np.mean(x)
     elif reduction == 'sum':
@@ -268,10 +269,9 @@ def nrmse_2(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None,
                 float: The power-normalzized NRMSE.
             """
     if mask is None:
-        mask = slice(None)
+        power_y = np.square(y).sum()
     else:
-        mask = np.asarray(mask, dtype=bool)
-    power_y = np.square(y[mask]).sum()
+        power_y = np.square(y[np.asarray(mask, dtype=bool)]).sum()
     return rmse(y_hat, y, mask, reduction) / power_y
 
 
@@ -300,7 +300,7 @@ def r2(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None) -> f
         mask = slice(None)
     else:
         mask = np.asarray(mask, dtype=bool)
-    return 1. - np.square(y_hat[mask] - y[mask]).sum() / (np.square(y[mask].mean() - y[mask]).sum())
+    return 1. - np.square(y_hat[mask] - y[mask]).sum() / (np.square(y[mask].mean(axis=0) - y[mask]).sum())
 
 
 # TODO align with others
