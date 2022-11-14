@@ -125,11 +125,11 @@ class Predictor(pl.LightningModule):
 
     def _set_metrics(self, metrics):
         self.train_metrics = MetricCollection(metrics={k: self._check_metric(m) for k, m in metrics.items()},
-                                              prefix='train')
+                                              prefix='train_')
         self.val_metrics = MetricCollection(metrics={k: self._check_metric(m) for k, m in metrics.items()},
-                                            prefix='val')
+                                            prefix='val_')
         self.test_metrics = MetricCollection(metrics={k: self._check_metric(m) for k, m in metrics.items()},
-                                             prefix='test')
+                                             prefix='test_')
 
     def log_metrics(self, metrics, **kwargs):
         """"""

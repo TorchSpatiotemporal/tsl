@@ -48,8 +48,7 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
         spatial_order = filter_params.shape[0] - 1  # l
         model = cls(spatial_order=spatial_order,
                     temporal_order=temporal_order,
-                    gcn_norm=gcn_norm,
-                    activation=activation)
+                    gcn_norm=gcn_norm)
         model.weight = torch.nn.Parameter(filter_params)
         return model
 
@@ -68,7 +67,7 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
 
         # [b n p] -> [b n l]
         h = F.linear(out, self.weight)
-        for l in range(1, self.spatial_order):
+        for l in range(1, self.spatial_order + 1):
             h[..., l:] = self.propagate(edge_index=edge_index, x=h[..., l:], norm=edge_weight)
 
         # [... n l] -> [... t=1 n f=1]

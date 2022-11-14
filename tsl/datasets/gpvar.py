@@ -34,10 +34,16 @@ class _GPVAR(GraphPolyVAR):
 
 class GPVARDataset(GaussianNoiseSyntheticDataset):
     """
-    A synthetic dataset generated from a GraphPolyVarFilter filter on a
-    TriCommunityGraph graph.
-    """
+    Generator for synthetic datasets from GraphPolyVar filters on triangular community graphs (see Zambon et al.,
+    "AZ-whiteness test: a test for uncorrelated noise on spatio-temporal graphs", NeurIPS 22).
 
+    Args:
+        num_communities (int): Number of communities (traingles) in the graph
+        num_steps (int): Lenght of the generated sequence.
+        filter_params (Tensor): Parameters of Graph Polinomial filter used to generate the dataset.
+        sigma_noise (float): Standard deviation of the noise.
+        name (optional, str): Name of the dataset.
+    """
     def __init__(self,
                  num_communities,
                  num_steps,
@@ -65,10 +71,17 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
 
 
 class GPVARDatasetAZ(GPVARDataset):
+    """
+    GPVARDataset generated with the same configuration used in Zambon et al., "AZ-whiteness test: a test for
+    uncorrelated noise on spatio-temporal graphs", NeurIPS 22.
+
+    Args:
+        root (optional, str): path to the directory to use for data storage.
+    """
     seed = 1234
     NUM_COMMUNITIES = 5
     NUM_STEPS = 30000
-    SIGMA_NOISE = 0.2
+    SIGMA_NOISE = 0.4
 
     def __init__(self, root=None):
         self.root = root
@@ -79,7 +92,7 @@ class GPVARDatasetAZ(GPVARDataset):
                                              num_steps=self.NUM_STEPS,
                                              filter_params=filter_params,
                                              sigma_noise=self.SIGMA_NOISE,
-                                             name='GPVAR-AZ-Dataset')
+                                             name='GPVAR-AZ')
 
     @property
     def required_file_names(self):
