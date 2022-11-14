@@ -10,7 +10,7 @@ from tsl.data.preprocessing import StandardScaler
 from tsl.datasets import MetrLA, PemsBay
 from tsl.datasets.pems_benchmarks import PeMS03, PeMS04, PeMS07, PeMS08
 from tsl.experiment import Experiment
-from tsl.inference import Predictor
+from tsl.engines import Predictor
 from tsl.metrics import torch as torch_metrics, numpy as numpy_metrics
 from tsl.nn import models
 from tsl.nn.utils import casting
