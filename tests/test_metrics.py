@@ -4,7 +4,7 @@ import torch
 import numpy as np
 
 from tsl.data import Batch
-from tsl.inference.predictor import Predictor
+from tsl.engines.predictor import Predictor
 from tsl.metrics.torch import MaskedPinballLoss
 from tsl.nn.models.temporal.tcn_model import TCNModel
 from tsl.metrics.torch.metrics import MaskedMAE, MaskedMSE, MaskedMAPE, MaskedMRE
