@@ -1,20 +1,21 @@
-import pandas as pd
-from torch_geometric.data.storage import recursive_apply
-from torch_geometric.typing import Adj
 from types import ModuleType
 from typing import Optional, Tuple, Union, List
 
 import numpy as np
+import pandas as pd
 import torch
 import torch_sparse
 from scipy.sparse import coo_matrix
 from torch import Tensor
+from torch_geometric.data.storage import recursive_apply
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
+from torch_geometric.typing import Adj
 from torch_geometric.utils import add_remaining_self_loops, subgraph
 from torch_sparse import SparseTensor, fill_diag
 
+from tsl.typing import TensArray, OptTensArray, SparseTensArray, DataArray, \
+    ScipySparseMatrix
 from tsl.utils import casting
-from tsl.typing import TensArray, OptTensArray, SparseTensArray, DataArray, ScipySparseMatrix
 
 
 def maybe_num_nodes(edge_index, num_nodes=None):
@@ -181,19 +182,34 @@ def transpose(edge_index: SparseTensArray, edge_weights: OptTensArray = None) \
 
 def reduce_graph(subset: Union[Tensor, List[int]],
                  edge_index: SparseTensArray,
-                 edge_attr: OptTensArray = None,
-                 num_nodes: Optional[int] = None) \
+                 num_nodes: Optional[int] = None,
+                 backend: ModuleType = None) \
         -> Tuple[TensArray, OptTensArray]:
-    # TODO update with new version of PyG with option to return edge_mask
-    if isinstance(edge_index, Tensor):
-        return subgraph(subset, edge_index,
-                        edge_attr=edge_attr,
-                        relabel_nodes=True,
-                        num_nodes=num_nodes)
+    """Returns the subgraph with all nodes in :attr:`subset` and only the edges
+    between them.
+
+    Args:
+        subset: The index of the nodes in the output subgraph.
+        edge_index: Adjacency matrix as COO :obj:`edge_index` or
+            :class:`torch_sparse.SparseTensor`.
+        num_nodes: The number of nodes.
+            (default: :obj:`None`)
+        backend (ModuleType, optional): Backend matching :obj:`edge_index` type
+            (either :mod:`numpy` or :mod:`torch`), if :obj:`None` it is inferred
+            from :obj:`edge_index` type.
+            (default :obj:`None`)
+
+    Returns:
+        tuple: edge_index, edge_mask
+    """
+    backend = infer_backend(edge_index, backend)
+    if backend is torch:
+        edge_index, _, edge_mask = subgraph(subset, edge_index,
+                                            return_edge_mask=True,
+                                            relabel_nodes=True,
+                                            num_nodes=num_nodes)
+        return edge_index, edge_mask
     else:
-        if edge_attr is not None:
-            raise RuntimeError("Cannot reduce graph with N x N connectivity "
-                               "and edge_attr.")
         edge_index = edge_index[subset, subset]
         return edge_index, None
 
