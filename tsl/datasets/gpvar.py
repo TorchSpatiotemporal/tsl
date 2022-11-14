@@ -106,11 +106,3 @@ class GPVARDatasetAZ(GPVARDataset):
         self.maybe_build()
         x = np.load(self.required_files_paths[0])
         return x, np.ones_like(x)
-
-
-if __name__ == '__main__':
-    dataset = GPVARDatasetAZ()
-    f, axs = plt.subplots(20, 1, sharex=True)
-    for i, ax in enumerate(axs):
-        ax.plot(x[-100:,i])
-    print('done')

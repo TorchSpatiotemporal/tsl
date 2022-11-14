@@ -62,11 +62,14 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
         else:
             self.model = model_class(**model_kwargs)
         self.sigma_noise = sigma_noise
-        self.connectivity = parse_connectivity(
-            connectivity,
-            target_layout='edge_index',
-            num_nodes=num_nodes
-        )
+        if connectivity is not None:
+            self.connectivity = parse_connectivity(
+                connectivity,
+                target_layout='edge_index',
+                num_nodes=num_nodes
+            )
+        else:
+            self.connectivity = None
 
         target, mask = self.load()
         super().__init__(target=target,
@@ -94,7 +97,11 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
                          self._num_nodes,
                          self._num_features)).normal_(generator=rng) * self.sigma_noise
 
-        edge_index, edge_weight = self.connectivity
+        if self.connectivity is None:
+            edge_index = edge_weight = None
+        else:
+            edge_index, edge_weight = self.connectivity
+
         with torch.no_grad():
             h_t = None
             for t in range(self._min_window, self._min_window + self._num_steps):
@@ -110,5 +117,8 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
         return x, np.ones_like(x)
 
     def get_connectivity(self,  layout: str = 'edge_index'):
+        if self.connectivity is None:
+            return self.connectivity
         return parse_connectivity(connectivity=self.connectivity,
+                                  target_layout=layout,
                                   num_nodes=self.n_nodes)
