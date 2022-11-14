@@ -7,7 +7,7 @@ from .mixin import TemporalFeaturesMixin
 from .tabular_dataset import TabularDataset
 
 
-class PandasDataset(TabularDataset, TemporalFeaturesMixin):
+class DatetimeDataset(TabularDataset, TemporalFeaturesMixin):
     r"""Create a tsl dataset from a :class:`pandas.DataFrame`.
 
     Args:

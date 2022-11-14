@@ -6,10 +6,10 @@ import pandas as pd
 from tsl import logger
 from tsl.ops.similarities import gaussian_kernel
 from tsl.utils import download_url, extract_zip
-from .prototypes import PandasDataset
+from .prototypes import DatetimeDataset
 
 
-class PemsBay(PandasDataset):
+class PemsBay(DatetimeDataset):
     r"""The dataset contains 6 months of traffic readings from 01/01/2017 to
     05/31/2017 collected every 5 minutes by 325 traffic sensors in San Francisco
     Bay Area.

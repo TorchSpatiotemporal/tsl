@@ -3,10 +3,10 @@ import os
 
 import tsl
 from tsl.utils import download_url
-from tsl.datasets.prototypes import PandasDataset
+from tsl.datasets.prototypes import DatetimeDataset
 
 
-class _MTSBenchmarkDataset(PandasDataset):
+class _MTSBenchmarkDataset(DatetimeDataset):
     """Abstract class for loading datasets from
     https://github.com/laiguokun/multivariate-time-series-data.
 

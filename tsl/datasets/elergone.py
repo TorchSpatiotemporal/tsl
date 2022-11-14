@@ -7,11 +7,11 @@ import os
 import tsl
 from tsl.utils import download_url, extract_zip
 from tsl.datasets.prototypes import casting
-from tsl.datasets.prototypes import PandasDataset
+from tsl.datasets.prototypes import DatetimeDataset
 from tsl.ops import similarities as sims
 
 
-class Elergone(PandasDataset):
+class Elergone(DatetimeDataset):
     """Load profiles of 370 points collected every 15 minutes from 2011 to 2014.
 
     Raw data at https://archive.ics.uci.edu/ml/datasets/ElectricityLoadDiagrams20112014.

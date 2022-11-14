@@ -130,7 +130,7 @@ Get started
    modules/data
    modules/datasets
    modules/nn
-   modules/inference_modules
+   modules/engines
    modules/metrics
    modules/experiment
    modules/ops

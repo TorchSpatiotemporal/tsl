@@ -98,11 +98,11 @@ class TabularDataset(Dataset, TabularParsingMixin):
         # Set dataset's main signal
         self.target = self._parse_target(target)
 
-        from .pd_dataset import PandasDataset
-        if not isinstance(self, PandasDataset) \
+        from .datetime_dataset import DatetimeDataset
+        if not isinstance(self, DatetimeDataset) \
                 and casting.is_datetime_like_index(self.index):
             logger.warn("It seems you have timestamped data. You may "
-                        "consider to use DateTimeDataset instead.")
+                        "consider to use tsl.datasets.DatetimeDataset instead.")
 
         self.mask: Optional[np.ndarray] = None
         self.set_mask(mask)

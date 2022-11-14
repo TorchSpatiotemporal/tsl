@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 
 from tsl import logger
-from .prototypes import PandasDataset
+from .prototypes import DatetimeDataset
 from ..ops.similarities import gaussian_kernel
 from ..utils import download_url, extract_zip
 
 
-class MetrLA(PandasDataset):
+class MetrLA(DatetimeDataset):
     r"""Traffic readings collected from 207 loop detectors on
     highways in Los Angeles County, aggregated in 5 minutes intervals over four
     months between March 2012 and June 2012.

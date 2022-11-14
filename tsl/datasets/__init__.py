@@ -1,5 +1,5 @@
 # Interfaces
-from .prototypes import Dataset, TabularDataset, PandasDataset
+from .prototypes import Dataset, TabularDataset, DatetimeDataset
 from .prototypes import classes as prototype_classes
 # Datasets
 from .air_quality import AirQuality

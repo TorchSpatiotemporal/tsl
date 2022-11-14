@@ -7,10 +7,10 @@ import pandas as pd
 from tsl import logger
 from tsl.ops.similarities import gaussian_kernel
 from tsl.utils import download_url, extract_zip
-from tsl.datasets.prototypes import PandasDataset
+from tsl.datasets.prototypes import DatetimeDataset
 
 
-class _PeMS(PandasDataset):
+class _PeMS(DatetimeDataset):
     r"""
     Abstract class for PeMSD datasets.
     """

@@ -6,7 +6,7 @@ import pandas as pd
 
 from tsl.data.datamodule.splitters import disjoint_months, Splitter
 from tsl.data.synch_mode import HORIZON
-from tsl.datasets.prototypes import PandasDataset
+from tsl.datasets.prototypes import DatetimeDataset
 from tsl.datasets.prototypes.mixin import MissingValuesMixin
 from tsl.utils import download_url, extract_zip
 
@@ -85,7 +85,7 @@ class AirQualitySplitter(Splitter):
         self.set_indices(train_idxs, val_idxs, test_idxs)
 
 
-class AirQuality(PandasDataset, MissingValuesMixin):
+class AirQuality(DatetimeDataset, MissingValuesMixin):
     r"""Measurements of pollutant :math:`PM2.5` collected by 437 air quality
     monitoring stations spread across 43 Chinese cities from May 2014 to April
     2015.
