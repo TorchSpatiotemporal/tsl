@@ -43,7 +43,7 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
         nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
 
     @classmethod
-    def from_params(cls, filter_params, gcn_norm=False, activation='linear'):
+    def from_params(cls, filter_params, gcn_norm=False):
         temporal_order = filter_params.shape[1]  # p
         spatial_order = filter_params.shape[0] - 1  # l
         model = cls(spatial_order=spatial_order,

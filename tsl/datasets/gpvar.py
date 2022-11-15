@@ -58,8 +58,7 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
         num_nodes = len(node_idx)
         connectivity = _gcn_gso(torch.tensor(edge_index), num_nodes)
 
-        filter = _GPVAR.from_params(filter_params=torch.tensor(filter_params),
-                                    activation='tanh')
+        filter = _GPVAR.from_params(filter_params=torch.tensor(filter_params))
         super(GPVARDataset, self).__init__(num_features=1,
                                            num_nodes=num_nodes,
                                            num_steps=num_steps,
