@@ -80,19 +80,19 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
         self.add_covariate('optimal_pred', optimal_pred, 't n f')
 
     def load_raw(self, *args, **kwargs):
-        return self.generate_data()
+        return self.generate_data(self.seed)
 
     @property
     def mae_optimal_model(self):
         """ E[|X|] of a Gaussian X"""
         return math.sqrt(2.0 / math.pi) * self.sigma_noise
 
-    def generate_data(self):
+    def generate_data(self, seed=None):
         r"""
         """
         rng = torch.Generator()
-        if self.seed is not None:
-            rng.manual_seed(self.seed)
+        if seed is not None:
+            rng.manual_seed(seed)
 
         # initialize with noise
         x = torch.empty((self._num_steps + self._min_window,

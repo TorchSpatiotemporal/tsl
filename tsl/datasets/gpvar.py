@@ -100,7 +100,7 @@ class GPVARDatasetAZ(GPVARDataset):
         return [f'GPVAR_AZ.npy']
 
     def build(self) -> None:
-        x, y_opt, _ = self.generate_data()
+        x, y_opt, _ = self.generate_data(seed=self.seed)
         np.save(self.required_files_paths[0], np.stack([x, y_opt]))
 
     def load_raw(self, *args, **kwargs):
