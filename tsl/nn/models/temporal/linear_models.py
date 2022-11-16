@@ -30,8 +30,8 @@ class ARModel(BaseModel):
         super(ARModel, self).__init__(return_type=Tensor)
 
         input_size += exog_size
-        self.linear = LinearReadout(input_size * temporal_order,
-                                    output_size,
+        self.linear = LinearReadout(input_size=input_size * temporal_order,
+                                    output_size=output_size,
                                     horizon=horizon,
                                     bias=bias)
         self.temporal_order = temporal_order

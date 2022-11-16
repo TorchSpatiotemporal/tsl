@@ -194,10 +194,3 @@ class SpatioTemporalDataModule(LightningDataModule):
             -> Optional[DataLoader]:
         """"""
         return self.get_dataloader('test', shuffle, batch_size)
-
-    @staticmethod
-    def add_argparse_args(parser, **kwargs):
-        parser.add_argument('--batch-size', type=int, default=64)
-        parser.add_argument('--mask-scaling', type=bool, default=True)
-        parser.add_argument('--workers', type=int, default=0)
-        return parser
