@@ -9,6 +9,7 @@ from torch import Tensor
 from torch_geometric.data.data import Data as PyGData, size_repr
 from torch_geometric.data.storage import BaseStorage
 from torch_geometric.data.view import KeysView, ValuesView, ItemsView
+from torch_geometric.typing import Adj
 
 from tsl.ops.connectivity import reduce_graph
 from tsl.ops.pattern import take
@@ -123,11 +124,10 @@ class Data(PyGData):
     series of equal length associated with every node.
 
 
-    The data object extends :class:`~torch_geometric.data.Data`, thus preserving
-    all its functionalities (see the :class:`documentation
-    <torch_geometric.data.Data>` and `the accompanying
-    tutorial <https://pytorch-geometric.readthedocs.io/en/latest/notes/
-    introduction.html#data-handling-of-graphs>`_).
+    The data object extends :class:`torch_geometric.data.Data`, thus preserving
+    all its functionalities (see also the `accompanying tutorial
+    <https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html
+    #data-handling-of-graphs>`_).
 
     Args:
         input (Mapping, optional): Named mapping of :class:`~torch.Tensor` to be
@@ -135,6 +135,15 @@ class Data(PyGData):
             (default: :obj:`None`)
         target (Mapping, optional): Named mapping of :class:`~torch.Tensor` to be
             used as target of the task.
+            (default: :obj:`None`)
+        edge_index (Adj, optional): Graph connectivity either in COO
+            format (a :class:`~torch.Tensor` of shape :obj:`[2, E]`) or as a
+            :class:`torch_sparse.SparseTensor` with shape :obj:`[N, N]`.
+            For dynamic graphs -- with time-varying topology -- can be a Python
+            list of :class:`~torch.Tensor`.
+            (default: :obj:`None`)
+        edge_weight (Tensor, optional): Weights of the edges (if
+            :attr:`edge_index` is not a :class:`torch_sparse.SparseTensor`).
             (default: :obj:`None`)
         mask (Tensor, optional): The optional mask associated with the target.
             (default: :obj:`None`)
@@ -154,13 +163,18 @@ class Data(PyGData):
 
     def __init__(self, input: Optional[Mapping] = None,
                  target: Optional[Mapping] = None,
+                 edge_index: Optional[Adj] = None,
+                 edge_weight: Optional[Tensor] = None,
                  mask: Optional[Tensor] = None,
                  transform: Optional[Mapping] = None,
                  pattern: Optional[Mapping] = None,
                  **kwargs):
         input = input if input is not None else dict()
         target = target if target is not None else dict()
-        super(Data, self).__init__(**input, **target, **kwargs)
+        super(Data, self).__init__(**input, **target,
+                                   edge_index=edge_index,
+                                   edge_weight=edge_weight,
+                                   **kwargs)
         # Set 'input' as view on input keys
         self.__dict__['input'] = StorageView(self._store, input.keys())
         # Set 'target' as view on target keys

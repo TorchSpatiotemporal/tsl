@@ -1,4 +1,4 @@
-from .batch import Batch, DisjointBatch, static_graph_collate
+from .batch import StaticBatch, DisjointBatch, static_graph_collate
 from .batch_map import BatchMap, BatchMapItem
 from .data import Data
 from .datamodule import *

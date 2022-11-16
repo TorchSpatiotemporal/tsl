@@ -14,7 +14,7 @@ from torch_sparse import SparseTensor
 
 from tsl.typing import DataArray, TemporalIndex, IndexSlice, TensArray, \
     SparseTensArray
-from . import Batch
+from . import StaticBatch
 from .batch_map import BatchMap, BatchMapItem
 from .data import Data
 from .mixin import DataParsingMixin
@@ -241,7 +241,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             item = self.transform(item)
         if self.item_pattern_layout == 'node_then_time':
             patterns = self.batch_patterns_rearrange
-            if isinstance(item, Batch):
+            if isinstance(item, StaticBatch):
                 patterns = {k: 'b ' + v for k, v in patterns.items()}
             item.rearrange(patterns)
         return item
@@ -542,7 +542,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         elif ndim == 1:  # get batch of items
             pattern = {name: ('b ' + pattern) if 't' in pattern else pattern
                        for name, pattern in self.batch_patterns.items()}
-            sample = Batch(pattern=pattern, size=item.size(0))
+            sample = StaticBatch(pattern=pattern, size=item.size(0))
         else:
             raise RuntimeError(f"Too many dimensions for index ({ndim}).")
 

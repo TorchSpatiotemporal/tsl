@@ -1,59 +1,93 @@
-from typing import (Optional, Any, Union, List, Mapping, Callable)
+from typing import (Optional, List, Mapping)
 
 import torch
 from torch import Tensor
 from torch.utils.data.dataloader import default_collate
-from torch_geometric.data import Batch as PyGBatch
+from torch_geometric.data import Batch
 from torch_geometric.data.collate import collate
 from torch_geometric.data.separate import separate
+from torch_geometric.typing import Adj
 
 from .data import Data
 from .preprocessing import ScalerModule
+from ..utils import ensure_list
 
 
-def _collate_scaler_modules(batch: List[Mapping[str, Any]]):
-    transform = batch[0]
-    for k, v in transform.items():
-        # scaler params are supposed to be the same for all elements in
-        # minibatch, just add a fake, 1-sized, batch dimension
-        transform[k] = ScalerModule(bias=transform[k].bias[None],
-                                    scale=transform[k].scale[None])
-        if transform[k].pattern is not None:
-            transform[k].pattern = 'b ' + transform[k].pattern
+# STATIC BATCH ################################################################
+
+def static_scaler_collate(transform_list: List[Mapping[str, ScalerModule]]):
+    transform = transform_list[0]
+    for key, scaler in transform.items():
+        params, pattern = scaler.params(), scaler.pattern
+        # collate scalers only if time-varying, otherwise keep first one
+        if scaler.t is not None:
+            for p_name, param in params.items():
+                # params can be broadcastable in some dimension
+                if param.size(0) == scaler.t:
+                    # batch time-varying param on new axis
+                    params[p_name] = default_collate(
+                        [getattr(scl_dict[key], p_name)
+                         for scl_dict in transform_list])
+                else:
+                    params[p_name] = param[None]  # unsqueeze first dimension
+            # add batch dim in pattern
+            pattern = 'b ' + pattern
+        # create new scaler
+        transform[key] = ScalerModule(**params, pattern=pattern)
     return transform
 
 
-def static_graph_collate(batch: List[Data], cls: Optional[type] = None) -> Data:
-    # collate subroutine
-    def _collate(items: List[Union[Tensor, Mapping[str, Any]]], key: str,
-                 pattern: str):
-        if key == 'transform':
-            return _collate_scaler_modules(items), None
-        # if key.startswith('edge_'):
-        #     return items[0]
-        if pattern is not None:
-            if 't' in pattern:
-                return default_collate(items), 'b ' + pattern
-            return items[0], pattern
-        return default_collate(items), None
+def get_static_scaler(transform: Mapping[str, ScalerModule], idx: int):
+    out = dict()
+    for key, scaler in transform.items():
+        params, pattern = scaler.params(), scaler.pattern
+        # index scalers only if time-varying
+        if pattern.startswith('b'):
+            for p_name, param in params.items():
+                # params can have different shapes
+                if param.size(0) > 1:  # check if this param has b > 1
+                    # batch time-varying param on new axis
+                    params[p_name] = param[idx]
+                else:
+                    params[p_name] = param[0]  # squeeze first dimension
+            # remove batch dim from pattern
+            pattern = pattern[2:]
+        # create new scaler
+        out[key] = ScalerModule(**params, pattern=pattern)
+    return out
+
+
+def static_graph_collate(data_list: List[Data],
+                         cls: Optional[type] = None) -> Data:
+    data_list = ensure_list(data_list)
 
     # collate all sample-wise elements
-    elem = batch[0]
+    elem = data_list[0]
     if cls is None:
         cls = elem.__class__
     out = cls()
     out = out.stores_as(elem)
-    for k in elem.keys:
-        pattern = elem.pattern.get(k)
-        out[k], pattern = _collate([b[k] for b in batch], k, pattern)
-        if pattern is not None:
-            out.pattern[k] = pattern
 
-    out.__dict__['batch_size'] = len(batch)
+    pattern = elem.pattern
+
+    for key in elem.keys:
+        if key == 'transform':
+            out[key] = static_scaler_collate([data[key] for data in data_list])
+        elif key in pattern:
+            if 't' in pattern[key]:
+                out[key] = default_collate([data[key] for data in data_list])
+                out.pattern[key] = 'b ' + pattern[key]
+            else:
+                out[key] = elem[key]
+        else:
+            # add warning ?
+            out[key] = default_collate([data[key] for data in data_list])
+
+    out._batch_size = len(data_list)
     return out
 
 
-class Batch(Data):
+class StaticBatch(Data):
     r"""A batch of :class:`tsl.data.Data` objects for multiple spatiotemporal
     graphs sharing the same topology.
 
@@ -66,6 +100,13 @@ class Batch(Data):
             (default: :obj:`None`)
         target (Mapping, optional): Named mapping of :class:`~torch.Tensor` to be
             used as target of the task.
+            (default: :obj:`None`)
+        edge_index (Adj, optional): Shared graph connectivity, either in COO
+            format (a :class:`~torch.Tensor` of shape :obj:`[2, E]`) or as a
+            :class:`torch_sparse.SparseTensor` with shape :obj:`[N, N]`.
+            (default: :obj:`None`)
+        edge_weight (Tensor, optional): Weights of the edges (if
+            :attr:`edge_index` is not a :class:`torch_sparse.SparseTensor`).
             (default: :obj:`None`)
         mask (Tensor, optional): The optional mask associated with the target.
             (default: :obj:`None`)
@@ -84,22 +125,58 @@ class Batch(Data):
             (default: :obj:`None`)
         **kwargs: Any keyword argument for :class:`~torch_geometric.data.Data`.
     """
-    _collate_fn: Callable = static_graph_collate
 
     def __init__(self, input: Optional[Mapping] = None,
                  target: Optional[Mapping] = None,
+                 edge_index: Optional[Adj] = None,
+                 edge_weight: Optional[Tensor] = None,
                  mask: Optional[Tensor] = None,
                  transform: Optional[Mapping] = None,
                  pattern: Optional[Mapping] = None,
                  size: Optional[int] = None,
                  **kwargs):
-        super(Batch, self).__init__(input=input,
-                                    target=target,
-                                    mask=mask,
-                                    transform=transform,
-                                    pattern=pattern,
-                                    **kwargs)
+        super(StaticBatch, self).__init__(input=input,
+                                          target=target,
+                                          edge_index=edge_index,
+                                          edge_weight=edge_weight,
+                                          mask=mask,
+                                          transform=transform,
+                                          pattern=pattern,
+                                          **kwargs)
         self._batch_size = size
+
+    @classmethod
+    def from_data_list(cls, data_list: List[Data]):
+        r"""Constructs a :class:`~tsl.data.Batch` object from a Python list of
+         :class:`~tsl.data.Data` representing temporal signals on a static
+         (shared) graph."""
+        return static_graph_collate(data_list, cls)
+
+    def get_example(self, idx: int) -> Data:
+        r"""Gets the :class:`~torch_geometric.data.Data` or
+        :class:`~torch_geometric.data.HeteroData` object at index :obj:`idx`.
+        The :class:`~torch_geometric.data.Batch` object must have been created
+        via :meth:`from_data_list` in order to be able to reconstruct the
+        initial object."""
+        out = Data()
+        out.stores_as(self)
+
+        for key, value in self:
+            pattern = self.pattern.get(key)
+            if key == 'transform':
+                out.transform.update(get_static_scaler(self.transform, idx))
+            elif pattern is not None and pattern.startswith('b'):
+                out[key] = value[idx]
+                out.pattern[key] = pattern[2:]
+            else:
+                out[key] = value
+
+        return out
+
+    def __getitem__(self, item: int or str):
+        if isinstance(item, int):
+            return self.get_example(item)
+        return super(StaticBatch, self).__getitem__(item)
 
     @property
     def batch_size(self) -> int:
@@ -112,20 +189,15 @@ class Batch(Data):
                 if pattern.startswith('b'):
                     return self[key].size(0)
 
-    @classmethod
-    def from_data_list(cls, data_list: List[Data]):
-        r"""Constructs a :class:`~tsl.data.Batch` object from a Python list of
-         :class:`~tsl.data.Data`, representing temporal signals on static
-         graphs."""
-
-        batch = cls._collate_fn(data_list, cls)
-
-        batch.__dict__['batch_size'] = len(data_list)
-
-        return batch
+    @property
+    def num_graphs(self) -> int:
+        return self.batch_size
 
 
-def collate_scaler_params(values, cat_dim=None, batch_index=None):
+# DISJOINT BATCH ##############################################################
+
+def collate_scaler_params(values: List[Tensor], cat_dim: Optional[int] = None,
+                          batch_index: Optional[Tensor] = None):
     elem = values[0]
     # Stack scaler params on new batch dimension.
     if cat_dim is None:
@@ -141,7 +213,8 @@ def collate_scaler_params(values, cat_dim=None, batch_index=None):
     return value, False
 
 
-def separate_scaler_params(value, slices, idx, is_repeated, cat_dim=None):
+def separate_scaler_params(value: Tensor, slices, idx: int, is_repeated: bool,
+                           cat_dim: Optional[int] = None):
     if not is_repeated:
         start, end = slices[idx], slices[idx + 1]
         out = value.narrow(cat_dim or 0, start, end - start)
@@ -150,7 +223,8 @@ def separate_scaler_params(value, slices, idx, is_repeated, cat_dim=None):
     return out
 
 
-def collate_scalers(data_list, batch_index=None):
+def disjoint_scaler_collate(data_list: List[Data],
+                            batch_index: Optional[Tensor] = None):
     elem = data_list[0]
     transform = data_list[0].transform
 
@@ -182,7 +256,7 @@ def collate_scalers(data_list, batch_index=None):
     return out
 
 
-def get_example_scalers(batch, idx):
+def get_disjoint_scaler(batch, idx):
     transform = batch.transform
 
     out = dict()
@@ -213,7 +287,7 @@ def get_example_scalers(batch, idx):
     return out
 
 
-class DisjointBatch(PyGBatch):
+class DisjointBatch(Batch):
     r"""A data object describing a batch of graphs as one big (disconnected)
     graph.
 
@@ -262,12 +336,12 @@ class DisjointBatch(PyGBatch):
             cls,
             data_list=data_list,
             increment=True,
-            add_batch=not isinstance(data_list[0], Batch),
+            add_batch=not isinstance(data_list[0], StaticBatch),
             follow_batch=follow_batch,
             exclude_keys=exclude_keys,
         )
 
-        scalers = collate_scalers(data_list, batch_index=batch.batch)
+        scalers = disjoint_scaler_collate(data_list, batch_index=batch.batch)
         batch.transform.update(scalers)
 
         # repeat node-invariant item element along node dimension to not lose
@@ -323,7 +397,7 @@ class DisjointBatch(PyGBatch):
             decrement=True,
         )
 
-        scalers = get_example_scalers(self, idx=idx)
+        scalers = get_disjoint_scaler(self, idx=idx)
         data.transform.update(scalers)
 
         for key in self._repeated_keys:
@@ -333,3 +407,8 @@ class DisjointBatch(PyGBatch):
                 data.pattern[key] = data.pattern[key][2:]
 
         return data
+
+    def __getitem__(self, item: int or str):
+        if isinstance(item, int):
+            return self.get_example(item)
+        return super(DisjointBatch, self).__getitem__(item)

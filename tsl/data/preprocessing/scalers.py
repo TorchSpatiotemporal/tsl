@@ -353,13 +353,15 @@ class ScalerModule(Module):
     def t(self) -> int or None:
         """Size of temporal dimension (:obj:`None` if time-invariant)."""
         if self.pattern is not None and 't' in self.pattern:
+            # 't' is always in first dimension
             return max(self.scale.size(0), self.bias.size(0))
 
     @property
     def n(self) -> int or None:
         """Size of node dimension (:obj:`None` if node-invariant)."""
         if self.pattern is not None and 'n' in self.pattern:
-            return max(self.scale.size(0), self.bias.size(0))
+            return max(self.scale.size(self.n_axis),
+                       self.bias.size(self.n_axis))
 
     def set_pattern(self, value, check: bool = False):
         if value is not None:

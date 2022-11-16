@@ -1,12 +1,11 @@
 import inspect
-from typing import Type, Mapping, Callable, Optional, Union
+from typing import Type, Mapping, Callable, Optional
 
 import pytorch_lightning as pl
 import torch
-from pytorch_lightning.utilities import move_data_to_device
 from torchmetrics import MetricCollection, Metric
 
-from tsl.data import Data, Batch
+from tsl.data import Data
 from tsl.metrics.torch import MaskedMetric
 
 
@@ -153,15 +152,19 @@ class Predictor(pl.LightningModule):
         transform = batch.get('transform')
         return inputs, targets, mask, transform
 
-    def predict_batch(self, batch: Union[Batch, Data],
+    def predict_batch(self, batch: Data,
                       preprocess: bool = False, postprocess: bool = True,
                       return_target: bool = False,
                       **forward_kwargs):
-        """This method takes as input a :class:`~tsl.data.Batch` or
-        :class:`~tsl.data.Data` object and outputs the predictions.
+        """This method takes as input a :class:`~tsl.data.Data` object and
+        outputs the predictions.
+
+        Note that this method works seamlessly for all :class:`~tsl.data.Data`
+        subclasses like :class:`~tsl.data.StaticBatch` and
+        :class:`~tsl.data.DisjointBatch`.
 
         Args:
-            batch (Batch or Data): The batch to be forwarded to the model.
+            batch (Data): The batch to be forwarded to the model.
             preprocess (bool, optional): If :obj:`True`, then preprocess tensors
                 in :attr:`batch.input` using transformation modules in
                 :attr:`batch.transform`. Note that inputs are preprocessed
