@@ -133,6 +133,7 @@ Get started
    modules/engines
    modules/metrics
    modules/experiment
+   modules/transforms
    modules/ops
 
 .. toctree::
