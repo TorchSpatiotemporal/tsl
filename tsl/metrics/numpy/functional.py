@@ -26,7 +26,7 @@ def _masked_reduce(x: FrameArray, reduction: ReductionType,
         return x
     # 'mean'/'sum': return mean/sum of x[mask == True]
     if mask is not None:
-        mask = framearray_to_numpy(mask).astype(np.bool)
+        mask = framearray_to_numpy(mask).astype(bool)
         x = x[mask]
     if reduction == 'mean':
         return np.mean(x)

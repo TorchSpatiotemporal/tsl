@@ -98,7 +98,7 @@ def reduce(x: FrameArray, index: Index,
 
         n_levels = x.columns.nlevels
         if n_levels > 1:
-            if index.dtype == np.bool:
+            if index.dtype == bool:
                 index = x.columns.unique(level)[index]
             index = tuple([index if i == level else slice(None)
                            for i in range(n_levels)])
