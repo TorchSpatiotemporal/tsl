@@ -1,10 +1,6 @@
 from typing import Optional
 
-from torch.utils.data import (DataLoader,
-                              Sampler,
-                              RandomSampler,
-                              SequentialSampler,
-                              BatchSampler)
+from torch.utils.data import DataLoader
 
 from ..spatiotemporal_dataset import SpatioTemporalDataset
 
@@ -15,15 +11,12 @@ class StaticGraphLoader(DataLoader):
 
     This loader exploits the efficient indexing of
     :class:`~tsl.data.SpatioTemporalDataset` to get multiple items at once,
-    by leveraging on a :class:`~torch.utils.data.BatchSampler`.
+    by using a :class:`torch.utils.data.BatchSampler`.
 
     Args:
         dataset (SpatioTemporalDataset): The dataset from which to load the data.
         batch_size (int, optional): How many samples per batch to load.
             (default: :obj:`1`)
-        sampler (Sampler or Iterable, optional): defines the strategy to draw
-            samples from the dataset. Can be any ``Iterable`` with ``__len__``
-            implemented. If specified, :attr:`shuffle` must not be specified.
         shuffle (bool, optional): If :obj:`True`, then data will be
             reshuffled at every epoch.
             (default: :obj:`False`)
@@ -37,20 +30,22 @@ class StaticGraphLoader(DataLoader):
 
     def __init__(self, dataset: SpatioTemporalDataset,
                  batch_size: Optional[int] = 1,
-                 sampler: Optional[Sampler] = None,
                  shuffle: bool = False,
                  drop_last: bool = False,
                  **kwargs):
         if 'collate_fn' in kwargs:
             del kwargs['collate_fn']
-        if sampler is None:
-            sampler_cls = RandomSampler if shuffle else SequentialSampler
-            sampler = sampler_cls(dataset)
-        sampler = BatchSampler(sampler,
-                               batch_size=batch_size,
-                               drop_last=drop_last)
         super().__init__(dataset,
-                         sampler=sampler,
-                         batch_size=None,
+                         batch_size=batch_size,
+                         shuffle=shuffle,
+                         drop_last=drop_last,
                          collate_fn=lambda x: x,
                          **kwargs)
+
+    @property
+    def _auto_collation(self):
+        return False
+
+    @property
+    def _index_sampler(self):
+        return self.batch_sampler
