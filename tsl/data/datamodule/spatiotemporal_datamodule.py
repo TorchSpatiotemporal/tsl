@@ -9,6 +9,8 @@ from ..loader import StaticGraphLoader
 from ..spatiotemporal_dataset import SpatioTemporalDataset
 from ...typing import Index
 
+StageOptions = Literal['fit', 'validate', 'test', 'predict']
+
 
 class SpatioTemporalDataModule(LightningDataModule):
     r"""Base :class:`~pytorch_lightning.core.LightningDataModule` for
@@ -16,22 +18,26 @@ class SpatioTemporalDataModule(LightningDataModule):
 
     Args:
         dataset (SpatioTemporalDataset): The complete dataset.
-        scalers (dict, optional): Named mapping of :class:`~tsl.data.preprocessing.scalers.Scaler`
+        scalers (dict, optional): Named mapping of
+            :class:`~tsl.data.preprocessing.scalers.Scaler`
             to be used for data rescaling after splitting. Every scaler is given
             as input the attribute of the dataset named as the scaler's key.
             If :obj:`None`, no scaling is performed.
             (default :obj:`None`)
-        mask_scaling (bool): Whether to compute statistics for data scaler (if
-            any) by considering only valid values (according to :obj:`dataset.mask`).
+        mask_scaling (bool): If :obj:`True`, then compute statistics for
+            :obj:`dataset.target` scaler (if any) by considering only valid
+            values (according to :obj:`dataset.mask`).
             (default :obj:`True`)
-        splitter (Splitter, optional): :class:`~tsl.data.datamodule.splitters.Splitter` to
-            be used for splitting :obj:`dataset` into training/validation/testing.
+        splitter (Splitter, optional): The
+            :class:`~tsl.data.datamodule.splitters.Splitter` to be used for
+            splitting :obj:`dataset` into train/validation/test sets.
             (default :obj:`None`)
-        batch_size (int): Size of batches for training/validation/testing splits.
+        batch_size (int): Size of the mini-batches for the dataloaders.
             (default :obj:`32`)
-        workers (int): Number of workers to use in DataLoaders.
+        workers (int): Number of workers to use in the dataloaders.
             (default :obj:`0`)
-        pin_memory (bool): Whether to enable pinned GPU memory for the train dataloader.
+        pin_memory (bool): If :obj:`True`, then enable pinned GPU memory for
+            :meth:`~tsl.data.datamodule.SpatioTemporalDataModule.train_dataloader`.
             (default :obj:`False`)
     """
 
@@ -138,7 +144,7 @@ class SpatioTemporalDataModule(LightningDataModule):
             slice_name = split_type + '_slice'  # e.g. trainset > _train_slice
             setattr(self, slice_name, _slice)
 
-    def setup(self, stage=None):
+    def setup(self, stage: StageOptions = None):
         # splitting
         if self.splitter is not None:
             self.splitter.split(self.torch_dataset)
@@ -146,15 +152,27 @@ class SpatioTemporalDataModule(LightningDataModule):
             self.valset = self.splitter.val_idxs
             self.testset = self.splitter.test_idxs
 
-        for k, scaler, in self.scalers.items():
-            train = getattr(self.torch_dataset, k)[self.train_slice]
-            train_mask = None
-            if k == 'target' and self.mask_scaling:
-                if self.torch_dataset.mask is not None:
-                    train_mask = self.torch_dataset.mask[self.train_slice]
-            scaler = scaler.fit(train, mask=train_mask, keepdims=True)
-            tsl.logger.info('Fit and set scaler for {}: {}'.format(k, scaler))
-            self.torch_dataset.add_scaler(k, scaler)
+        for key, scaler, in self.scalers.items():
+            if key not in self.torch_dataset:
+                raise RuntimeError("Cannot find a tensor to scale matching "
+                                   f"key '{key}'.")
+            # fit scalers before training
+            if stage == 'fit':
+                data = getattr(self.torch_dataset, key)
+                # get only training slice
+                if 't' in self.torch_dataset.patterns[key]:
+                    data = data[self.train_slice]
+
+                mask = None
+                if key == 'target' and self.mask_scaling:
+                    if self.torch_dataset.mask is not None:
+                        mask = self.torch_dataset.get_mask()[self.train_slice]
+
+                scaler = scaler.fit(data, mask=mask, keepdims=True)
+                tsl.logger.info(f'Fit and set scaler for {key}: {scaler}')
+            else:
+                tsl.logger.info(f'Set scaler for {key}: {scaler}')
+            self.torch_dataset.add_scaler(key, scaler)
 
     def get_dataloader(self, split: Literal['train', 'val', 'test'] = None,
                        shuffle: bool = False,

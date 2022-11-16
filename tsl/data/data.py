@@ -264,7 +264,7 @@ class Data(PyGData):
             self.transform[key] = self.transform[key].rearrange(end_pattern)
 
     def rearrange(self, patterns: Mapping):
-        r"""Rearrange all keys in Data according to the provided patter
+        r"""Rearrange all keys in Data according to the provided pattern
          using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
         for key, pattern in patterns.items():
             self.rearrange_element(key, pattern)
