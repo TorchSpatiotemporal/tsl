@@ -23,7 +23,7 @@ In detail, the package provide:
 * Automatization of the preprocessing phase, with methods to scale and detrend the time series (see :doc:`modules/data_preprocessing` section).
 * A set of most used datasets in spatiotemporal data processing literature (see :doc:`modules/datasets` section).
 * A straightforward way of building spatiotemporal datasets that work with `PyTorch <https://pytorch.org/>`_ and `PyG <https://www.pyg.org/>`_ (see :doc:`modules/data` section).
-* Out-of-the-box scalability -- from a single CPU to clusters of GPUs -- with `PyTorch Lightning <https://www.pytorchlightning.ai/>`_  (see :doc:`modules/inference_modules` section).
+* Out-of-the-box scalability -- from a single CPU to clusters of GPUs -- with `PyTorch Lightning <https://www.pytorchlightning.ai/>`_  (see :doc:`modules/engines` section).
 * Plug-and-play state-of-the-art models from neural spatiotemporal literature (see :doc:`modules/nn_models` section).
 * A collection of neural layers for creating neural spatiotemporal models in a fast and modular way (see :doc:`modules/nn_layers` section).
 * A standard for experiment reproducibility based on the `Hydra <https://hydra.cc/>`_ framework, to promote and support research on spatiotemporal data mining  (see :doc:`modules/experiment` section).

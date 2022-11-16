@@ -3,14 +3,6 @@ Spatiotemporal Data Representation
 
     This page is still under development
 
-TSL is meant to deal with discrete-time, spatiotemporal data. Common input examples
-are data streams coming from sensor networks. In principle, data of this kind can be
-represented by 3-dimensional tensors, with:
-
-#. The **Time** (:obj:`t`) dimension, accounting for the temporal evolution of the signal within a node (i.e., a sensor).
-#. The **Node** (:obj:`n`) dimension, accounting for simultaneous observations measured at the different nodes in the network in a discrete time step.
-#. The **Features** (:obj:`f`) or **Channels** dimension, allowing for multiple (heterogeneous) measurements at the same spatio-temporal point.
-
 As a real-life example, you may think of an air quality monitoring system with
 :math:`N` air quality monitoring stations, each measuring :math:`F` different pollution
 parameters (e.g., PM2.5, PM10, CO2).
