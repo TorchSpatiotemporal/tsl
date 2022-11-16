@@ -1,3 +1,4 @@
+import os.path
 from copy import deepcopy
 from typing import Tuple, List, Union, Optional
 
@@ -126,6 +127,41 @@ class Scaler:
         :obj:`x`."""
         self.fit(x, *args, **kwargs)
         return self.transform(x)
+
+    def save(self, filename: str) -> str:
+        """Save the scaler to disk.
+
+        Args:
+            filename (str): The path to the filename for storage.
+
+        Returns:
+            str: The absolute path to the saved file.
+        """
+        params = self.params()
+        is_torch = any([isinstance(param, Tensor) for param in params.values()])
+        if is_torch:
+            if not filename.endswith('.pt'):
+                filename = filename + '.pt'
+            torch.save(params, filename)
+        else:
+            np.savez_compressed(filename, **params)
+        return os.path.abspath(filename)
+
+    @classmethod
+    def load(cls, filename: str) -> "Scaler":
+        """Load instance of this type of scaler from disk.
+
+        Args:
+            filename (str): The path to the scaler file.
+        """
+        ext = filename.split('.')[-1]
+        if ext == 'npz':
+            params = np.load(filename)
+        elif ext == 'pt':
+            params = torch.load(filename)
+        else:
+            raise RuntimeError(f"Filename {filename} is not in a valid format.")
+        return cls(**params)
 
 
 class StandardScaler(Scaler):

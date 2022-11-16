@@ -6,7 +6,7 @@ from .imputation_stds import ImputationDataset
 from .spatiotemporal_dataset import SpatioTemporalDataset
 from .synch_mode import SynchMode, WINDOW, HORIZON, STATIC
 
-data_classes = ['Data', 'Batch', 'DisjointBatch']
+data_classes = ['Data', 'StaticBatch', 'DisjointBatch']
 dataset_classes = ['SpatioTemporalDataset', 'ImputationDataset']
 
 __all__ = [

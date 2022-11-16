@@ -87,11 +87,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             :class:`tsl.data.Data` object and returns a transformed version.
             The data object will be transformed before every access.
             (default: :obj:`None`)
-        item_pattern_layout (str): Specify the pattern convention when getting
-            dataset samples. Possible options are :obj:`'time_then_node'`, if
-            the time dimension precedes the nodes' one, or
-            :obj:`'node_then_time`' otherwise.
-            (default: :obj:`'time_then_node'`)
         window (int): Length (in number of steps) of the lookback window.
             (default: 12)
         horizon (int): Length (in number of steps) of the prediction horizon.
@@ -127,7 +122,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                  scalers: Optional[Mapping[str, Scaler]] = None,
                  trend: Optional[DataArray] = None,
                  transform: Optional[Callable] = None,
-                 item_pattern_layout: str = 'time_then_node',
                  window: int = 12,
                  horizon: int = 1,
                  delay: int = 0,
@@ -141,10 +135,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # Set info
         self.name = name if name is not None else self.__class__.__name__
         self.precision = precision
-        if item_pattern_layout not in ['time_then_node', 'node_then_time']:
-            raise ValueError("item_pattern_layout must be one of "
-                             "'time_then_node' or 'node_then_time'.")
-        self.item_pattern_layout = item_pattern_layout
 
         # Store windowing information
         self.window = window
@@ -239,11 +229,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         item = self.get(item)
         if self.transform is not None:
             item = self.transform(item)
-        if self.item_pattern_layout == 'node_then_time':
-            patterns = self.batch_patterns_rearrange
-            if isinstance(item, StaticBatch):
-                patterns = {k: 'b ' + v for k, v in patterns.items()}
-            item.rearrange(patterns)
         return item
 
     def __contains__(self, item) -> bool:
@@ -374,14 +359,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         patterns.update({name: attr.pattern
                          for name, attr in self.target_map.items()})
         return patterns
-
-    @property
-    def batch_patterns_rearrange(self) -> dict:
-        return {
-            key: 'n t' + pattern[3:] if 'n' in pattern else '1 ' + pattern
-            for key, pattern in self.batch_patterns.items()
-            if pattern.startswith('t')
-        }
 
     @property
     def keys(self) -> list:
@@ -1231,7 +1208,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                      auxiliary_map: Optional[Union[Mapping, BatchMap]] = None,
                      scalers: Optional[Mapping[str, Scaler]] = None,
                      trend: Optional[DataArray] = None,
-                     item_pattern_layout: str = 'time_then_node',
                      window: int = 12,
                      horizon: int = 1,
                      delay: int = 0,
@@ -1253,7 +1229,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                    auxiliary_map=auxiliary_map,
                    scalers=scalers,
                    trend=trend,
-                   item_pattern_layout=item_pattern_layout,
                    window=window,
                    horizon=horizon,
                    delay=delay,

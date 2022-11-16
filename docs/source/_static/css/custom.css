@@ -58,7 +58,25 @@ table.docutils {
 table.docutils caption {
     font-size: var(--font-size--normal);
     caption-side: bottom;
-    margin-top: 0.5em;
+    margin-top: 1rem;
+}
+
+body {
+    counter-reset: table 0 figure 0;
+}
+
+table.docutils caption::before {
+    counter-increment: table;
+    content: "Table " counter(table) ".";
+    font-weight: 600;
+    margin-right: 0.3rem;
+}
+
+figure figcaption span.caption-text::before {
+    counter-increment: figure;
+    content: "Figure " counter(figure) ".";
+    font-weight: 600;
+    margin-right: 0.3rem;
 }
 
 code.literal {
