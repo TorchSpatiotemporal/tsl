@@ -1,0 +1,25 @@
+defaults:
+  - default
+  - _self_
+
+batch_size: 64
+
+model:
+  name: gatedgn
+  hparams:
+    input_window_size: 12
+    hidden_size: 64
+    enc_layers: 2
+    gnn_layers: 2
+    activation: 'silu'
+    full_graph: False
+
+optimizer:
+  hparams:
+    lr: 0.005
+
+lr_scheduler:
+  name: MultiStepLR
+  hparams:
+    gamma: 0.25
+    milestones: [ 25, 50, 100 ]

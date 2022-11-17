@@ -1,15 +1,23 @@
 from .dcrnn_model import DCRNNModel
-from .graph_wavenet_model import GraphWaveNetModel
 from .gated_gn_model import GatedGraphNetworkModel
-from .rnn2gcn_model import RNNEncGCNDecModel
+from .graph_wavenet_model import GraphWaveNetModel
+from .grin_model import GRINModel
+from .rnn_gcn_model import RNNEncGCNDecModel
 from .stcn_model import STCNModel
+from .evolve_gcn_model import EvolveGCNModel
+from .gru_gcn_model import GRUGCNModel
+from .agcrn_model import AGCRNModel
 
 __all__ = [
     'DCRNNModel',
     'GraphWaveNetModel',
     'GatedGraphNetworkModel',
     'RNNEncGCNDecModel',
-    'STCNModel'
+    'STCNModel',
+    'GRINModel',
+    'EvolveGCNModel',
+    'GRUGCNModel',
+    'AGCRNModel'
 ]
 
 classes = __all__

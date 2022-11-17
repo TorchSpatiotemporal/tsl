@@ -1,0 +1,50 @@
+#### Experiment params ########################################################
+hydra:
+  run:
+    dir: logs/${model.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+seed: 42
+tags:
+  - 'traffic'
+  - ${model.name}
+  - ${dataset.name}
+workers: 0
+#wandb:
+#  project: sandbox
+#  offline: False
+
+#### Dataset params ###########################################################
+dataset:
+  name: ???
+  splitting:
+    val_len: 0.1
+    test_len: 0.2
+  connectivity:
+    method: distance
+    threshold: 0.1
+    include_self: False
+    layout: edge_index
+
+#### Windowing params #########################################################
+window: 12
+horizon: 12
+stride: 1
+
+#### Model params #############################################################
+model: ???
+
+#### Training params ##########################################################
+epochs: 300
+patience: 50
+batch_size: 64
+grad_clip_val: 5
+optimizer:
+  name: Adam
+  hparams:
+    lr: 0.001
+    weight_decay: 0
+#lr_scheduler:
+#  name: CosineAnnealingLR
+#  params:
+#      eta_min: 0.0001
+#      T_max: ${ epochs }

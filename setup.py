@@ -6,7 +6,6 @@ URL = 'https://github.com/TorchSpatiotemporal/tsl'
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-
 install_requires = [
     'einops',
     'numpy',
@@ -17,18 +16,33 @@ install_requires = [
     'scipy',
     'tables',
     'test_tube',
-    'torch>=1.9',
-    'torch_geometric>=2.0',
     'torchmetrics>=0.7',
     'tqdm',
 ]
 
-full_install_requires = [
-    'holidays'
+plot_requires = [
     'matplotlib',
-    'mpld3',
+    'mpld3'
+]
+
+experiment_requires = [
+    'hydra-core',
+    'omegaconf'
+]
+
+full_install_requires = plot_requires + experiment_requires + [
+    'holidays',
     'neptune-client>=0.14',
     'pytorch_fast_transformers'
+]
+
+doc_requires = full_install_requires + [
+    'sphinx',
+    'sphinx-design',
+    'sphinx-copybutton',
+    'sphinxext-opengraph',
+    'myst-nb',
+    'furo'
 ]
 
 setup(
@@ -40,6 +54,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url=URL,
+    download_url=f'{URL}/archive/v{__version__}.tar.gz',
     license="MIT",
     keywords=[
         'pytorch',
@@ -48,12 +63,15 @@ setup(
         'graph-neural-networks',
         'graph-convolutional-networks',
         'temporal-graph-networks',
+        'spatiotemporal-graph-neural-networks',
         'spatiotemporal-processing',
     ],
     python_requires='>=3.7',
     install_requires=install_requires,
     extras_require={
+        'experiment': experiment_requires,
         'full': full_install_requires,
+        'doc': doc_requires,
     },
     packages=find_packages(exclude=['examples*']),
 )

@@ -3,12 +3,16 @@ from torch import Tensor
 from torch import nn
 from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
+from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.typing import Adj, OptTensor
+from torch_sparse import SparseTensor, matmul
 
-from tsl.ops.connectivity import normalize
+from tsl.nn.layers.graph_convs.mixin import NormalizedAdjacencyMixin
+from tsl.nn.utils import get_functional_activation
+from tsl.ops.connectivity import normalize_connectivity
 
 
-class GraphConv(MessagePassing):
+class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
     r"""A simple graph convolutional operator where the message function is a simple linear projection and aggregation
     a simple average. In other terms:
 
@@ -26,12 +30,22 @@ class GraphConv(MessagePassing):
             :class:`torch_geometric.nn.conv.MessagePassing`.
     """
 
-    def __init__(self, input_size: int, output_size: int, bias: bool = True, root_weight: bool = True, **kwargs):
+    def __init__(self, input_size: int,
+                 output_size: int,
+                 bias: bool = True,
+                 asymmetric_norm: bool = True,
+                 root_weight: bool = True,
+                 activation='linear',
+                 cached: bool = False,
+                 **kwargs):
         super(GraphConv, self).__init__(aggr="add", node_dim=-2)
         super().__init__(**kwargs)
 
         self.in_channels = input_size
         self.out_channels = output_size
+        self.asymmetric_norm = asymmetric_norm
+        self.cached = cached
+        self.activation = get_functional_activation(activation)
 
         self.lin = nn.Linear(input_size, output_size, bias=False)
 
@@ -57,10 +71,13 @@ class GraphConv(MessagePassing):
     def forward(self, x: Tensor, edge_index: Adj,
                 edge_weight: OptTensor = None) -> Tensor:
         """"""
-        n = x.size(-2)
         out = self.lin(x)
 
-        _, edge_weight = normalize(edge_index, edge_weight, dim=1, num_nodes=n)
+        edge_index, edge_weight = self.normalize_edge_index(x,
+                                                            edge_index=edge_index,
+                                                            edge_weight=edge_weight,
+                                                            use_cached=self.cached)
+
         out = self.propagate(edge_index, x=out, edge_weight=edge_weight)
 
         if self.root_lin is not None:
@@ -69,7 +86,13 @@ class GraphConv(MessagePassing):
         if self.bias is not None:
             out += self.bias
 
-        return out
+        return self.activation(out)
 
     def message(self, x_j: Tensor, edge_weight) -> Tensor:
         return edge_weight.view(-1, 1) * x_j
+
+    def message_and_aggregate(self, adj_t: SparseTensor, x: Tensor) -> Tensor:
+        """"""
+        # adj_t: SparseTensor [nodes, nodes]
+        # x: [(batch,) nodes, channels]
+        return matmul(adj_t, x, reduce=self.aggr)

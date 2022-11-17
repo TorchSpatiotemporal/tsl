@@ -5,13 +5,10 @@ import numpy as np
 import pandas as pd
 
 from tsl.data.datamodule.splitters import disjoint_months, Splitter
-from tsl.ops.dataframe import compute_mean
-from tsl.ops.similarities import gaussian_kernel
-from tsl.ops.similarities import geographical_distance
+from tsl.data.synch_mode import HORIZON
+from tsl.datasets.prototypes import DatetimeDataset
+from tsl.datasets.prototypes.mixin import MissingValuesMixin
 from tsl.utils import download_url, extract_zip
-from .prototypes import PandasDataset
-from .prototypes.mixin import MissingValuesMixin
-from ..data.utils import HORIZON
 
 
 def infer_mask(df, infer_from='next'):
@@ -88,17 +85,30 @@ class AirQualitySplitter(Splitter):
         self.set_indices(train_idxs, val_idxs, test_idxs)
 
 
-class AirQuality(PandasDataset, MissingValuesMixin):
-    """Measurements of pollutant :math:`PM2.5` collected by 437 air quality
+class AirQuality(DatetimeDataset, MissingValuesMixin):
+    r"""Measurements of pollutant :math:`PM2.5` collected by 437 air quality
     monitoring stations spread across 43 Chinese cities from May 2014 to April
     2015.
 
-    See more at https://www.microsoft.com/en-us/research/project/urban-air/"""
+    The dataset contains also a smaller version :obj:`AirQuality(small=True)`
+    with only the subset of nodes containing the 36 sensors in Beijing.
+
+    Data collected inside the `Urban Air
+    <https://www.microsoft.com/en-us/research/project/urban-air/>`_ project.
+
+    Dataset size:
+        + Time steps: 8760
+        + Nodes: 437
+        + Channels: 1
+        + Sampling rate: 1 hour
+        + Missing values: 25.67%
+
+    Static attributes:
+        + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
+    """
     url = "https://drive.switch.ch/index.php/s/W0fRqotjHxIndPj/download"
 
     similarity_options = {'distance'}
-    temporal_aggregation_options = {'mean', 'nearest'}
-    spatial_aggregation_options = {'mean'}
 
     def __init__(self, root: str = None,
                  impute_nans: bool = True,
@@ -116,15 +126,13 @@ class AirQuality(PandasDataset, MissingValuesMixin):
         else:
             self.masked_sensors = list(masked_sensors)
         df, mask, eval_mask, dist = self.load(impute_nans=impute_nans)
-        super().__init__(dataframe=df,
-                         attributes=dict(dist=dist),
-                         mask=mask,
-                         freq=freq,
+        super().__init__(target=df, mask=mask, freq=freq,
                          similarity_score='distance',
                          temporal_aggregation='mean',
                          spatial_aggregation='mean',
                          default_splitting_method='air_quality',
                          name='AQI36' if self.small else 'AQI')
+        self.add_covariate('dist', dist, pattern='n n')
         self.set_eval_mask(eval_mask)
 
     @property
@@ -146,6 +154,7 @@ class AirQuality(PandasDataset, MissingValuesMixin):
         path = os.path.join(self.root_dir, 'full437.h5')
         stations = pd.DataFrame(pd.read_hdf(path, 'stations'))
         st_coord = stations.loc[:, ['latitude', 'longitude']]
+        from tsl.ops.similarities import geographical_distance
         dist = geographical_distance(st_coord, to_rad=True).values
         np.save(os.path.join(self.root_dir, 'aqi_dist.npy'), dist)
 
@@ -175,7 +184,8 @@ class AirQuality(PandasDataset, MissingValuesMixin):
             eval_mask[:, self.masked_sensors] = mask[:, self.masked_sensors]
         # eventually replace nans with weekly mean by hour
         if impute_nans:
-            df = df.fillna(compute_mean(df))
+            from tsl.ops.framearray import temporal_mean
+            df = df.fillna(temporal_mean(df))
         return df, mask, eval_mask, dist
 
     def get_splitter(self, method: Optional[str] = None, **kwargs):
@@ -186,6 +196,7 @@ class AirQuality(PandasDataset, MissingValuesMixin):
 
     def compute_similarity(self, method: str, **kwargs):
         if method == "distance":
+            from tsl.ops.similarities import gaussian_kernel
             # use same theta for both air and air36
             theta = np.std(self.dist[:36, :36])
             return gaussian_kernel(self.dist, theta=theta)

@@ -1,0 +1,14 @@
+defaults:
+  - default
+  - _self_
+
+model:
+  name: birnni
+  hparams:
+    hidden_size: 64
+    cell: 'gru'
+    concat_mask: True
+    detach_input: False
+    fully_connected: True
+    state_init: 'zero'
+    dropout: 0

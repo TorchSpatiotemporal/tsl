@@ -1,198 +1,84 @@
-@import "theme.css";
-
-.wy-side-nav-search .wy-dropdown > a img.logo, .wy-side-nav-search > a img.logo {
-  height: 150px;
+a {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
 }
 
-.wy-side-nav-search {
-  background: rgb(243,244,247);
+section#torch-spatiotemporal h1 {
+    display: none;
 }
 
-.wy-side-nav-search > div.version {
-  color: black;
+.hero-logo {
+    position: absolute;
+    width: 65%;
+    min-width: 300px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 0 20px var(--color-background-primary));
+    z-index: 20;
 }
 
-.wy-nav-content-wrap {
-  background: inherit;
+.hero-shade {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    background: linear-gradient(rgba(0, 0, 0, 0), var(--color-background-primary));
+    z-index: 10;
 }
 
-.wy-side-nav-search input[type="text"] {
-  border: none;
-  box-shadow: none;
-  background: white;
-  border-radius: 0;
-  font-size: 100%;
+#particles-js {
+    z-index: -30;
+    position: relative;
 }
 
-.wy-menu-vertical li.current a,
-.wy-menu-vertical li.toctree-l1.current > a {
-  border: none;
+.particles-js-canvas-el {
+    opacity: 50%;
 }
 
-.ethical-rtd > div.ethical-sidebar,
-.ethical-rtd > div.ethical-footer {
-  display: none !important;
+.carousel-logo {
+    background: unset;
+    box-shadow: unset !important;
+    border: unset !important;
+    width: 50px !important;
+    margin: auto;
+    filter: contrast(0);
+    transition-duration: 0.3s;
 }
 
-h1 {
-  text-transform: uppercase;
-  font-family: inherit;
-  font-weight: 200;
+.carousel-logo:hover {
+    filter: unset;
+    transform: unset;
 }
 
-h2,
-.rst-content .toctree-wrapper p.caption {
-  font-family: inherit;
-  font-weight: 200;
+table.docutils {
+    box-shadow: unset;
 }
 
-.rst-content a:visited {
-  color: #3091d1;
+table.docutils caption {
+    font-size: var(--font-size--normal);
+    caption-side: bottom;
+    margin-top: 1rem;
 }
 
-/* Begin code */
-.rst-content pre.literal-block,
-.rst-content div[class^="highlight"] {
-  border: none;
+body {
+    counter-reset: table 0 figure 0;
 }
 
-.rst-content pre.literal-block,
-.rst-content div[class^="highlight"] pre,
-.rst-content .linenodiv pre {
-  font-size: 80%;
+table.docutils caption::before {
+    counter-increment: table;
+    content: "Table " counter(table) ".";
+    font-weight: 600;
+    margin-right: 0.3rem;
 }
 
-.highlight {
-  background: #f6f8fa;
-  border-radius: 6px;
+figure figcaption span.caption-text::before {
+    counter-increment: figure;
+    content: "Figure " counter(figure) ".";
+    font-weight: 600;
+    margin-right: 0.3rem;
 }
 
-.highlight .kn,
-.highlight .k {
-  color: #d73a49;
-}
-
-.highlight .nn {
-  color: inherit;
-  font-weight: inherit;
-}
-
-.highlight .nc {
-  color: #e36209;
-  font-weight: inherit;
-}
-
-.highlight .fm,
-.highlight .nd,
-.highlight .nf,
-.highlight .nb {
-  color: #6f42c1;
-}
-
-.highlight .bp,
-.highlight .n {
-  color: inherit;
-}
-
-.highlight .kc,
-.highlight .s1,
-.highlight .s2,
-.highlight .mi,
-.highlight .mf,
-.highlight .bp,
-.highlight .bn,
-.highlight .ow {
-  color: #005cc5;
-  font-weight: inherit;
-}
-
-.highlight .c1 {
-  color: #6a737d;
-}
-
-.rst-content code.xref {
-  padding: .2em .4em;
-  background: rgba(27,31,35,.05);
-  border-radius: 6px;
-  border: none;
-}
-/* End code */
-
-.rst-content dl:not(.docutils) dt,
-.rst-content dl:not(.docutils) dl dt {
-  background: rgb(243,244,247);
-}
-
-.rst-content dl:not(.docutils) dt.field-odd {
-  text-transform: uppercase;
-  background: inherit;
-  border: none;
-  padding: 6px 0;
-}
-
-.rst-content dl:not(.docutils) .property:first-child .pre {
-  text-transform: uppercase;
-  font-style: normal;
-}
-
-em.sig-param span.n:first-child, em.sig-param span.n:nth-child(2) {
-  color: black;
-  font-style: normal;
-}
-
-em.sig-param span.n:nth-child(3),
-em.sig-param span.n:nth-child(3) a {
-  color: inherit;
-  font-weight: normal;
-  font-style: normal;
-}
-
-em.sig-param span.default_value {
-  font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",Courier,monospace;
-  font-style: normal;
-  font-size: 90%;
-}
-
-.sig-paren {
-  padding: 0 4px;
-}
-
-.wy-table-responsive table td,
-.wy-table-responsive table th {
-  white-space: normal;
-}
-
-.wy-table-bordered-all,
-.rst-content table.docutils {
-  border: none;
-}
-
-.wy-table-bordered-all td,
-.rst-content table.docutils td {
-  border: none;
-}
-
-.wy-table-odd td,
-.wy-table-striped tr:nth-child(2n-1) td,
-.rst-content table.docutils:not(.field-list) tr:nth-child(2n-1) td {
-  background: rgb(243,244,247);
-}
-
-.wy-table td,
-.rst-content table.docutils td,
-.rst-content table.field-list td,
-.wy-table th,
-.rst-content table.docutils th,
-.rst-content table.field-list th {
-  padding: 14px;
-}
-
-table.colwidths-given tr td p,
-table.colwidths-given tr th p {
-  text-align: center;
-}
-
-table.colwidths-given tr td:first-child p,
-table.colwidths-given tr th:first-child p {
-  text-align: left;
+code.literal {
+    font-weight: 600;
 }

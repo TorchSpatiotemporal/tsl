@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
+
 import tsl
-
-from sklearn.metrics.pairwise import rbf_kernel, haversine_distances
-
 from tsl.typing import FrameArray
 
 
@@ -11,8 +9,9 @@ def _pearson_sim_matrix(unbiased_x, norms):
     n_samples = unbiased_x.shape[0]
     res = np.zeros(shape=(n_samples, n_samples))
     for i in range(n_samples):
-            corr = (unbiased_x[i] @ unbiased_x[i+1:].T) / (norms[i] * norms[i+1:] + 1e-8)
-            res[i, i+1:] = corr
+        corr = (unbiased_x[i] @ unbiased_x[i + 1:].T) / (
+                    norms[i] * norms[i + 1:] + 1e-8)
+        res[i, i + 1:] = corr
     return res + res.T + np.identity(n_samples)
 
 
@@ -37,6 +36,8 @@ def correntropy(x, period, mask=None, gamma=0.05):
     Returns:
         The similarity matrix.
     """
+    from sklearn.metrics.pairwise import rbf_kernel
+
     if mask is None:
         mask = 1 - np.isnan(x, dtype='uint8')
         mask = mask[..., None]
@@ -88,6 +89,7 @@ def geographical_distance(x: FrameArray, to_rad: bool = True):
     if to_rad:
         latlon_pairs = np.vectorize(np.radians)(latlon_pairs)
 
+    from sklearn.metrics.pairwise import haversine_distances
     distances = haversine_distances(latlon_pairs) * _AVG_EARTH_RADIUS_KM
 
     # Cast response

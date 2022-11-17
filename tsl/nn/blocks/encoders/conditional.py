@@ -3,7 +3,7 @@ from torch.nn import Module
 from torch.nn import functional as F
 
 from tsl.nn.base import TemporalConv2d, GatedTemporalConv2d
-from tsl.nn.utils import utils
+from tsl.nn import utils
 
 
 class ConditionalBlock(Module):

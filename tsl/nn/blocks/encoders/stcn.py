@@ -4,7 +4,7 @@ from tsl.nn.layers.graph_convs.diff_conv import DiffConv
 from tsl.nn.blocks.encoders.tcn import TemporalConvNet
 from tsl.nn.layers.norm.norm import Norm
 
-from tsl.nn.utils import utils
+from tsl.nn import utils
 
 
 class SpatioTemporalConvNet(nn.Module):

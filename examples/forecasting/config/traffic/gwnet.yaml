@@ -1,0 +1,31 @@
+defaults:
+  - default
+  - _self_
+
+batch_size: 64
+l2_reg: 0.0001
+lr: 0.001
+
+model:
+  name: gwnet
+  hparams:
+    hidden_size: 32
+    ff_size: 256
+    n_layers: 8
+    dropout: 0.3
+    temporal_kernel_size: 2
+    spatial_kernel_size: 2
+    dilation: 2
+    dilation_mod: 2
+    norm: batch
+    learned_adjacency: True
+
+dataset:
+  connectivity:
+    layout: csr
+
+optimizer:
+  hparams:
+    lr: 0.01
+
+lr_scheduler: null

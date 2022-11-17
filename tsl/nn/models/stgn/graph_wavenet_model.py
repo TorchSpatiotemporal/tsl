@@ -1,58 +1,75 @@
-from torch import nn
-from torch.nn import functional as F
-import torch
+from typing import Optional
 
-from tsl.nn.blocks.encoders.tcn import TemporalConvNet
+import torch
+from einops import repeat
+from torch import nn, Tensor
+from torch.nn import functional as F
+from torch_geometric.typing import Adj, OptTensor
+
 from tsl.nn.base.embedding import StaticGraphEmbedding
 from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
+from tsl.nn.blocks.encoders.tcn import TemporalConvNet
+from tsl.nn.layers.graph_convs.dense_graph_conv import DenseGraphConvOrderK
 from tsl.nn.layers.graph_convs.diff_conv import DiffConv
-from tsl.nn.layers.graph_convs.dense_spatial_conv import SpatialConvOrderK
 from tsl.nn.layers.norm.norm import Norm
-
-from tsl.utils.parser_utils import ArgParser, str_to_bool
-from einops import repeat
+from ..base_model import BaseModel
 
 
-class GraphWaveNetModel(nn.Module):
-    r"""
-    Graph WaveNet Model from Wu et al., ”Graph WaveNet for Deep Spatial-Temporal Graph Modeling”, IJCAI 2019
+class GraphWaveNetModel(BaseModel):
+    r"""The Graph WaveNet model from the paper `"Graph WaveNet for Deep
+    Spatial-Temporal Graph Modeling" <https://arxiv.org/abs/1906.00121>`_
+    (Wu et al., IJCAI 2019).
 
     Args:
-        input_size (int): Size of the input.
-        exog_size (int): Size of the exogenous variables.
-        hidden_size (int): Number of units in the hidden layer.
-        ff_size (int): Number of units in the hidden layers of the nonlinear readout.
+        input_size (int): Number of features of the input sample.
         output_size (int): Number of output channels.
-        n_layers (int): Number of GraphWaveNet blocks.
-        horizon (int): Forecasting horizon.
+        horizon (int): Number of future time steps to forecast.
+        exog_size (int, optional): Number of features of the input covariate,
+            if any. (default: :obj:`None`)
+        hidden_size (int): Number of hidden units.
+            (default: :obj:`32`)
+        ff_size (int): Number of units in the nonlinear readout.
+            (default: :obj:`256`)
+        n_layers (int): Number of Graph WaveNet blocks.
+            (default: :obj:`8`)
         temporal_kernel_size (int): Size of the temporal convolution kernel.
+            (default: :obj:`2`)
         spatial_kernel_size (int): Order of the spatial diffusion process.
-        learned_adjacency (bool): Whether to consider an additional learned adjacency matrix.
-        n_nodes (int, optional): Number of nodes in the input graph. Only needed if `learned_adjacency` is `True`.
-        emb_size (int, optional): Number of features in the node embeddings used for graph learning.
-        dilation (int, optional): Dilation of the temporal convolutional kernels.
-        dilation_mod (int, optional): Length of the cycle for the dilation coefficient.
-        norm (str, optional): Normalization strategy.
-        dropout (float, optional): Dropout probability.
+            (default: :obj:`2`)
+        learned_adjacency (bool):  If :obj:`True`, then consider an additional
+            learned adjacency matrix.
+            (default: :obj:`True`)
+        n_nodes (int, optional): Number of nodes in the input graph, required
+            only when :attr:`learned_adjacency` is :obj:`True`.
+            (default: :obj:`None`)
+        emb_size (int): Number of features in the node embeddings used for
+            graph learning.
+            (default: :obj:`10`)
+        dilation (int): Dilation of the temporal convolutional kernels.
+            (default: :obj:`2`)
+        dilation_mod (int): Length of the cycle for the dilation coefficient.
+            (default: :obj:`2`)
+        norm (str): Normalization strategy.
+            (default: :obj:`'batch'`)
+        dropout (float): Dropout probability.
+            (default: :obj:`0.3`)
     """
-    def __init__(self,
-                 input_size,
-                 exog_size,
-                 hidden_size,
-                 ff_size,
-                 output_size,
-                 n_layers,
-                 horizon,
-                 temporal_kernel_size,
-                 spatial_kernel_size,
-                 learned_adjacency,
-                 n_nodes=None,
-                 emb_size=8,
-                 dilation=2,
-                 dilation_mod=2,
-                 norm='batch',
-                 dropout=0.):
-        super(GraphWaveNetModel, self).__init__()
+
+    def __init__(self, input_size: int, output_size: int, horizon: int,
+                 exog_size: Optional[int] = None,
+                 hidden_size: int = 32,
+                 ff_size: int = 256,
+                 n_layers: int = 8,
+                 temporal_kernel_size: int = 2,
+                 spatial_kernel_size: int = 2,
+                 learned_adjacency: bool = True,
+                 n_nodes: Optional[int] = None,
+                 emb_size: int = 10,
+                 dilation: int = 2,
+                 dilation_mod: int = 2,
+                 norm: str = 'batch',
+                 dropout: float = 0.3):
+        super(GraphWaveNetModel, self).__init__(return_type=Tensor)
 
         if learned_adjacency:
             assert n_nodes is not None
@@ -71,16 +88,15 @@ class GraphWaveNetModel(nn.Module):
         receptive_field = 1
         for i in range(n_layers):
             d = dilation ** (i % dilation_mod)
-            temporal_conv_blocks.append(TemporalConvNet(
-                input_channels=hidden_size,
-                hidden_channels=hidden_size,
-                kernel_size=temporal_kernel_size,
-                dilation=d,
-                exponential_dilation=False,
-                n_layers=1,
-                causal_padding=False,
-                gated=True
-            )
+            temporal_conv_blocks.append(
+                TemporalConvNet(input_channels=hidden_size,
+                                hidden_channels=hidden_size,
+                                kernel_size=temporal_kernel_size,
+                                dilation=d,
+                                exponential_dilation=False,
+                                n_layers=1,
+                                causal_padding=False,
+                                gated=True)
             )
 
             spatial_convs.append(DiffConv(in_channels=hidden_size,
@@ -102,12 +118,12 @@ class GraphWaveNetModel(nn.Module):
         if learned_adjacency:
             for _ in range(n_layers):
                 dense_sconvs.append(
-                    SpatialConvOrderK(input_size=hidden_size,
-                                      output_size=hidden_size,
-                                      support_len=1,
-                                      order=spatial_kernel_size,
-                                      include_self=False,
-                                      channel_last=True)
+                    DenseGraphConvOrderK(input_size=hidden_size,
+                                         output_size=hidden_size,
+                                         support_len=1,
+                                         order=spatial_kernel_size,
+                                         include_self=False,
+                                         channel_last=True)
                 )
         self.dense_sconvs = nn.ModuleList(dense_sconvs)
         self.readout = nn.Sequential(nn.ReLU(),
@@ -122,13 +138,14 @@ class GraphWaveNetModel(nn.Module):
         adj = torch.softmax(logits, dim=1)
         return adj
 
-    def forward(self, x, edge_index, edge_weight=None, u=None, **kwargs):
+    def forward(self, x: Tensor, edge_index: Adj, edge_weight: OptTensor = None,
+                u: OptTensor = None) -> Tensor:
         """"""
-        # x: [batches, steps, nodes, channels] -> [batches, channels, nodes, steps]
+        # x: [b t n f]
 
         if u is not None:
             if u.dim() == 3:
-                u = repeat(u, 'b s c -> b s n c', n=x.size(-2))
+                u = repeat(u, 'b t f -> b t n f', n=x.size(-2))
             x = torch.cat([x, u], -1)
 
         if self.receptive_field > x.size(1):
@@ -142,7 +159,8 @@ class GraphWaveNetModel(nn.Module):
 
         out = torch.zeros(1, x.size(1), 1, 1, device=x.device)
         for i, (tconv, sconv, skip_conn, norm) in enumerate(
-                zip(self.tconvs, self.sconvs, self.skip_connections, self.norms)):
+                zip(self.tconvs, self.sconvs, self.skip_connections,
+                    self.norms)):
             res = x
             # temporal conv
             x = tconv(x)
@@ -160,18 +178,3 @@ class GraphWaveNetModel(nn.Module):
             x = norm(x)
 
         return self.readout(out)
-
-    @staticmethod
-    def add_model_specific_args(parser: ArgParser):
-        parser.opt_list('--hidden-size', type=int, default=32, tunable=True, options=[16, 32, 64, 128])
-        parser.opt_list('--ff-size', type=int, default=256, tunable=True, options=[64, 128, 256, 512])
-        parser.opt_list('--n-layers', type=int, default=8, tunable=True, options=[1, 2])
-        parser.opt_list('--dropout', type=float, default=0.3, tunable=True, options=[0., 0.1, 0.25, 0.5])
-        parser.opt_list('--temporal-kernel-size', type=int, default=2, tunable=True, options=[2, 3, 5])
-        parser.opt_list('--spatial-kernel-size', type=int, default=2, tunable=True, options=[1, 2])
-        parser.opt_list('--dilation', type=int, default=2, tunable=True, options=[1, 2])
-        parser.opt_list('--dilation-mod', type=int, default=2, tunable=True, options=[1, 2])
-        parser.opt_list('--norm', type=str, default='batch', tunable=True, options=['none', 'layer', 'batch'])
-        parser.opt_list('--learned-adjacency', type=str_to_bool, tunable=False, nargs='?', const=True, default=True, options=[True, False])
-        parser.opt_list('--emb-size', type=int, default=10, tunable=True, options=[8, 10, 16])
-        return parser

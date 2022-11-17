@@ -1,0 +1,22 @@
+defaults:
+  - default
+  - _self_
+
+model:
+  name: tcn
+  hparams:
+    hidden_size: 32
+    ff_size: 64
+    kernel_size: 2
+    n_convs_layer: 2
+    n_layers: 4
+    dropout: 0.1
+    resnet: true
+    norm: batch
+    dilation: 2
+
+optimizer:
+  hparams:
+    lr: 0.001
+
+lr_scheduler: null

@@ -1,6 +1,6 @@
 import torch
 
-from tsl.nn.layers.graph_convs.dense_spatial_conv import SpatialConvOrderK
+from tsl.nn.layers.graph_convs.dense_graph_conv import DenseGraphConvOrderK
 from tsl.nn.blocks.encoders.gcrnn import _GraphGRUCell, _GraphRNN
 
 
@@ -19,21 +19,21 @@ class DenseDCRNNCell(_GraphGRUCell):
     def __init__(self, input_size, output_size, k=2, root_weight=False):
         super(DenseDCRNNCell, self).__init__()
         # instantiate gates
-        self.forget_gate = SpatialConvOrderK(
+        self.forget_gate = DenseGraphConvOrderK(
             input_size=input_size + output_size,
             output_size=output_size,
             support_len=2,
             order=k,
             include_self=root_weight,
             channel_last=True)
-        self.update_gate = SpatialConvOrderK(
+        self.update_gate = DenseGraphConvOrderK(
             input_size=input_size + output_size,
             output_size=output_size,
             support_len=2,
             order=k,
             include_self=root_weight,
             channel_last=True)
-        self.candidate_gate = SpatialConvOrderK(
+        self.candidate_gate = DenseGraphConvOrderK(
             input_size=input_size + output_size,
             output_size=output_size,
             support_len=2,
@@ -76,5 +76,5 @@ class DenseDCRNN(_GraphRNN):
                 root_weight=root_weight))
 
     def forward(self, x, adj, h=None):
-        support = SpatialConvOrderK.compute_support(adj)
+        support = DenseGraphConvOrderK.compute_support(adj)
         return super(DenseDCRNN, self).forward(x, support, h=h)

@@ -1,0 +1,19 @@
+defaults:
+  - default
+  - _self_
+
+model:
+  name: transformer
+  hparams:
+    hidden_size: 64
+    ff_size: 128
+    n_layers: 4
+    n_heads: 2
+    dropout: 0.1
+    axis: both
+
+optimizer:
+  hparams:
+    lr: 0.001
+
+lr_scheduler: null

@@ -1,43 +1,52 @@
-from tsl.nn.blocks.encoders.dcrnn import DCRNN
-from tsl.utils.parser_utils import ArgParser
+from typing import Optional
 
 from einops import rearrange
-from torch import nn
+from torch import nn, Tensor
+from torch_geometric.typing import Adj, OptTensor
 
-from tsl.nn.blocks.encoders import ConditionalBlock
 from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
+from tsl.nn.blocks.encoders import ConditionalBlock
+from tsl.nn.blocks.encoders.dcrnn import DCRNN
+from ..base_model import BaseModel
 
 
-class DCRNNModel(nn.Module):
-    r"""
-    Diffusion ConvolutionalRecurrent Neural Network with a nonlinear readout.
+class DCRNNModel(BaseModel):
+    r"""The Diffusion Convolutional Recurrent Neural Network from the paper
+    `"Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic
+    Forecasting" <https://arxiv.org/abs/1707.01926>`_ (Li et al., ICLR 2018).
 
-    From Li et al., "Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic Forecasting", ICLR 2018.
+    Differently from the original implementation, the recurrent decoder is
+    substituted with a fixed-length nonlinear readout.
 
     Args:
-        input_size (int): Size of the input.
-        hidden_size (int): Number of units in the DCRNN hidden layer.
-        ff_size (int): Number of units in the nonlinear readout.
+        input_size (int): Number of features of the input sample.
         output_size (int): Number of output channels.
-        n_layers (int): Number DCRNN cells.
-        exog_size (int): Number of channels in the exogenous variable.
-        horizon (int): Number of steps to forecast.
-        activation (str, optional): Activation function in the readout.
-        dropout (float, optional): Dropout probability.
+        horizon (int): Number of future time steps to forecast.
+        exog_size (int): Number of features of the input covariate,
+            if any. (default: :obj:`0`)
+        hidden_size (int): Number of hidden units.
+            (default: :obj:`32`)
+        kernel_size (int): Order of the spatial diffusion process.
+            (default: :obj:`2`)
+        ff_size (int): Number of units in the nonlinear readout.
+            (default: :obj:`256`)
+        n_layers (int): Number of DCRNN cells.
+            (default: :obj:`1`)
+        dropout (float): Dropout probability.
+            (default: :obj:`0`)
+        activation (str): Activation function in the readout.
+            (default: :obj:`'relu'`)
     """
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 ff_size,
-                 output_size,
-                 n_layers,
-                 exog_size,
-                 horizon,
-                 activation='relu',
-                 dropout=0.,
-                 kernel_size=2):
-        super(DCRNNModel, self).__init__()
+    def __init__(self, input_size: int, output_size: int, horizon: int,
+                 exog_size: int = 0,
+                 hidden_size: int = 32,
+                 kernel_size: int = 2,
+                 ff_size: int = 256,
+                 n_layers: int = 1,
+                 dropout: float = 0.,
+                 activation: str = 'relu'):
+        super(DCRNNModel, self).__init__(return_type=Tensor)
         if exog_size:
             self.input_encoder = ConditionalBlock(input_size=input_size,
                                                   exog_size=exog_size,
@@ -58,7 +67,9 @@ class DCRNNModel(nn.Module):
                                   activation=activation,
                                   dropout=dropout)
 
-    def forward(self, x, edge_index, edge_weight=None, u=None, **kwargs):
+    def forward(self, x: Tensor, edge_index: Adj, edge_weight: OptTensor = None,
+                u: OptTensor = None) -> Tensor:
+        """"""
         if u is not None:
             if u.dim() == 3:
                 u = rearrange(u, 'b s c -> b s 1 c')
@@ -68,12 +79,3 @@ class DCRNNModel(nn.Module):
 
         h, _ = self.dcrnn(x, edge_index, edge_weight)
         return self.readout(h)
-
-    @staticmethod
-    def add_model_specific_args(parser: ArgParser):
-        parser.opt_list('--hidden-size', type=int, default=32, tunable=True, options=[16, 32, 64, 128])
-        parser.opt_list('--ff-size', type=int, default=256, tunable=True, options=[64, 128, 256, 512])
-        parser.opt_list('--n-layers', type=int, default=1, tunable=True, options=[1, 2])
-        parser.opt_list('--dropout', type=float, default=0., tunable=True, options=[0., 0.1, 0.25, 0.5])
-        parser.opt_list('--kernel-size', type=int, default=2, tunable=True, options=[1, 2])
-        return parser

@@ -1,7 +1,6 @@
 import torch.nn as nn
 from tsl.nn.base import TemporalConv2d, GatedTemporalConv2d
-from tsl.nn.utils import utils
-from tsl.nn.utils.utils import maybe_cat_exog
+from tsl.nn.utils import maybe_cat_exog, get_functional_activation
 
 from einops import rearrange
 
@@ -68,7 +67,7 @@ class TemporalConvNet(nn.Module):
                                     ))
 
         self.convs = nn.ModuleList(layers)
-        self.f = utils.get_functional_activation(activation) if not gated else nn.Identity()
+        self.f = get_functional_activation(activation) if not gated else nn.Identity()
         self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
 
         if output_channels is not None:

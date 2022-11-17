@@ -1,14 +1,17 @@
-from typing import Tuple, List, Union
+import os.path
+from copy import deepcopy
+from typing import Tuple, List, Union, Optional
 
 import numpy as np
 import torch
+from einops import rearrange
 from scipy import stats
 from torch import Tensor
 from torch.nn import Module
 from torch_geometric.data.storage import recursive_apply
-from torch_geometric.typing import OptTensor
 
 import tsl
+from tsl.ops.pattern import check_pattern, take, outer_pattern
 from tsl.typing import TensArray
 
 __all__ = [
@@ -85,11 +88,25 @@ class Scaler:
         """
         return dict(bias=self.bias, scale=self.scale)
 
-    def torch(self):
-        for name, param in self.params().items():
+    def torch(self, inplace=True):
+        scaler = self
+        if not inplace:
+            scaler = deepcopy(self)
+        for name, param in scaler.params().items():
             param = torch.atleast_1d(torch.as_tensor(param))
-            setattr(self, name, param)
-        return self
+            setattr(scaler, name, param)
+        return scaler
+
+    def numpy(self, inplace=True):
+        r"""Transform all tensors to numpy arrays."""
+        scaler = self
+        if not inplace:
+            scaler = deepcopy(self)
+        for name, param in scaler.params().items():
+            if isinstance(param, Tensor):
+                param = param.detach().cpu().numpy()
+            setattr(scaler, name, param)
+        return scaler
 
     @fit_wrapper
     def fit(self, x: TensArray, *args, **kwargs):
@@ -110,6 +127,41 @@ class Scaler:
         :obj:`x`."""
         self.fit(x, *args, **kwargs)
         return self.transform(x)
+
+    def save(self, filename: str) -> str:
+        """Save the scaler to disk.
+
+        Args:
+            filename (str): The path to the filename for storage.
+
+        Returns:
+            str: The absolute path to the saved file.
+        """
+        params = self.params()
+        is_torch = any([isinstance(param, Tensor) for param in params.values()])
+        if is_torch:
+            if not filename.endswith('.pt'):
+                filename = filename + '.pt'
+            torch.save(params, filename)
+        else:
+            np.savez_compressed(filename, **params)
+        return os.path.abspath(filename)
+
+    @classmethod
+    def load(cls, filename: str) -> "Scaler":
+        """Load instance of this type of scaler from disk.
+
+        Args:
+            filename (str): The path to the scaler file.
+        """
+        ext = filename.split('.')[-1]
+        if ext == 'npz':
+            params = np.load(filename)
+        elif ext == 'pt':
+            params = torch.load(filename)
+        else:
+            raise RuntimeError(f"Filename {filename} is not in a valid format.")
+        return cls(**params)
 
 
 class StandardScaler(Scaler):
@@ -188,7 +240,7 @@ class MinMaxScaler(Scaler):
         if out_min >= out_max:
             raise ValueError(
                 "Output range minimum must be smaller than maximum. Got {}."
-                    .format(self.out_range))
+                .format(self.out_range))
 
         if mask is not None:
             x = np.where(mask, x, np.nan)
@@ -207,7 +259,7 @@ class MinMaxScaler(Scaler):
 
 
 class RobustScaler(Scaler):
-    """Removes the median and scales the data according to the quantile range.
+    r"""Removes the median and scales the data according to the quantile range.
 
     Default range is the Interquartile Range (IQR), i.e., the range between the
     1st quartile (25th quantile) and the 3rd quartile (75th quantile).
@@ -215,8 +267,9 @@ class RobustScaler(Scaler):
     Args:
         axis (int): dimensions of input to fit parameters on.
             (default: 0)
-        quantile_range (tuple): quantile range :math:`(q_{\min}, q_{\max})`, with
-            :math:`0.0 < q_{\min} < q_{\max} < 100.0`, used to calculate :obj:`scale`.
+        quantile_range (tuple): quantile range :math:`(q_{\min}, q_{\max})`,
+            with :math:`0.0 < q_{\min} < q_{\max} < 100.0`, used to calculate
+            :obj:`scale`.
             (default: :obj:`(25.0, 75.0)`)
     """
 
@@ -230,7 +283,7 @@ class RobustScaler(Scaler):
 
     @fit_wrapper
     def fit(self, x: TensArray, mask=None, keepdims=True):
-        """Fit scaler's parameters `bias` :math:`\mu` and `scale`
+        r"""Fit scaler's parameters `bias` :math:`\mu` and `scale`
         :math:`\sigma` as the median and difference between quantiles of
         :obj:`x`, respectively.
 
@@ -272,58 +325,188 @@ class ScalerModule(Module):
     r"""Converts a :class:`Scaler` to a :class:`torch.nn.Module`, to insert
     transformation parameters and functions into the minibatch."""
 
-    def __init__(self, bias: OptTensor = None, scale: OptTensor = None,
-                 trend: OptTensor = None):
+    def __init__(self, scaler: Optional[Union[Scaler, "ScalerModule"]] = None,
+                 *, bias: Union[Tensor, float] = 0.,
+                 scale: Union[Tensor, float] = 1.,
+                 pattern: Optional[str] = None):
         super(ScalerModule, self).__init__()
-        self.register_buffer('bias', bias)
-        self.register_buffer('scale', scale)
-        self.register_buffer('trend', trend)
+        self.training = False
+        self.inherited_from = None
+        self.t_axis = None  # axis of time dimension
+        self.n_axis = None  # axis of node dimension
+        # initialize from scaler (if any)
+        if isinstance(scaler, Scaler):
+            scaler = scaler.torch()
+            self.inherited_from = scaler.__class__
+        elif isinstance(scaler, ScalerModule):
+            self.inherited_from = scaler.inherited_from
+            pattern = scaler.pattern
+        if scaler is not None:
+            bias = scaler.bias
+            scale = scaler.scale
+        # register scaling params as non-trainable parameters
+        self.bias = bias
+        self.scale = scale
+        self.pattern = pattern
 
     def __call__(self, *args, **kwargs):
         return self.transform(*args, **kwargs)
 
+    def __setattr__(self, key, value):
+        if key in ['bias', 'scale']:
+            if isinstance(value, Tensor):
+                value = value.clone().detach()
+            else:
+                value = torch.tensor(value)
+            value = torch.atleast_1d(value)
+            self.register_buffer(key, value)
+        elif key == 'pattern':
+            self.set_pattern(value)
+        else:
+            super(ScalerModule, self).__setattr__(key, value)
+
+    def _get_name(self):
+        if self.inherited_from is not None:
+            return self.inherited_from.__name__ + 'Module'
+        return self.__class__.__name__
+
     def extra_repr(self) -> str:
-        s = []
-        if self.bias is not None:
-            s.append("bias={}".format(tuple(self.bias.shape)))
-        if self.scale is not None:
-            s.append("scale={}".format(tuple(self.scale.shape)))
-        if self.trend is not None:
-            s.append("trend={}".format(tuple(self.trend.shape)))
+        s = ["bias={}".format(tuple(self.bias.shape)),
+             "scale={}".format(tuple(self.scale.shape))]
+        if self.pattern is not None:
+            s.append("pattern='{}'".format(self.pattern))
         return ', '.join(s)
 
-    def transform_tensor(self, x: Tensor):
-        if self.trend is not None:
-            x = x - self.trend
-        if self.bias is not None:
-            x = x - self.bias
-        if self.scale is not None:
-            x = x / (self.scale + tsl.epsilon)
-        return x
+    def params(self) -> dict:
+        """Dictionary of the scaler parameters `bias` and `scale`.
 
-    def inverse_transform_tensor(self, x: Tensor):
-        if self.scale is not None:
-            x = x * (self.scale + tsl.epsilon)
-        if self.bias is not None:
-            x = x + self.bias
-        if self.trend is not None:
-            x = x + self.trend
-        return x
+        Returns:
+            dict: Scaler's parameters `bias` and `scale.`
+        """
+        return dict(bias=self.bias, scale=self.scale)
+
+    @property
+    def t(self) -> int or None:
+        """Size of temporal dimension (:obj:`None` if time-invariant)."""
+        if self.pattern is not None and 't' in self.pattern:
+            # 't' is always in first dimension
+            return max(self.scale.size(0), self.bias.size(0))
+
+    @property
+    def n(self) -> int or None:
+        """Size of node dimension (:obj:`None` if node-invariant)."""
+        if self.pattern is not None and 'n' in self.pattern:
+            return max(self.scale.size(self.n_axis),
+                       self.bias.size(self.n_axis))
+
+    def set_pattern(self, value, check: bool = False):
+        if value is not None:
+            value = value.strip()
+            if value.count('n') > 1:
+                raise RuntimeError("ScalerModule does not support data with "
+                                   "multiple 'n' dimensions.")
+            if check:
+                value = check_pattern(value, ndim=self.bias.ndim,
+                                      include_batch=True)
+            self.t_axis = 0 if 't' in value else None
+            if 'n' in value:
+                self.n_axis = value.split(' ').index('n')
+        self.__dict__['pattern'] = value
+
+    def transform_tensor(self, x: Tensor) -> Tensor:
+        r"""Apply transformation :math:`f(x) = (x - \mu) / \sigma` to tensor
+        :obj:`x`."""
+        return (x - self.bias) / self.scale + tsl.epsilon
+
+    def inverse_transform_tensor(self, x: Tensor) -> Tensor:
+        r"""Apply inverse transformation
+        :math:`f(x) = (x \cdot \sigma) + \mu` to tensor :obj:`x`."""
+        return x * (self.scale + tsl.epsilon) + self.bias
 
     def transform(self, x):
+        r"""Recursively apply transformation :math:`f(x) = (x - \mu) / \sigma`
+        to :obj:`x`."""
         return recursive_apply(x, self.transform_tensor)
 
     def inverse_transform(self, x):
+        r"""Recursively apply inverse transformation
+        :math:`f(x) = (x \cdot \sigma) + \mu` to :obj:`x`."""
         return recursive_apply(x, self.inverse_transform_tensor)
 
     def numpy(self):
-        r"""Transform all tensors to numpy arrays, either for all attributes or
-        only the ones given in :obj:`*args`."""
-        bias = self.bias if self.bias is not None else 0
-        bias = bias + self.trend if self.trend is not None else 0
-        bias = bias.detach().cpu().numpy()
-        scale = self.scale.detach().cpu().numpy()
-        return Scaler(bias=bias, scale=scale)
+        r"""Transform :class:`~tsl.data.preprocessing.ScalerModule` to
+        :class:`~tsl.data.preprocessing.Scaler`."""
+        b = self.bias.detach().cpu().numpy()
+        s = self.scale.detach().cpu().numpy()
+        return Scaler(bias=b, scale=s)
+
+    def rearrange(self, pattern: str, inplace=False, **axes_lengths) \
+            -> "ScalerModule":
+        r"""Rearrange parameters in the scaler according to the provided patter
+         using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
+        if '->' in pattern:
+            start_pattern, end_pattern = pattern.split('->')
+            start_pattern = start_pattern.strip()
+            if self.pattern is not None and self.pattern != start_pattern:
+                raise RuntimeError(f"Starting pattern {start_pattern} does not "
+                                   f"match with scaler patter {self.pattern}.")
+            self.pattern = start_pattern
+        else:
+            end_pattern = pattern
+            pattern = self.pattern + ' -> ' + pattern
+        b = rearrange(self.bias, pattern, **axes_lengths)
+        s = rearrange(self.scale, pattern, **axes_lengths)
+        if inplace:
+            self.bias, self.scale = b, s
+            self.pattern = end_pattern
+            return self
+        return ScalerModule(bias=b, scale=s, pattern=end_pattern.strip())
+
+    def slice(self, time_index: Union[List, Tensor] = None,
+              node_index: Union[List, Tensor] = None):
+        """Slice the parameters of the scaler with the given time and node
+        indices.
+
+        The scaler must have a pattern defining the dimensions of the
+        parameters. This operation is not in place, it always returns a new
+        :class:`~tsl.data.preprocessing.ScalerModule`. The parameters of the
+        new scaler have same size of the indices provided along the slicing
+        axes or 1 for the params with a single, broadcastable, value."""
+        if self.pattern is None:
+            raise RuntimeError("You are trying to slice a scaler with no "
+                               "pattern.")
+        # move to new object
+        scaler = ScalerModule(self)
+        # shortcut for when scaler is time-unvarying and node_index is None
+        if time_index is None and node_index is None:
+            return scaler
+
+        # if time-unvarying scaler, just apply unsqueezing indexing
+        new_axes, pattern = None, scaler.pattern
+        if time_index is not None and time_index.ndim == 2:
+            new_axes = torch.zeros(1, 1, dtype=torch.long)
+            pattern = 'b ' + scaler.pattern
+
+        # compute actual slicing for each param
+        t, n = self.t_axis, self.n_axis  # axis of time and node dimensions
+        ti_bias = ti_scale = time_index
+        ni_bias = ni_scale = node_index
+        if self.t_axis is not None:
+            ti_bias = time_index if self.bias.size(t) > 1 else new_axes
+            ti_scale = time_index if self.scale.size(t) > 1 else new_axes
+        if self.n_axis is not None:
+            ni_bias = node_index if self.bias.size(n) > 1 else None
+            ni_scale = node_index if self.scale.size(n) > 1 else None
+
+        # slice params
+        scaler.bias = take(scaler.bias, self.pattern,
+                           time_index=ti_bias, node_index=ni_bias)
+        scaler.scale = take(scaler.scale, self.pattern,
+                            time_index=ti_scale, node_index=ni_scale)
+        # update pattern
+        scaler.pattern = pattern
+
+        return scaler
 
     @staticmethod
     def cat_tensors(scalers, sizes, key, dim, fill_value):
@@ -334,8 +517,9 @@ class ScalerModule(Module):
         # if no valid tensor return
         if len(tensors) == 0:
             return None
-        # get dtype and device of first tensor
-        dtype, device = tensors[0].dtype, tensors[0].device
+        # get dtype and device of first tensor and assume equal for all
+        elem = next(iter(tensors.values()))
+        dtype, device = elem.dtype, elem.device
         # for each scaler (also the ones with no tensor to be concatenated)
         # retrieve the tensor (or create one if not present) and the broadcast
         # shape
@@ -363,8 +547,6 @@ class ScalerModule(Module):
     @classmethod
     def cat(cls, scalers: Union[List, Tuple], dim: int = -1,
             sizes: Union[List, Tuple] = None):
-        assert isinstance(scalers, (tuple, list)), \
-            "`scalers` must be a tuple or list"
         # if all scalers are None, return None
         if all([scaler is None for scaler in scalers]):
             return None
@@ -372,19 +554,12 @@ class ScalerModule(Module):
         # containing the shape of the corresponding tensors
         if None in scalers:
             assert sizes is not None
-        bias, scale, trend = None, None, None
-        # trend
-        trends = [(i, scaler.trend) for i, scaler in enumerate(scalers)
-                  if isinstance(scaler, cls) and scaler.trend is not None]
-        if len(trends) == 1:
-            i, trend = trends[0]
-            pad = [torch.zeros_like(trend)] * (len(scalers) - 1)
-            pad.insert(i, trend)
-            trend = torch.cat(pad, dim=dim)
-        elif len(trends) > 1:
-            raise ValueError()
         # scale
         scale = cls.cat_tensors(scalers, sizes, 'scale', dim, 1)
         # bias
         bias = cls.cat_tensors(scalers, sizes, 'bias', dim, 0)
-        return cls(bias=bias, scale=scale, trend=trend)
+        # pattern
+        pattern = outer_pattern([scaler.pattern for scaler in scalers
+                                 if scaler is not None and
+                                 scaler.pattern is not None])
+        return cls(bias=bias, scale=scale, pattern=pattern)

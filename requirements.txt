@@ -1,5 +1,7 @@
 einops
+hydra-core
 numpy
+omegaconf
 pandas
 pytorch_lightning>=1.5
 PyYAML
@@ -7,9 +9,5 @@ scikit_learn
 scipy
 tables
 test_tube
-torch>=1.9
-torchvision
-torchaudio
-torch_geometric>=2.0
 torchmetrics>=0.7
 tqdm

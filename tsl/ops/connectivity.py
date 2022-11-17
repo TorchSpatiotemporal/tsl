@@ -1,13 +1,21 @@
 from types import ModuleType
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 
 import numpy as np
+import pandas as pd
 import torch
 import torch_sparse
 from scipy.sparse import coo_matrix
 from torch import Tensor
-from torch_sparse import SparseTensor
-from tsl.typing import TensArray, OptTensArray, SparseTensArray
+from torch_geometric.data.storage import recursive_apply
+from torch_geometric.nn.conv.gcn_conv import gcn_norm
+from torch_geometric.typing import Adj
+from torch_geometric.utils import add_remaining_self_loops, subgraph
+from torch_sparse import SparseTensor, fill_diag
+
+from tsl.typing import TensArray, OptTensArray, SparseTensArray, DataArray, \
+    ScipySparseMatrix
+from tsl.utils import casting
 
 
 def maybe_num_nodes(edge_index, num_nodes=None):
@@ -172,6 +180,40 @@ def transpose(edge_index: SparseTensArray, edge_weights: OptTensArray = None) \
     return edge_index[[1, 0]]
 
 
+def reduce_graph(subset: Union[Tensor, List[int]],
+                 edge_index: SparseTensArray,
+                 num_nodes: Optional[int] = None,
+                 backend: ModuleType = None) \
+        -> Tuple[TensArray, OptTensArray]:
+    """Returns the subgraph with all nodes in :attr:`subset` and only the edges
+    between them.
+
+    Args:
+        subset: The index of the nodes in the output subgraph.
+        edge_index: Adjacency matrix as COO :obj:`edge_index` or
+            :class:`torch_sparse.SparseTensor`.
+        num_nodes: The number of nodes.
+            (default: :obj:`None`)
+        backend (ModuleType, optional): Backend matching :obj:`edge_index` type
+            (either :mod:`numpy` or :mod:`torch`), if :obj:`None` it is inferred
+            from :obj:`edge_index` type.
+            (default :obj:`None`)
+
+    Returns:
+        tuple: edge_index, edge_mask
+    """
+    backend = infer_backend(edge_index, backend)
+    if backend is torch:
+        edge_index, _, edge_mask = subgraph(subset, edge_index,
+                                            return_edge_mask=True,
+                                            relabel_nodes=True,
+                                            num_nodes=num_nodes)
+        return edge_index, edge_mask
+    else:
+        edge_index = edge_index[subset, subset]
+        return edge_index, None
+
+
 def weighted_degree(index: TensArray, weights: OptTensArray = None,
                     num_nodes: Optional[int] = None) -> TensArray:
     r"""Computes the weighted degree of a given one-dimensional index tensor.
@@ -197,8 +239,10 @@ def weighted_degree(index: TensArray, weights: OptTensArray = None,
     return out
 
 
-def normalize(edge_index: SparseTensArray, edge_weights: OptTensArray = None,
-              dim: int = 0, num_nodes: Optional[int] = None) \
+def asymmetric_norm(edge_index: SparseTensArray,
+                    edge_weight: OptTensArray = None,
+                    dim: int = 0, num_nodes: Optional[int] = None,
+                    add_self_loops: bool = False) \
         -> Tuple[SparseTensArray, OptTensArray]:
     r"""Normalize edge weights across dimension :obj:`dim`.
 
@@ -207,24 +251,51 @@ def normalize(edge_index: SparseTensArray, edge_weights: OptTensArray = None,
 
     Args:
         edge_index (LongTensor): Edge index tensor.
-        edge_weights (Tensor): Edge weights tensor.
+        edge_weight (Tensor): Edge weights tensor.
         dim (int): Dimension over which to compute normalization.
         num_nodes (int, optional): The number of nodes, *i.e.*
             :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
+        add_self_loops: Whether to add self loops to the adjacency matrix.
     """
     backend = infer_backend(edge_index)
 
     if backend is torch_sparse:
-        assert edge_weights is None
+        assert edge_weight is None
+        if add_self_loops:
+            edge_index = fill_diag(edge_index, 1)
         deg = edge_index.sum(dim=dim).to(torch.float)
         deg_inv = deg.pow(-1.0)
         deg_inv[deg_inv == float('inf')] = 0
         edge_index = deg_inv.view(-1, 1) * edge_index
         return edge_index, None
 
+    if add_self_loops:
+        edge_index, tmp_edge_weight = add_remaining_self_loops(edge_index,
+                                                               edge_weight, 1,
+                                                               num_nodes)
+        assert tmp_edge_weight is not None
+        edge_weight = tmp_edge_weight
+
     index = edge_index[dim]
-    degree = weighted_degree(index, edge_weights, num_nodes=num_nodes)
-    return edge_index, edge_weights / degree[index]
+    degree = weighted_degree(index, edge_weight, num_nodes=num_nodes)
+    norm_weight = (1 if edge_weight is None else edge_weight) / degree[index]
+    return edge_index, norm_weight
+
+
+def normalize_connectivity(edge_index, edge_weight, symmetric, num_nodes,
+                           add_self_loops=False):
+    if symmetric:
+        edge_index, edge_weight = gcn_norm(edge_index,
+                                           edge_weight,
+                                           num_nodes,
+                                           add_self_loops=add_self_loops)
+    else:
+        edge_index, edge_weight = asymmetric_norm(edge_index,
+                                                  edge_weight,
+                                                  dim=1,
+                                                  num_nodes=num_nodes,
+                                                  add_self_loops=add_self_loops)
+    return edge_index, edge_weight
 
 
 def power_series(edge_index: TensArray, edge_weights: OptTensArray = None,
@@ -288,3 +359,27 @@ def get_dummy_edge_index(dummy: str, num_nodes: int,
     else:
         raise NotImplementedError
     return edge_index
+
+
+def parse_connectivity(connectivity: Union[SparseTensArray, Tuple[DataArray]],
+                       target_layout: Optional[str] = None,
+                       num_nodes: Optional[int] = None
+                       ) -> Tuple[Optional[Adj], Optional[Tensor]]:
+    # Convert to torch
+    # from np.ndarray, pd.DataFrame or torch.Tensor
+    if isinstance(connectivity, (pd.DataFrame, np.ndarray, Tensor)):
+        connectivity = casting.copy_to_tensor(connectivity)
+    elif isinstance(connectivity, (list, tuple)):
+        connectivity = recursive_apply(connectivity, casting.copy_to_tensor)
+    # from scipy sparse matrix
+    elif isinstance(connectivity, ScipySparseMatrix.__args__):
+        connectivity = SparseTensor.from_scipy(connectivity)
+    elif not isinstance(connectivity, SparseTensor):
+        raise TypeError("`connectivity` must be a dense matrix or in "
+                        "COO format (i.e., an `edge_index`).")
+
+    if target_layout is not None:
+        connectivity = convert_torch_connectivity(connectivity,
+                                                  target_layout,
+                                                  num_nodes=num_nodes)
+    return connectivity

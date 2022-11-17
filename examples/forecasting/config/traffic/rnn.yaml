@@ -1,0 +1,20 @@
+defaults:
+  - default
+  - _self_
+
+model:
+  name: rnn
+  hparams:
+    hidden_size: 32
+    ff_size: 64
+    rec_layers: 2
+    ff_layers: 1
+    rec_dropout: 0.1
+    ff_dropout: 0.1
+    cell_type: gru
+
+optimizer:
+  hparams:
+    lr: 0.001
+
+lr_scheduler: null

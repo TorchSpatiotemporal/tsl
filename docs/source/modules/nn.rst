@@ -6,7 +6,8 @@ NN
    :maxdepth: 2
    :caption: NN
 
-   nn_models
-   nn_blocks
    nn_layers
+   nn_blocks
+   nn_models
    nn_base
+   nn_functional

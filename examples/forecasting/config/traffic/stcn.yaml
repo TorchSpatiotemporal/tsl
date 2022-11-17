@@ -1,0 +1,29 @@
+defaults:
+  - default
+  - _self_
+
+batch_size: 64
+l2_reg: 0.0001
+lr: 0.001
+
+model:
+  name: stcn
+  hparams:
+    hidden_size: 32
+    ff_size: 256
+    n_layers: 4
+    dropout: 0.1
+    temporal_kernel_size: 2
+    spatial_kernel_size: 2
+    dilation: 2
+    norm: batch
+
+dataset:
+  connectivity:
+    layout: csr
+
+optimizer:
+  hparams:
+    lr: 0.01
+
+lr_scheduler: null

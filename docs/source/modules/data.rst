@@ -1,31 +1,18 @@
-Data handling
-=============
-
+.. py:module:: tsl.data
 .. currentmodule:: tsl.data
 
+Data structures
+===============
 
-Data
-----
+The module :mod:`tsl.data` contains all the classes and methods used in tsl to
+store, represent, and process spatiotemporal data in PyTorch.
 
-.. autosummary::
-   :nosignatures:
-   {% for cls in tsl.data.data_classes %}
-     {{ cls }}
-   {% endfor %}
+.. toctree::
+   :glob:
+   :maxdepth: 2
+   :caption: Data structures
 
-{% for cls in tsl.data.data_classes %}
-.. autoclass:: {{ cls }}
-    :inherited-members:
-{% endfor %}
-
-Dataset
--------
-
-.. autosummary::
-   :nosignatures:
-   {% for cls in tsl.data.dataset_classes %}
-     {{ cls }}
-   {% endfor %}
-
-.. automodule:: tsl.data
-    :members: {% for cls in tsl.data.dataset_classes %}{{ cls }}, {% endfor %}
+   data_objects
+   data_pytorch_datasets
+   data_datamodule
+   data_preprocessing

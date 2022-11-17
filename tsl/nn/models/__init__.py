@@ -1,17 +1,7 @@
-from .rnn_model import RNNModel, FCRNNModel
-from .tcn_model import TCNModel
-from .transformer_model import TransformerModel
+from .base_model import BaseModel
+from .stgn import *
+from .temporal import *
 
-from . import imputation
-from . import stgn
+__all__ = ['BaseModel'] + stgn.classes + temporal.classes
 
-__all__ = [
-    'imputation',
-    'stgn',
-    'FCRNNModel',
-    'RNNModel',
-    'TCNModel',
-    'TransformerModel'
-]
-
-classes = __all__[2:]
+classes = __all__

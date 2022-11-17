@@ -1,0 +1,29 @@
+defaults:
+  - default
+  - _self_
+
+batch_size: 64
+
+model:
+  name: evolvegcn
+  hparams:
+    hidden_size: 64
+    n_layers: 2
+    asymmetric_norm: True
+    cached: True
+    variant: O
+    root_weight: True
+
+dataset:
+  connectivity:
+    force_symmetric: True
+
+optimizer:
+  hparams:
+    lr: 0.005
+
+lr_scheduler:
+  name: MultiStepLR
+  hparams:
+    gamma: 0.1
+    milestones: [ 20, 30, 40 ]

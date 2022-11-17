@@ -2,7 +2,7 @@ from torch import nn
 
 from tsl.nn.base.attention import MultiHeadAttention
 from tsl.nn.layers.norm import LayerNorm
-from tsl.nn.utils import utils
+from tsl.nn import utils
 from functools import partial
 
 import torch.nn.functional as F

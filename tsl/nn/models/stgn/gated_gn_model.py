@@ -1,19 +1,17 @@
 import torch
 from torch import nn
-from tsl.utils.parser_utils import ArgParser
 
-from tsl.utils.parser_utils import str_to_bool
-
+from tsl.nn.models import BaseModel
 
 from einops import rearrange
 from einops.layers.torch import Rearrange
 
 from tsl.nn.base import StaticGraphEmbedding
 from tsl.nn.layers.graph_convs import GatedGraphNetwork
-from tsl.nn.utils import utils
+from tsl.nn import utils
 
 
-class GatedGraphNetworkModel(nn.Module):
+class GatedGraphNetworkModel(BaseModel):
     r"""
     Simple time-then-space model with an MLP with residual connections as encoder (flattened time dimension) and a
     gated GN decoder with node identification.
@@ -84,7 +82,7 @@ class GatedGraphNetworkModel(nn.Module):
             Rearrange('b n (h f) -> b h n f', h=horizon, f=output_size)
         )
 
-    def forward(self, x, edge_index=None, u=None, **kwargs):
+    def forward(self, x, edge_index=None, u=None):
         """"""
         # x: [batches steps nodes features]
         x = utils.maybe_cat_exog(x, u)
@@ -108,13 +106,3 @@ class GatedGraphNetworkModel(nn.Module):
         x = self.decoder(x) + x
 
         return self.readout(x)
-
-    @staticmethod
-    def add_model_specific_args(parser: ArgParser):
-        parser.opt_list('--hidden-size', type=int, default=64, tunable=True, options=[16, 32, 64, 128, 256])
-        parser.opt_list('--input-window-size', type=int, default=12, tunable=False)
-        parser.opt_list('--enc-layers', type=int, default=2, tunable=True, options=[1, 2, 3])
-        parser.opt_list('--gnn-layers', type=int, default=2, tunable=True, options=[1, 2, 3])
-        parser.opt_list('--full-graph', type=str_to_bool, nargs='?', const=True, default=False)
-        parser.opt_list('--activation', type=str, default='silu', tunable=False, options=['relu', 'elu', 'silu'])
-        return parser

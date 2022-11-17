@@ -1,9 +1,0 @@
-window: 12
-horizon: 12
-batch_size: 16
-l2_reg: 0.
-use_lr_schedule: True
-batches_epoch: -1
-grad_clip_val: -1
-lr: 0.005
-epochs: 200

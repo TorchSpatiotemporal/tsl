@@ -1,9 +1,8 @@
 from torch import nn
-from torch.nn import functional as F
 
 from tsl.nn.base.graph_conv import GraphConv
 from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
-from tsl.nn.utils import utils
+from tsl.nn import utils
 
 
 class GCNDecoder(nn.Module):

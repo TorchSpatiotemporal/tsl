@@ -9,10 +9,10 @@ from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.nn.inits import glorot, zeros
 from torch_geometric.typing import (Adj,
                                     OptPairTensor,
-                                    OptTensor,
-                                    Size)
+                                    OptTensor)
 from torch_geometric.utils import add_self_loops, remove_self_loops
 from torch_sparse import SparseTensor, set_diag
+
 from tsl.nn.functional import sparse_softmax
 
 
@@ -189,6 +189,7 @@ class GATConv(MessagePassing):
 
     def forward(self, x: Union[Tensor, OptPairTensor], edge_index: Adj,
                 edge_attr: OptTensor = None, need_weights: bool = False):
+        """"""
         node_dim = self.node_dim
         self.node_dim = (node_dim + x.dim()) if node_dim < 0 else node_dim
 
@@ -258,6 +259,7 @@ class GATConv(MessagePassing):
     def edge_update(self, alpha_j: Tensor, alpha_i: OptTensor,
                     edge_attr: OptTensor, index: Tensor, ptr: OptTensor,
                     size_i: Optional[int]) -> Tensor:
+        """"""
         # Given edge-level attention coefficients for source and target nodes,
         # we simply need to sum them up to "emulate" concatenation:
         alpha = alpha_j if alpha_i is None else alpha_j + alpha_i
@@ -280,6 +282,7 @@ class GATConv(MessagePassing):
         return alpha
 
     def message(self, x_j: Tensor, alpha: Tensor) -> Tensor:
+        """"""
         return alpha.unsqueeze(-1) * x_j
 
     def __repr__(self) -> str:
