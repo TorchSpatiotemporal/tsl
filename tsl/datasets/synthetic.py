@@ -11,6 +11,7 @@ from tsl.datasets import TabularDataset
 import tsl
 from tsl.typing import SparseTensArray
 from tsl.ops.connectivity import parse_connectivity
+from tsl.utils.casting import torch_to_numpy
 
 
 class GaussianNoiseSyntheticDataset(TabularDataset):
@@ -121,8 +122,8 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
                 x_t = x_t + torch.zeros_like(x_t).normal_(generator=rng) * self.sigma_noise
                 x[t:t + 1] = x_t[0]
 
-        x = x[self._min_window:].detach().numpy()
-        y_opt = y_opt.detach().numpy()
+        x = torch_to_numpy(x[self._min_window:])
+        y_opt = torch_to_numpy(y_opt)
         return x, y_opt, np.ones_like(x)
 
     def get_connectivity(self, layout: str = 'edge_index'):
