@@ -70,7 +70,7 @@ class RNNModel(BaseModel):
             dropout=ff_dropout
         )
 
-    def forward(self, x: Tensor, u: Optional[Tensor] = None, **kwargs) -> Tensor:
+    def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""
         # x: [batches steps nodes features]
         # u: [batches steps (nodes) features]
@@ -132,7 +132,7 @@ class FCRNNModel(RNNModel):
                                          cell_type=cell_type,
                                          activation=activation)
 
-    def forward(self, x: Tensor, u: Optional[Tensor] = None, **kwargs) -> Tensor:
+    def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""
         # x: [batches, steps, nodes, features]
         # u: [batches, steps, (nodes), features]

@@ -107,7 +107,7 @@ class TCNModel(BaseModel):
         self.window = readout_kernel_size
         self.horizon = horizon
 
-    def forward(self, x: Tensor, u: Optional[Tensor] = None, **kwargs) -> Tensor:
+    def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""
         # x: [b t n f]
         # u: [b t (n) f]

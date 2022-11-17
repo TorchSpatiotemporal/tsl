@@ -5,8 +5,11 @@ import pytorch_lightning as pl
 import torch
 from torchmetrics import MetricCollection, Metric
 
+from tsl import logger
 from tsl.data import Data
 from tsl.metrics.torch import MaskedMetric
+from tsl.nn.models import BaseModel
+from tsl.utils import foo_signature
 
 
 class Predictor(pl.LightningModule):
@@ -56,6 +59,8 @@ class Predictor(pl.LightningModule):
                                   logger=False)
         self.model_cls = model_class
         self.model_kwargs = model_kwargs
+        self._model_fwd_signature = None  # automatic set on model assignment
+
         self.optim_class = optim_class
         self.optim_kwargs = optim_kwargs
         self.scheduler_class = scheduler_class
@@ -82,6 +87,12 @@ class Predictor(pl.LightningModule):
             # can be used to set the model manually later
             self.model = None
 
+    def __setattr__(self, key, value):
+        super(Predictor, self).__setattr__(key, value)
+        if key == 'model' and value is not None:
+            self._model_fwd_signature = foo_signature(self.model.forward)
+            self._check_kwargs = True
+
     def reset_model(self):
         """"""
         if self.model_cls is not None:
@@ -100,14 +111,51 @@ class Predictor(pl.LightningModule):
         self.load_state_dict(model['state_dict'])
 
     @property
-    def trainable_parameters(self):
+    def is_tsl_model(self):
+        """"""
+        return self.model is not None and isinstance(self.model, BaseModel)
+
+    @property
+    def trainable_parameters(self) -> int:
         """"""
         return sum(
             p.numel() for p in self.model.parameters() if p.requires_grad)
 
+    @property
+    def filter_forward_kwargs(self) -> bool:
+        """"""
+        return self._model_fwd_signature is not None and \
+               not self._model_fwd_signature['has_kwargs']
+
+    def _filter_forward_kwargs(self, kwargs: dict) -> dict:
+        """"""
+        if self._check_kwargs:
+            model_args = self._model_fwd_signature['signature']
+            filtered = set(kwargs).difference(model_args)
+            forwarded = set(kwargs).intersection(model_args)
+            msg = f"Only args {list(forwarded)} are forwarded to the model " \
+                  f"({self.model.__class__.__name__}). "
+            if len(filtered):
+                msg = f"Arguments {list(filtered)} are filtered out. " + msg
+            logger.warn(msg)
+            self._check_kwargs = False
+        return {k: v for k, v in kwargs.items() if k in
+                self._model_fwd_signature['signature']}
+
     def forward(self, *args, **kwargs):
         """"""
+        if self.filter_forward_kwargs:
+            kwargs = self._filter_forward_kwargs(kwargs)
         return self.model(*args, **kwargs)
+
+    def predict(self, *args, **kwargs):
+        """"""
+        predict_fn = self.model.predict if self.is_tsl_model else self.model
+        if self.filter_forward_kwargs:
+            return predict_fn(*args, **{k: v for k, v in kwargs if k in
+                                        self._model_fwd_signature['signature']})
+        else:
+            return predict_fn(*args, **kwargs)
 
     @staticmethod
     def _check_metric(metric, on_step=False):
@@ -123,12 +171,15 @@ class Predictor(pl.LightningModule):
         return metric
 
     def _set_metrics(self, metrics):
-        self.train_metrics = MetricCollection(metrics={k: self._check_metric(m) for k, m in metrics.items()},
-                                              prefix='train_')
-        self.val_metrics = MetricCollection(metrics={k: self._check_metric(m) for k, m in metrics.items()},
-                                            prefix='val_')
-        self.test_metrics = MetricCollection(metrics={k: self._check_metric(m) for k, m in metrics.items()},
-                                             prefix='test_')
+        self.train_metrics = MetricCollection(
+            metrics={k: self._check_metric(m) for k, m in metrics.items()},
+            prefix='train_')
+        self.val_metrics = MetricCollection(
+            metrics={k: self._check_metric(m) for k, m in metrics.items()},
+            prefix='val_')
+        self.test_metrics = MetricCollection(
+            metrics={k: self._check_metric(m) for k, m in metrics.items()},
+            prefix='test_')
 
     def log_metrics(self, metrics, **kwargs):
         """"""

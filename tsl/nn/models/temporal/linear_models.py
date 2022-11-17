@@ -36,7 +36,7 @@ class ARModel(BaseModel):
                                     bias=bias)
         self.temporal_order = temporal_order
 
-    def forward(self, x: Tensor, u: Optional[Tensor] = None, **kwargs) -> Tensor:
+    def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""
         # x: [batches steps nodes features]
         # u: [batches steps (nodes) features]
@@ -75,7 +75,7 @@ class VARModel(ARModel):
                                        exog_size=exog_size,
                                        bias=bias)
 
-    def forward(self, x: Tensor, u: Optional[Tensor] = None, **kwargs) -> Tensor:
+    def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""
         # x: [batches, steps, nodes, features]
         # u: [batches, steps, (nodes), features]

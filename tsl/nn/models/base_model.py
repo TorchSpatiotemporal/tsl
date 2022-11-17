@@ -76,7 +76,7 @@ class BaseModel(nn.Module):
 
     def predict(self, *args, **kwargs):
         """Forward function used only for inference."""
-        return self.forward(*args, **kwargs)
+        return super(BaseModel, self).__call__(*args, **kwargs)
 
     @classmethod
     def get_model_signature(cls) -> dict:

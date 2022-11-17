@@ -71,7 +71,7 @@ class TransformerModel(BaseModel):
             Rearrange('b n (h f) -> b h n f', f=output_size, h=horizon)
         )
 
-    def forward(self, x: Tensor, u: Optional[Tensor] = None, **kwargs) -> Tensor:
+    def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""
         # x: [batches steps nodes features]
         # u: [batches steps (nodes) features]
