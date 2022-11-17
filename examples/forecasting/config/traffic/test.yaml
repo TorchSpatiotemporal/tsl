@@ -1,0 +1,51 @@
+defaults:
+  - _self_
+
+#### Experiment params ########################################################
+hydra:
+  output_subdir: null
+
+seed: 42
+tags:
+  - 'traffic'
+
+workers: 0
+#wandb:
+#  project: sandbox
+#  offline: False
+
+#### Dataset params ###########################################################
+dataset:
+  name: la
+  splitting:
+    val_len: 0.1
+    test_len: 0.2
+  connectivity:
+    method: distance
+    threshold: 0.1
+    include_self: False
+    layout: edge_index
+
+#### Windowing params #########################################################
+window: 12
+horizon: 12
+stride: 1
+
+#### Model params #############################################################
+model:
+  name: ar
+  hparams:
+    temporal_order: 3
+
+#### Training params ##########################################################
+epochs: 1
+patience: 1
+batch_size: 64
+grad_clip_val: 5
+optimizer:
+  name: Adam
+  hparams:
+    lr: 0.01
+    weight_decay: 0
+
+lr_scheduler: null
