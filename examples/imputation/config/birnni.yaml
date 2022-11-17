@@ -3,7 +3,7 @@ defaults:
   - _self_
 
 model:
-  name: rnni
+  name: birnni
   hparams:
     hidden_size: 64
     cell: 'gru'
@@ -11,3 +11,4 @@ model:
     detach_input: False
     fully_connected: True
     state_init: 'zero'
+    dropout: 0

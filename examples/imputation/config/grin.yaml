@@ -1,23 +1,17 @@
-window: 24
-#warm_up_steps: [ 3, 3 ]
+defaults:
+  - default
+  - _self_
 
-batch_size: 32
-use_lr_schedule: True
-lr: 0.001
-epochs: 300
-batches_per_epoch: 160
-val_len: 0.1
-test_len: 0.2
-
-scale_target: True
-
-hidden_size: 64
-ff_size: 64
-embedding_size: 8
-n_layers: 1
-kernel_size: 2
-decoder_order: 1
-layer_norm: False
-dropout: 0
-ff_dropout: 0
-merge_mode: 'mlp'
+model:
+  name: grin
+  hparams:
+    hidden_size: 64
+    ff_size: 64
+    embedding_size: 8
+    n_layers: 1
+    kernel_size: 2
+    decoder_order: 1
+    layer_norm: False
+    dropout: 0
+    ff_dropout: 0
+    merge_mode: 'mlp'

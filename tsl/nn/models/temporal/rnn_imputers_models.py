@@ -105,17 +105,17 @@ class RNNImputerModel(BaseModel):
             x_p = torch.cat([x_p, m], -1)
         return x_p
 
-    def forward(self, x: Tensor, mask: Tensor,
+    def forward(self, x: Tensor, input_mask: Tensor,
                 u: Optional[Tensor] = None,
                 return_hidden: bool = False) -> Union[Tensor, list]:
         """"""
-        # x: [batches, steps, nodes, features]
+        # x: [batch, time, nodes, features]
         steps, nodes = x.size(1), x.size(2)
 
-        x = rearrange(x, f'b s n c -> {self._to_pattern}')
-        mask = rearrange(mask, f'b s n c -> {self._to_pattern}')
+        x = rearrange(x, f'b t n f -> {self._to_pattern}')
+        input_mask = rearrange(input_mask, f'b t n f -> {self._to_pattern}')
         if u is not None:
-            u = rearrange(u, f'b s n c -> {self._to_pattern}')
+            u = rearrange(u, f'b t n f -> {self._to_pattern}')
 
         h = self.init_hidden_state(x)
         x_hat = self.readout(h)
@@ -123,28 +123,29 @@ class RNNImputerModel(BaseModel):
         preds = [x_hat]
         for s in range(steps - 1):
             u_t = None if u is None else u[:, s]
-            x_t = self._preprocess_input(x[:, s], x_hat, mask[:, s], u_t)
+            x_t = self._preprocess_input(x[:, s], x_hat, input_mask[:, s], u_t)
             h = self.rnn_cell(x_t, h)
             x_hat = self.readout(h)
             hs.append(h)
             preds.append(x_hat)
 
-        x_hat = torch.stack(preds, 1)  # [b s (n c)] or [(b n) s c]
-        h = torch.stack(hs, 1)  # [b s h] or [(b n) s h]
+        x_hat = torch.stack(preds, 1)  # [b t (n f)] or [(b n) t f]
+        h = torch.stack(hs, 1)  # [b t h] or [(b n) t h]
 
-        x_hat = rearrange(x_hat, f'{self._to_pattern} -> b s n c', n=nodes)
+        x_hat = rearrange(x_hat, f'{self._to_pattern} -> b t n f', n=nodes)
 
         if not return_hidden:
             return x_hat
 
         if self.fully_connected:
-            h = rearrange(h, f'{self._to_pattern} -> b s n c', n=nodes)
+            h = rearrange(h, f'{self._to_pattern} -> b t n f', n=nodes)
         return [x_hat, h]
 
-    def predict(self, x: Tensor, mask: Tensor,
+    def predict(self, x: Tensor, input_mask: Tensor,
                 u: Optional[Tensor] = None) -> Tensor:
         """"""
-        return self.forward(x=x, mask=mask, u=u, return_hidden=False)
+        return self.forward(x=x, input_mask=input_mask, u=u,
+                            return_hidden=False)
 
 
 class BiRNNImputerModel(BaseModel):
@@ -184,18 +185,18 @@ class BiRNNImputerModel(BaseModel):
             assert n_nodes is not None
             self.read_out = nn.Sequential(
                 nn.Linear(2 * hidden_size, input_size * n_nodes),
-                Rearrange('b s (n h) -> b s n h', n=n_nodes)
+                Rearrange('... t (n h) -> ... t n h', n=n_nodes)
             )
 
-    def forward(self, x: Tensor, mask: Tensor,
+    def forward(self, x: Tensor, input_mask: Tensor,
                 u: Optional[Tensor] = None,
                 return_hidden: bool = False) -> list:
         """"""
         # x: [batches, steps, nodes, features]
-        x_hat_fwd, h_fwd = self.fwd_rnn(x, mask, u=u, return_hidden=True)
+        x_hat_fwd, h_fwd = self.fwd_rnn(x, input_mask, u=u, return_hidden=True)
         u_rev = reverse_tensor(u, 1) if u is not None else None
         x_hat_bwd, h_bwd = self.bwd_rnn(reverse_tensor(x, 1),
-                                        reverse_tensor(mask, 1),
+                                        reverse_tensor(input_mask, 1),
                                         u=u_rev,
                                         return_hidden=True)
         x_hat_bwd = reverse_tensor(x_hat_bwd, 1)
@@ -206,7 +207,8 @@ class BiRNNImputerModel(BaseModel):
             return [x_hat, (x_hat_fwd, x_hat_bwd), h]
         return [x_hat, (x_hat_fwd, x_hat_bwd)]
 
-    def predict(self, x: Tensor, mask: Tensor,
+    def predict(self, x: Tensor, input_mask: Tensor,
                 u: Optional[Tensor] = None) -> Tensor:
         """"""
-        return self.forward(x=x, mask=mask, u=u, return_hidden=False)[0]
+        return self.forward(x=x, input_mask=input_mask, u=u,
+                            return_hidden=False)[0]

@@ -1,0 +1,56 @@
+#### Experiment params ########################################################
+hydra:
+  run:
+    dir: logs/imputation/${model.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+#seed: 42
+workers: 0
+#wandb:
+#  project: sandbox
+#  offline: False
+
+#### Imputation params ########################################################
+p_fault: 0.0015
+p_noise: 0.05
+in_sample: False
+
+whiten_prob: 0.05
+prediction_loss_weight: 1.0
+impute_only_missing: False
+warm_up_steps: 0
+
+#### Dataset params ###########################################################
+dataset:
+  name: ???
+  splitting:
+    val_len: 0.1
+    test_len: 0.2
+  connectivity:
+    method: distance
+    threshold: 0.1
+    include_self: False
+    layout: edge_index
+
+#### Windowing params #########################################################
+window: 24
+stride: 1
+
+#### Model params #############################################################
+model: ???
+
+#### Training params ##########################################################
+epochs: 300
+patience: 50
+batch_size: 32
+grad_clip_val: 5
+scale_target: True
+optimizer:
+  name: Adam
+  hparams:
+    lr: 0.001
+    weight_decay: 0
+lr_scheduler:
+  name: CosineAnnealingLR
+  hparams:
+      eta_min: 0.0001
+      T_max: ${ epochs }

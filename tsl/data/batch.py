@@ -412,3 +412,7 @@ class DisjointBatch(Batch):
         if isinstance(item, int):
             return self.get_example(item)
         return super(DisjointBatch, self).__getitem__(item)
+
+    @property
+    def batch_size(self) -> int:
+        return self.num_graphs

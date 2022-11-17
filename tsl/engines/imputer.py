@@ -11,7 +11,8 @@ from .predictor import Predictor
 class Imputer(Predictor):
     r""":class:`~pytorch_lightning.core.LightningModule` to implement imputers.
 
-    Input data should follow the format [batch, steps, nodes, features].
+    An imputer is an engines designed to fill out missing values in
+    spatiotemporal data.
 
     Args:
         model_class (type): Class of :obj:`~torch.nn.Module` implementing the
@@ -69,41 +70,47 @@ class Imputer(Predictor):
                  optim_kwargs: Mapping,
                  loss_fn: Callable,
                  scale_target: bool = False,
-                 whiten_prob: Union[float, List[float]] = 0.05,
-                 prediction_loss_weight: float = 1.0,
-                 impute_only_missing: bool = True,
-                 warm_up_steps: Union[int, Tuple[int, int]] = 0,
                  metrics: Optional[Mapping[str, Metric]] = None,
                  scheduler_class: Optional = None,
-                 scheduler_kwargs: Optional[Mapping] = None):
+                 scheduler_kwargs: Optional[Mapping] = None,
+                 whiten_prob: Optional[Union[float, List[float]]] = 0.05,
+                 prediction_loss_weight: float = 1.0,
+                 impute_only_missing: bool = True,
+                 warm_up_steps: Union[int, Tuple[int, int]] = 0):
         super(Imputer, self).__init__(model_class=model_class,
                                       model_kwargs=model_kwargs,
                                       optim_class=optim_class,
                                       optim_kwargs=optim_kwargs,
                                       loss_fn=loss_fn,
+                                      scale_target=scale_target,
                                       metrics=metrics,
                                       scheduler_class=scheduler_class,
                                       scheduler_kwargs=scheduler_kwargs)
-        self.scale_target = scale_target
-        self.prediction_loss_weight = prediction_loss_weight
-        self.impute_only_missing = impute_only_missing
 
         if isinstance(whiten_prob, (list, tuple)):
-            self.whiten_prob = torch.Tensor(whiten_prob)
+            self.whiten_prob = torch.tensor(whiten_prob)
         else:
             self.whiten_prob = whiten_prob
+
+        self.prediction_loss_weight = prediction_loss_weight
+        self.impute_only_missing = impute_only_missing
 
         if isinstance(warm_up_steps, int):
             self.warm_up_steps = (warm_up_steps, 0)
         elif isinstance(warm_up_steps, (list, tuple)):
             self.warm_up_steps = tuple(warm_up_steps)
-        assert len(self.warm_up_steps) == 2
+        if len(self.warm_up_steps) != 2:
+            raise ValueError("'warm_up_steps' must be an int of time steps to "
+                             "be cut at the beginning of the sequence or a "
+                             "pair of int if the sequence must be trimmed in a "
+                             "bidirectional way.")
 
     def trim_warm_up(self, *args):
         """Trim all tensors in :obj:`args` removing a number of first and last
         steps equals to :obj:`(self.warm_up_steps[0], self.warm_up_steps[1])`,
         respectively."""
         left, right = self.warm_up_steps
+        # assume time in second dimension (after batch dim)
         trim = lambda s: s[:, left:s.size(1) - right]
         args = recursive_apply(args, trim)
         if len(args) == 1:
@@ -112,51 +119,39 @@ class Imputer(Predictor):
 
     # Imputation data hooks ###################################################
 
-    def on_after_batch_transfer(self, batch, dataloader_idx):
-        """Rearrange batch for imputation:
-            1. Move :obj:`eval_mask` from :obj:`batch.input` to :obj:`batch`
-            2. Move :obj:`mask` from :obj:`batch` to :obj:`batch.input`
-        """
-        # move eval_mask from batch.input to batch
-        batch.eval_mask = batch.input.pop('eval_mask')
-        # move mask from batch to batch.input
-        batch.input.mask = batch.pop('mask')
-        # whiten missing values
-        if 'x' in batch.input:
-            batch.input.x = batch.input.x * batch.input.mask
-        return batch
-
     def on_train_batch_start(self, batch, batch_idx: int,
                              unused: Optional[int] = 0) -> None:
         r"""For every training batch, randomly mask out value with probability
-        :math:`p = \texttt{self.whiten\_prob}`. Then, whiten missing values in
+        :obj:`p = self.whiten_prob`. Then, whiten missing values in
         :obj:`batch.input.x`."""
         super(Imputer, self).on_train_batch_start(batch, batch_idx, unused)
-        # randomly mask out value with probability p = whiten_prob
-        batch.original_mask = mask = batch.input.mask
-        p = self.whiten_prob
-        if isinstance(p, Tensor):
-            p_size = [mask.size(0)] + [1] * (mask.ndim - 1)
-            p = p[torch.randint(len(p), p_size)].to(device=mask.device)
-        whiten_mask = torch.rand(mask.size(), device=mask.device) > p
-        batch.input.mask = mask & whiten_mask
-        # whiten missing values
-        if 'x' in batch.input:
-            batch.input.x = batch.input.x * batch.input.mask
+        if self.whiten_prob is not None:
+            # randomly mask out value with probability p = whiten_prob
+            batch.original_mask = mask = batch.input_mask
+            p = self.whiten_prob
+            if isinstance(p, Tensor) and p.ndim > 0:
+                p_size = [mask.size(0)] + [1] * (mask.ndim - 1)
+                p = p[torch.randint(len(p), p_size)].to(device=mask.device)
+            whiten_mask = torch.rand(mask.size(), device=mask.device) > p
+            batch.input_mask = mask & whiten_mask
+            # whiten missing values
+            if 'x' in batch.input:
+                batch.input.x = batch.input.x * batch.input_mask
 
-    def _unpack_batch(self, batch):
-        transform = batch.get('transform')
-        return batch.input, batch.target, batch.eval_mask, transform
+    # Imputation data hooks ###################################################
 
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
-        y = batch.y
         # Make predictions
-        y_hat = self.predict_batch(batch, preprocess=False, postprocess=True)
-        if isinstance(y_hat, (list, tuple)):
-            y_hat = y_hat[0]
+        y_hat = self.predict(**batch.input)
+        # Rescale outputs
+        trans = batch.transform.get('y')
+        if trans is not None:
+            y_hat = trans.inverse_transform(y_hat)
+        # fill missing values in target data
         if self.impute_only_missing:
-            y_hat = torch.where(batch.mask.bool(), y, y_hat)
-        output = dict(y=batch.y, y_hat=y_hat, mask=batch.eval_mask)
+            y_hat = torch.where(batch.input_mask.bool(), batch.y, y_hat)
+        # return dict
+        output = dict(**batch.target, y_hat=y_hat, mask=batch.mask)
         return output
 
     def shared_step(self, batch, mask):
@@ -188,33 +183,30 @@ class Imputer(Predictor):
         y_hat, y, loss = self.shared_step(batch, batch.original_mask)
 
         # Logging
-        self.train_metrics.update(y_hat, y, batch.eval_mask)
+        self.train_metrics.update(y_hat, y, batch.mask)
         self.log_metrics(self.train_metrics, batch_size=batch.batch_size)
         self.log_loss('train', loss, batch_size=batch.batch_size)
         return loss
 
     def validation_step(self, batch, batch_idx):
 
-        y_hat, y, val_loss = self.shared_step(batch, batch.mask)
+        y_hat, y, val_loss = self.shared_step(batch, batch.input_mask)
 
         # Logging
-        self.val_metrics.update(y_hat, y, batch.eval_mask)
+        self.val_metrics.update(y_hat, y, batch.mask)
         self.log_metrics(self.val_metrics, batch_size=batch.batch_size)
         self.log_loss('val', val_loss, batch_size=batch.batch_size)
         return val_loss
 
     def test_step(self, batch, batch_idx):
         # Compute outputs and rescale
-        y_hat = self.predict_batch(batch, preprocess=False, postprocess=True)
+        y_hat = self.predict_step(batch, batch_idx)['y_hat']
 
-        if isinstance(y_hat, (list, tuple)):
-            y_hat = y_hat[0]
-
-        y, training_mask, eval_mask = batch.y, batch.mask, batch.eval_mask
-        test_loss = self.loss_fn(y_hat, y, training_mask)  # reconstruction loss
+        # reconstruction loss
+        test_loss = self.loss_fn(y_hat, batch.y, batch.input_mask)
 
         # Logging
-        self.test_metrics.update(y_hat.detach(), y, eval_mask)
+        self.test_metrics.update(y_hat.detach(), batch.y, batch.mask)
         self.log_metrics(self.test_metrics, batch_size=batch.batch_size)
         self.log_loss('test', test_loss, batch_size=batch.batch_size)
         return test_loss

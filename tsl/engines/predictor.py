@@ -152,10 +152,8 @@ class Predictor(pl.LightningModule):
         """"""
         predict_fn = self.model.predict if self.is_tsl_model else self.model
         if self.filter_forward_kwargs:
-            return predict_fn(*args, **{k: v for k, v in kwargs if k in
-                                        self._model_fwd_signature['signature']})
-        else:
-            return predict_fn(*args, **kwargs)
+            kwargs = self._filter_forward_kwargs(kwargs)
+        return predict_fn(*args, **kwargs)
 
     @staticmethod
     def _check_metric(metric, on_step=False):
