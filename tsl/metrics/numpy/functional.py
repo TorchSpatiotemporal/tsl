@@ -1,4 +1,4 @@
-from typing import Literal, Union, Optional
+from typing import Literal, Union, Optional, Tuple
 
 import numpy as np
 
@@ -275,8 +275,10 @@ def nrmse_2(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None,
     return rmse(y_hat, y, mask, reduction) / power_y
 
 
-# TODO align with others
-def r2(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None) -> float:
+def r2(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None,
+       reduction: ReductionType = 'mean',
+       nan_to_zero: bool = False,
+       mean_axis: Union[int, Tuple] = None) -> float:
     r"""Compute the `coefficient of determination
     <https://en.wikipedia.org/wiki/Coefficient_of_determination>`_ :math:`R^2`
     between the estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -293,17 +295,26 @@ def r2(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None) -> f
         y (FrameArray): The ground-truth variable.
         mask (FrameArray, optional): If provided, compute the metric using only
                     the values at valid indices (with :attr:`mask` set to :obj:`True`).
+        reduction (str): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
+            be applied, ``'mean'``: the sum of the output will be divided by the
+            number of elements in the output, ``'sum'``: the output will be
+            summed. (default: ``'mean'``)
+        nan_to_zero (bool): If :obj:`True`, then masked values in output are
+            converted to :obj:`0`. This has an effect only when :attr:`mask` is
+            not :obj:`None` and :attr:`reduction` is :obj:`'none'`.
+            (default: :obj:`False`)
+        mean_axis (int, Tuple, optional): the axis along which the mean of y is computed, to compute the variance of y
+            needed in the denominator of the R2 formula.
     Returns:
-        float: The :math:`R^2`.
+         float | np.ndarray: The :math:`R^2`.
     """
-    if mask is None:
-        mask = slice(None)
-    else:
-        mask = np.asarray(mask, dtype=bool)
-    return 1. - np.square(y_hat[mask] - y[mask]).sum() / (np.square(y[mask].mean(axis=0) - y[mask]).sum())
+    mse_ = mse(y_hat, y, mask, reduction, nan_to_zero)
+    mean_val = np.mean(y, axis=mean_axis, keepdims=True)
+    variance = mse(mean_val, y, mask, reduction, nan_to_zero)
+    return 1. - (mse_ / variance)
 
 
-# TODO align with others
 def mre(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None) -> float:
     if mask is None:
         mask = slice(None)
@@ -311,43 +322,3 @@ def mre(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None) -> 
         mask = np.asarray(mask, dtype=bool)
     err = np.abs(y_hat[mask] - y[mask])
     return err.sum() / (y[mask].sum() + tsl.epsilon)
-
-
-# TODO remove
-def masked_mae(y_hat, y, mask=None):
-    if mask is None:
-        mask = slice(None)
-    else:
-        mask = np.asarray(mask, dtype=bool)
-    err = y_hat[mask] - y[mask]
-    return np.abs(err).mean()
-
-
-# TODO remove
-def masked_mape(y_hat, y, mask=None):
-    if mask is None:
-        mask = slice(None)
-    else:
-        mask = np.asarray(mask, dtype=bool)
-    err = (y_hat[mask] - y[mask]) / (y[mask] + tsl.epsilon)
-    return np.abs(err).mean()
-
-
-# TODO remove
-def masked_mse(y_hat, y, mask=None):
-    if mask is None:
-        mask = slice(None)
-    else:
-        mask = np.asarray(mask, dtype=bool)
-    err = y_hat[mask] - y[mask]
-    return np.square(err).mean()
-
-
-# TODO remove
-def masked_rmse(y_hat, y, mask=None):
-    if mask is None:
-        mask = slice(None)
-    else:
-        mask = np.asarray(mask, dtype=bool)
-    err = np.square(y_hat[mask] - y[mask])
-    return np.sqrt(err.mean())

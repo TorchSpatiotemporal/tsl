@@ -4,7 +4,6 @@ from typing import Optional, Union, List, Mapping
 import numpy as np
 import pandas as pd
 from einops import rearrange
-from matplotlib.figure import Figure
 from pytorch_lightning.loggers import NeptuneLogger as LightningNeptuneLogger
 from torch import Tensor
 
@@ -135,7 +134,7 @@ class NeptuneLogger(LightningNeptuneLogger):
         df.to_csv(name, index=True, index_label='index')
         self.log_artifact(name, delete_after=True)
 
-    def log_figure(self, fig: Figure, name: str = 'figure'):
+    def log_figure(self, fig, name: str = 'figure'):
         """Log a matplotlib figure as html.
 
         Args:

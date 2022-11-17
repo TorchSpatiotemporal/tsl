@@ -40,10 +40,11 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
     Args:
         num_communities (int): Number of communities (traingles) in the graph
         num_steps (int): Lenght of the generated sequence.
-        filter_params (Tensor): Parameters of Graph Polinomial filter used to generate the dataset.
+        filter_params (iterable): Parameters of Graph Polinomial filter used to generate the dataset.
         sigma_noise (float): Standard deviation of the noise.
         name (optional, str): Name of the dataset.
     """
+
     def __init__(self,
                  num_communities,
                  num_steps,
@@ -58,7 +59,8 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
         num_nodes = len(node_idx)
         connectivity = _gcn_gso(torch.tensor(edge_index), num_nodes)
 
-        filter = _GPVAR.from_params(filter_params=torch.tensor(filter_params))
+        filter = _GPVAR.from_params(filter_params=torch.tensor(filter_params,
+                                                               dtype=torch.float32))
         super(GPVARDataset, self).__init__(num_features=1,
                                            num_nodes=num_nodes,
                                            num_steps=num_steps,
@@ -84,9 +86,9 @@ class GPVARDatasetAZ(GPVARDataset):
 
     def __init__(self, root=None):
         self.root = root
-        filter_params = torch.tensor([[5, 2],
-                                      [-4, 6],
-                                      [-1, 0]], dtype=torch.float32)
+        filter_params = [[5., 2.],
+                         [-4., 6.],
+                         [-1., 0.]]
         super(GPVARDatasetAZ, self).__init__(num_communities=self.NUM_COMMUNITIES,
                                              num_steps=self.NUM_STEPS,
                                              filter_params=filter_params,
@@ -98,10 +100,14 @@ class GPVARDatasetAZ(GPVARDataset):
         return [f'GPVAR_AZ.npy']
 
     def build(self) -> None:
-        x, _ = self.generate_data()
-        np.save(self.required_files_paths[0], x)
+        x, y_opt, _ = self.generate_data(seed=self.seed)
+        np.save(self.required_files_paths[0], np.stack([x, y_opt]))
 
     def load_raw(self, *args, **kwargs):
         self.maybe_build()
-        x = np.load(self.required_files_paths[0])
-        return x, np.ones_like(x)
+        x, y_opt = np.load(self.required_files_paths[0])
+        return x, y_opt, np.ones_like(x)
+
+
+if __name__ == '__main__':
+    dataset = GPVARDatasetAZ()

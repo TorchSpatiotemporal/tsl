@@ -99,3 +99,12 @@ def precision_stoi(precision: Union[int, str]) -> int:
         "precision must be one of 16 (or 'half'), 32 (or 'full') or 64 " \
         f"(or 'double'). Default is 32, invalid input '{precision}'."
     return precision
+
+
+def remove_files(directory: str, extension: str = '.ckpt'):
+    """Remove files of specific extension from a directory"""
+    files_in_directory = os.listdir(directory)
+    filtered_files = [file for file in files_in_directory if file.endswith(extension)]
+    for file in filtered_files:
+        path_to_file = os.path.join(directory, file)
+        os.remove(path_to_file)

@@ -71,31 +71,37 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
         else:
             self.connectivity = None
 
-        target, mask = self.load()
+        target, optimal_pred, mask = self.load()
         super().__init__(target=target,
                          mask=mask,
                          name=name,
                          **kwargs)
 
+        self.add_covariate('optimal_pred', optimal_pred, 't n f')
+
     def load_raw(self, *args, **kwargs):
-        return self.generate_data()
+        return self.generate_data(self.seed)
 
     @property
     def mae_optimal_model(self):
         """ E[|X|] of a Gaussian X"""
         return math.sqrt(2.0 / math.pi) * self.sigma_noise
 
-    def generate_data(self):
+    def generate_data(self, seed=None):
         r"""
         """
         rng = torch.Generator()
-        if self.seed is not None:
-            rng.manual_seed(self.seed)
+        if seed is not None:
+            rng.manual_seed(seed)
 
         # initialize with noise
         x = torch.empty((self._num_steps + self._min_window,
                          self._num_nodes,
                          self._num_features)).normal_(generator=rng) * self.sigma_noise
+
+        y_opt = torch.empty((self._num_steps,
+                             self._num_nodes,
+                             self._num_features))
 
         if self.connectivity is None:
             edge_index = edge_weight = None
@@ -110,13 +116,16 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
                                       t=t,
                                       edge_index=edge_index,
                                       edge_weight=edge_weight)
-                x_t += torch.zeros_like(x_t).normal_(generator=rng) * self.sigma_noise
-                x[t:t+1] = x_t[0]
+                y_opt[t - self._min_window:t + 1 - self._min_window] = x_t[0]
+                # add noise
+                x_t = x_t + torch.zeros_like(x_t).normal_(generator=rng) * self.sigma_noise
+                x[t:t + 1] = x_t[0]
 
         x = x[self._min_window:].detach().numpy()
-        return x, np.ones_like(x)
+        y_opt = y_opt.detach().numpy()
+        return x, y_opt, np.ones_like(x)
 
-    def get_connectivity(self,  layout: str = 'edge_index'):
+    def get_connectivity(self, layout: str = 'edge_index'):
         if self.connectivity is None:
             return self.connectivity
         return parse_connectivity(connectivity=self.connectivity,

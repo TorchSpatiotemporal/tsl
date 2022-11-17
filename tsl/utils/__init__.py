@@ -8,5 +8,6 @@ from .io import (extract_zip,
 from .python_utils import (ensure_list,
                            foo_signature,
                            files_exist,
-                           precision_stoi)
+                           precision_stoi,
+                           remove_files)
 from .parser_utils import ArgParser
