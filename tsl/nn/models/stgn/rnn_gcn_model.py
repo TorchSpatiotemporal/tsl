@@ -1,5 +1,4 @@
 from torch import nn
-from tsl.utils.parser_utils import ArgParser
 
 from tsl.nn.blocks.encoders import ConditionalBlock
 from tsl.nn.blocks.decoders.gcn_decoder import GCNDecoder
@@ -7,8 +6,10 @@ from tsl.nn.blocks.encoders.rnn import RNN
 
 from einops import rearrange
 
+from tsl.nn.models import BaseModel
 
-class RNNEncGCNDecModel(nn.Module):
+
+class RNNEncGCNDecModel(BaseModel):
     """
     Simple time-then-space model.
 
@@ -81,13 +82,3 @@ class RNNEncGCNDecModel(nn.Module):
         x = self.encoder(x, return_last_state=True)
 
         return self.decoder(x, edge_index, edge_weight)
-
-    @staticmethod
-    def add_model_specific_args(parser: ArgParser):
-        parser.opt_list('--hidden-size', type=int, default=32, tunable=True, options=[16, 32, 64, 128, 256])
-        parser.opt_list('--rnn-layers', type=int, default=1, tunable=True, options=[1, 2, 3])
-        parser.opt_list('--gcn-layers', type=int, default=1, tunable=True, options=[1, 2, 3])
-        parser.opt_list('--rnn-dropout', type=float, default=0., tunable=True, options=[0., 0.1, 0.2])
-        parser.opt_list('--gcn-dropout', type=float, default=0., tunable=True, options=[0., 0.1, 0.25, 0.5])
-        parser.opt_list('--cell-type', type=str, default='gru', tunable=True, options=['gru', 'lstm'])
-        return parser
