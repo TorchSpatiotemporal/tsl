@@ -1,5 +1,5 @@
 import torch
-from typing import Literal, Union, Optional
+from typing import Literal, Union, Optional, Tuple
 
 import tsl
 from tsl.utils import ensure_list
@@ -279,8 +279,10 @@ def nrmse_2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] =
     return rmse(y_hat, y, mask, reduction) / power_y
 
 
-# TODO align with others
-def r2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None) -> float:
+def r2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None,
+       reduction: ReductionType = 'mean',
+       nan_to_zero: bool = False,
+       mean_axis: Union[int, Tuple] = None) -> MetricOutputType:
     r"""Compute the `coefficient of determination
     <https://en.wikipedia.org/wiki/Coefficient_of_determination>`_ :math:`R^2`
     between the estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -297,18 +299,31 @@ def r2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None
         y (torch.Tensor): The ground-truth variable.
         mask (torch.Tensor, optional): If provided, compute the metric using only
                     the values at valid indices (with :attr:`mask` set to :obj:`True`).
+        reduction (str): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
+            be applied, ``'mean'``: the sum of the output will be divided by the
+            number of elements in the output, ``'sum'``: the output will be
+            summed. (default: ``'mean'``)
+        nan_to_zero (bool): If :obj:`True`, then masked values in output are
+            converted to :obj:`0`. This has an effect only when :attr:`mask` is
+            not :obj:`None` and :attr:`reduction` is :obj:`'none'`.
+            (default: :obj:`False`)
+        mean_axis (int, Tuple, optional): the axis along which the mean of y is computed, to compute the variance of y
+            needed in the denominator of the R2 formula.
     Returns:
-        float: The :math:`R^2`.
+        float | torch.Tensor: The :math:`R^2`.
     """
-    if mask is None:
-        return 1. - torch.square(y_hat - y).sum() / (torch.square(y.mean(dim=0) - y).sum())
-    else:
-        if mask.dtype != torch.bool:
-            mask = mask.to(torch.bool)
-        return 1. - torch.square(y_hat[mask] - y[mask]).sum() / (torch.square(y[mask].mean(dim=0) - y[mask]).sum())
+    mse_ = mse(y_hat, y, mask, reduction, nan_to_zero)
+
+    # compute mean(s) of target data
+    if mean_axis is None:
+        mean_axis = tuple(range(y.dim()))
+    mean_val = torch.mean(y, dim=mean_axis, keepdims=True)
+
+    variance = mse(mean_val, y, mask, reduction, nan_to_zero)
+    return 1. - (mse_ / variance)
 
 
-# TODO align with others
 def mre(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None) -> float:
     if mask is None:
         err = torch.abs(y_hat - y)

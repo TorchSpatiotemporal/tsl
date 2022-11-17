@@ -12,10 +12,11 @@ from tsl.nn.utils import casting
 from tsl.datasets import MetrLA, PemsBay
 from tsl.datasets.pems_benchmarks import PeMS03, PeMS04, PeMS07, PeMS08
 from tsl.nn import models
+from tsl.utils import remove_files
 from tsl import __path__ as tsl_path
 
 from hydra import compose, initialize
-from omegaconf import OmegaConf
+
 
 def get_model_class(model_str):
     if model_str == 'dcrnn':
@@ -202,6 +203,9 @@ def test_example_training():
     res_functional.update(dict(val_mae=numpy_metrics.mae(y_hat, y_true, mask),
                                val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
                                val_mape=numpy_metrics.mape(y_hat, y_true, mask)))
+
+    # clean out directory
+    remove_files(os.getcwd(), extension='.ckpt')
 
     assert np.isclose(res_test[0]['test_mae'], res_functional['test_mae'])
     assert np.isclose(res_test[0]['test_mape'], res_functional['test_mape'])
