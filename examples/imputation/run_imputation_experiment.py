@@ -12,8 +12,8 @@ from tsl.engines import Imputer
 from tsl.experiment import Experiment
 from tsl.metrics import torch as torch_metrics, numpy as numpy_metrics
 from tsl.nn.models import RNNImputerModel, BiRNNImputerModel, GRINModel
-from tsl.nn.utils import casting
 from tsl.ops.imputation import add_missing_values
+from tsl.utils.casting import torch_to_numpy
 
 
 def get_model_class(model_str):
@@ -171,7 +171,7 @@ def run_imputation(cfg: DictConfig):
     trainer.test(imputer, datamodule=dm)
 
     output = trainer.predict(imputer, dataloaders=dm.test_dataloader())
-    output = casting.numpy(output)
+    output = torch_to_numpy(output)
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
                           output.get('mask', None)
@@ -180,7 +180,7 @@ def run_imputation(cfg: DictConfig):
                test_mape=numpy_metrics.mape(y_hat, y_true, mask))
 
     output = trainer.predict(imputer, dataloaders=dm.val_dataloader())
-    output = casting.numpy(output)
+    output = torch_to_numpy(output)
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
                           output.get('mask', None)

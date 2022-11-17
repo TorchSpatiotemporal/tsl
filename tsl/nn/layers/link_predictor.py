@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from tsl.nn.utils.utils import get_layer_activation
+from tsl.nn.utils import get_layer_activation
 
 
 class LinkPredictor(nn.Module):

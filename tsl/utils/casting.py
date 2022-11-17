@@ -1,8 +1,9 @@
-from typing import Union
+from typing import Union, Any
 
 import torch
 from einops import rearrange
 from torch import Tensor
+from torch_geometric.data.storage import recursive_apply
 from torch_sparse import SparseTensor
 
 from tsl.ops.framearray import framearray_to_numpy
@@ -44,3 +45,15 @@ def convert_precision_tensor(tensor: Union[Tensor, SparseTensor],
         new_dtype = getattr(torch, f'int{precision}')
         return tensor.to(new_dtype)
     return tensor
+
+
+def torch_to_numpy(tensors: Any) -> Any:
+    """Cast tensors to numpy arrays.
+
+    Args:
+        tensors: A tensor or a list or dictionary containing tensors.
+
+    Returns:
+        Tensors casted to numpy arrays.
+    """
+    return recursive_apply(tensors, lambda t: t.detach().cpu().numpy())

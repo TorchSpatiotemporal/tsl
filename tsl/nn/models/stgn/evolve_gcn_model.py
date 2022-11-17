@@ -1,8 +1,7 @@
-import torch
 from torch import nn
 
 from tsl.nn.models import BaseModel
-from tsl.nn.utils import utils
+from tsl.nn import utils
 from tsl.nn.blocks.encoders import EvolveGCN
 from tsl.nn.blocks.decoders import LinearReadout
 

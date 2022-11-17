@@ -5,7 +5,13 @@ from einops import rearrange
 from torch import nn
 from torch.nn import functional as F
 
-from ..functional import expand_then_cat
+from tsl.nn.functional import expand_then_cat
+
+__all__ = [
+    'get_layer_activation',
+    'get_functional_activation',
+    'maybe_cat_exog'
+]
 
 _torch_activations_dict = {
     'elu': 'ELU',

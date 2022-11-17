@@ -9,7 +9,7 @@ from tsl.nn.blocks.encoders.tcn import TemporalConvNet
 from tsl.nn.layers.norm import Norm
 from tsl.nn.models.base_model import BaseModel
 from tsl.nn.layers.ops import Lambda
-from tsl.nn.utils.utils import get_layer_activation
+from tsl.nn.utils import get_layer_activation
 
 
 class TCNModel(BaseModel):

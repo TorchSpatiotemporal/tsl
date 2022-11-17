@@ -1,20 +1,16 @@
-from typing import Optional
-
-from einops import rearrange
 from torch import nn, Tensor
-from torch_geometric.typing import Adj, OptTensor
+from torch_geometric.typing import OptTensor
 
-from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
-from tsl.nn.blocks.encoders import ConditionalBlock
 from tsl.nn.blocks.encoders.agcrn import AGCRN
 from ..base_model import BaseModel
 from ...blocks.decoders import LinearReadout
-from ...utils import utils
+from ... import utils
 
 
 class AGCRNModel(BaseModel):
     r"""The Adaptive Graph Convolutional Recurrent Network from the paper
-    `"Adaptive Graph Convolutional Recurrent Network for Trafﬁc Forecasting" <https://arxiv.org/abs/2007.02842>`_ (Bai et al., NeurIPS 2020).
+    `"Adaptive Graph Convolutional Recurrent Network for Traffic Forecasting"
+    <https://arxiv.org/abs/2007.02842>`_ (Bai et al., NeurIPS 2020).
 
     Args:
         input_size (int): Number of features of the input sample.
@@ -51,7 +47,7 @@ class AGCRNModel(BaseModel):
                                      output_size=output_size,
                                      horizon=horizon)
 
-    def forward(self, x: Tensor, u: OptTensor = None, **kwargs) -> Tensor:
+    def forward(self, x: Tensor, u: OptTensor = None) -> Tensor:
         """"""
         x = utils.maybe_cat_exog(x, u)
         x = self.input_encoder(x)

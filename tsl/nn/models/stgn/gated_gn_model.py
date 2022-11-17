@@ -8,7 +8,7 @@ from einops.layers.torch import Rearrange
 
 from tsl.nn.base import StaticGraphEmbedding
 from tsl.nn.layers.graph_convs import GatedGraphNetwork
-from tsl.nn.utils import utils
+from tsl.nn import utils
 
 
 class GatedGraphNetworkModel(BaseModel):
@@ -82,7 +82,7 @@ class GatedGraphNetworkModel(BaseModel):
             Rearrange('b n (h f) -> b h n f', h=horizon, f=output_size)
         )
 
-    def forward(self, x, edge_index=None, u=None, **kwargs):
+    def forward(self, x, edge_index=None, u=None):
         """"""
         # x: [batches steps nodes features]
         x = utils.maybe_cat_exog(x, u)

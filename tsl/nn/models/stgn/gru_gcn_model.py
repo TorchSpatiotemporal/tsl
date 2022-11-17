@@ -8,7 +8,7 @@ from tsl.nn.models import BaseModel
 from einops.layers.torch import Rearrange
 
 from tsl.nn.blocks.encoders import RNN
-from tsl.nn.utils import utils
+from tsl.nn import utils
 
 
 class GRUGCNModel(BaseModel):

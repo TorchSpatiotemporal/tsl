@@ -1,12 +1,11 @@
-from einops.layers.torch import Rearrange
 from typing import Optional
 
 from einops import rearrange
-from torch import nn, Tensor
+from torch import Tensor
 
 from tsl.nn.blocks.decoders import LinearReadout
 from tsl.nn.models.base_model import BaseModel
-from tsl.nn.utils.utils import maybe_cat_exog
+from tsl.nn.utils import maybe_cat_exog
 
 
 class ARModel(BaseModel):

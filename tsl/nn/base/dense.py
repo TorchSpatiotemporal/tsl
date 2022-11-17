@@ -1,6 +1,6 @@
 from torch import nn
 
-from tsl.nn.utils import utils
+from tsl.nn import utils
 
 
 class Dense(nn.Module):

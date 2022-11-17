@@ -1,21 +1,21 @@
 import os
+
 import numpy as np
 import torch
+from hydra import compose, initialize
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
+from tsl import __path__ as tsl_path
 from tsl.data import SpatioTemporalDataset, SpatioTemporalDataModule
 from tsl.data.preprocessing import StandardScaler
-from tsl.engines import Predictor
-from tsl.metrics import torch as torch_metrics, numpy as numpy_metrics
-from tsl.nn.utils import casting
 from tsl.datasets import MetrLA, PemsBay
 from tsl.datasets.pems_benchmarks import PeMS03, PeMS04, PeMS07, PeMS08
+from tsl.engines import Predictor
+from tsl.metrics import torch as torch_metrics, numpy as numpy_metrics
 from tsl.nn import models
 from tsl.utils import remove_files
-from tsl import __path__ as tsl_path
-
-from hydra import compose, initialize
+from tsl.utils.casting import torch_to_numpy
 
 
 def get_model_class(model_str):
@@ -186,7 +186,7 @@ def test_example_training():
     res_test = trainer.test(predictor, datamodule=dm)
 
     output = trainer.predict(predictor, dataloaders=dm.test_dataloader())
-    output = casting.numpy(output)
+    output = torch_to_numpy(output)
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
                           output.get('mask', None)
@@ -196,7 +196,7 @@ def test_example_training():
 
     res_val = trainer.validate(predictor, datamodule=dm)
     output = trainer.predict(predictor, dataloaders=dm.val_dataloader())
-    output = casting.numpy(output)
+    output = torch_to_numpy(output)
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
                           output.get('mask', None)

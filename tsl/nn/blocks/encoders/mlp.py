@@ -1,7 +1,7 @@
 from torch import nn
 
 from ...base.dense import Dense
-from ...utils import utils
+from ...utils import maybe_cat_exog
 
 
 class MLP(nn.Module):
@@ -44,7 +44,7 @@ class MLP(nn.Module):
 
     def forward(self, x, u=None):
         """"""
-        x = utils.maybe_cat_exog(x, u)
+        x = maybe_cat_exog(x, u)
         out = self.mlp(x)
         if self.readout is not None:
             return self.readout(out)
@@ -104,7 +104,7 @@ class ResidualMLP(nn.Module):
 
     def forward(self, x, u=None):
         """"""
-        x = utils.maybe_cat_exog(x, u)
+        x = maybe_cat_exog(x, u)
         for layer, skip in zip(self.layers, self.skip_connections):
             x = layer(x) + skip(x)
         if self.readout is not None:

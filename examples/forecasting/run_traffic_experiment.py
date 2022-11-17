@@ -13,7 +13,7 @@ from tsl.experiment import Experiment
 from tsl.engines import Predictor
 from tsl.metrics import torch as torch_metrics, numpy as numpy_metrics
 from tsl.nn import models
-from tsl.nn.utils import casting
+from tsl.utils.casting import torch_to_numpy
 
 
 def get_model_class(model_str):
@@ -191,7 +191,7 @@ def run_traffic(cfg: DictConfig):
     trainer.test(predictor, datamodule=dm)
 
     output = trainer.predict(predictor, dataloaders=dm.test_dataloader())
-    output = casting.numpy(output)
+    output = torch_to_numpy(output)
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
                           output.get('mask', None)
@@ -200,7 +200,7 @@ def run_traffic(cfg: DictConfig):
                test_mape=numpy_metrics.mape(y_hat, y_true, mask))
 
     output = trainer.predict(predictor, dataloaders=dm.val_dataloader())
-    output = casting.numpy(output)
+    output = torch_to_numpy(output)
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
                           output.get('mask', None)

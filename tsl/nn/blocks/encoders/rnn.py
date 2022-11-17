@@ -3,7 +3,7 @@ import torch
 from torch import nn
 from einops import rearrange
 
-from ...utils.utils import maybe_cat_exog
+from ...utils import maybe_cat_exog
 
 class RNN(nn.Module):
     r"""

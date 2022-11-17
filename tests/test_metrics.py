@@ -1,16 +1,16 @@
-import torch
 import numpy as np
+import torch
 
+import tsl.metrics.numpy.functional as npf
+import tsl.metrics.torch.functional as trf
 from tsl.data import StaticBatch
 from tsl.engines.predictor import Predictor
 from tsl.metrics.torch import MaskedPinballLoss
+from tsl.metrics.torch.metrics import MaskedMAE, MaskedMSE, MaskedMAPE, \
+    MaskedMRE
 from tsl.nn.models.temporal.tcn_model import TCNModel
-from tsl.nn.utils import casting
 from tsl.ops.framearray import framearray_to_numpy
-
-from tsl.metrics.torch.metrics import MaskedMAE, MaskedMSE, MaskedMAPE, MaskedMRE
-import tsl.metrics.numpy.functional as npf
-import tsl.metrics.torch.functional as trf
+from tsl.utils.casting import torch_to_numpy
 
 metrics_res = dict(mae=MaskedMAE(),
                    mse=MaskedMSE(),
@@ -58,49 +58,49 @@ predictor.test_metrics.reset()
 
 
 def test_mae_metric():
-    y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
+    y_hat_, y_ = torch_to_numpy(y_hat), torch_to_numpy(y)
     res = npf.mae(y_hat_, y_)
     assert np.isclose(metrics_res['test_mae'], res, atol=DELTA)
 
 
 def test_mae_masked_metric():
-    y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
+    y_hat_, y_, mask_ = torch_to_numpy(y_hat), torch_to_numpy(y), torch_to_numpy(mask)
     res = npf.mae(y_hat_, y_, mask_.astype(bool))
     assert np.isclose(masked_metrics_res['test_mae'], res, atol=DELTA)
 
 
 def test_mse_metric():
-    y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
+    y_hat_, y_ = torch_to_numpy(y_hat), torch_to_numpy(y)
     res = npf.mse(y_hat_, y_)
     assert np.isclose(metrics_res['test_mse'], res, atol=DELTA)
 
 
 def test_mse_masked_metric():
-    y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
+    y_hat_, y_, mask_ = torch_to_numpy(y_hat), torch_to_numpy(y), torch_to_numpy(mask)
     res = npf.mse(y_hat_, y_, mask_.astype(bool))
     assert np.isclose(masked_metrics_res['test_mse'], res, atol=DELTA)
 
 
 def test_mape_metric():
-    y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
+    y_hat_, y_ = torch_to_numpy(y_hat), torch_to_numpy(y)
     res = npf.mape(y_hat_, y_)
     assert np.isclose(metrics_res['test_mape'], res, atol=DELTA)
 
 
 def test_mape_masked_metric():
-    y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
+    y_hat_, y_, mask_ = torch_to_numpy(y_hat), torch_to_numpy(y), torch_to_numpy(mask)
     res = npf.mape(y_hat_, y_, mask_.astype(bool))
     assert np.isclose(masked_metrics_res['test_mape'], res, atol=DELTA)
 
 
 def test_mre_metric():
-    y_hat_, y_ = casting.numpy(y_hat), casting.numpy(y)
+    y_hat_, y_ = torch_to_numpy(y_hat), torch_to_numpy(y)
     res = npf.mre(y_hat_, y_)
     assert np.isclose(metrics_res['test_mre'], res, atol=DELTA)
 
 
 def test_mre_masked_metric():
-    y_hat_, y_, mask_ = casting.numpy(y_hat), casting.numpy(y), casting.numpy(mask)
+    y_hat_, y_, mask_ = torch_to_numpy(y_hat), torch_to_numpy(y), torch_to_numpy(mask)
     res = npf.mre(y_hat_, y_, mask_.astype(bool))
     assert np.isclose(masked_metrics_res['test_mre'], res, atol=DELTA)
 
