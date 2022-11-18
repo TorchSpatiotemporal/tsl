@@ -7,9 +7,9 @@ channels:
 dependencies:
   - python=3.8
   - pytorch>=1.9
-  - pytorch-lightning>=1.5
-  - torchmetrics>=0.7
-  - pyg>=2.0
+  - pytorch-lightning>=1.5,<1.8
+  - torchmetrics>=0.7,<0.11
+  - pyg>=2.0.3
   - pip
   - pip:
       - .
@@ -17,9 +17,8 @@ dependencies:
       - hydra-core
       - numpy
       - omegaconf
-      - pandas
+      - pandas>=1.4,<1.5
       - scikit-learn
       - scipy
       - tables
-      - test-tube
       - tqdm

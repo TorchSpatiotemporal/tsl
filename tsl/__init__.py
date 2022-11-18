@@ -5,9 +5,9 @@ from .logger import logger
 data = LazyLoader('data', globals(), 'tsl.data')
 datasets = LazyLoader('datasets', globals(), 'tsl.datasets')
 nn = LazyLoader('nn', globals(), 'tsl.nn')
-inference = LazyLoader('inference', globals(), 'tsl.inference')
+engines = LazyLoader('engines', globals(), 'tsl.engines')
 
-__version__ = '0.1.1'
+__version__ = '0.9.0'
 
 epsilon = 5e-8
 config = Config()
@@ -20,5 +20,5 @@ __all__ = [
     'data',
     'datasets',
     'nn',
-    'inference'
+    'engines'
 ]

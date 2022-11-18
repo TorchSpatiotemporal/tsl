@@ -1,4 +1,3 @@
-from .experiment import TslExperiment
 from .io import (extract_zip,
                  extract_tar,
                  download_url,
@@ -10,4 +9,3 @@ from .python_utils import (ensure_list,
                            files_exist,
                            precision_stoi,
                            remove_files)
-from .parser_utils import ArgParser

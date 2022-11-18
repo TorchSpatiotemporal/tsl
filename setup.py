@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-__version__ = '0.1.1'
+__version__ = '0.9.0'
 URL = 'https://github.com/TorchSpatiotemporal/tsl'
 
 with open("README.md", "r") as fh:
@@ -9,14 +9,13 @@ with open("README.md", "r") as fh:
 install_requires = [
     'einops',
     'numpy',
-    'pandas',
-    'pytorch_lightning>=1.5',
+    'pandas>=1.4,<1.5',
+    'pytorch_lightning>=1.5,<1.9',
     'PyYAML',
     'scikit_learn',
     'scipy',
     'tables',
-    'test_tube',
-    'torchmetrics>=0.7',
+    'torchmetrics>=0.7,<0.11',
     'tqdm',
 ]
 
@@ -32,7 +31,7 @@ experiment_requires = [
 
 full_install_requires = plot_requires + experiment_requires + [
     'holidays',
-    'neptune-client>=0.14',
+    'neptune-client>=0.14,<0.17',
     'pytorch_fast_transformers'
 ]
 
