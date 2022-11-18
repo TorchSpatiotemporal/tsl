@@ -1,5 +1,6 @@
-from typing import (Optional, List, Mapping)
+from typing import (Optional, List, Mapping, Sequence, Union)
 
+import numpy as np
 import torch
 from torch import Tensor
 from torch.utils.data.dataloader import default_collate
@@ -10,6 +11,7 @@ from torch_geometric.typing import Adj
 
 from .data import Data
 from .preprocessing import ScalerModule
+from ..typing import IndexSlice
 from ..utils import ensure_list
 
 
@@ -173,10 +175,55 @@ class StaticBatch(Data):
 
         return out
 
-    def __getitem__(self, item: int or str):
-        if isinstance(item, int):
-            return self.get_example(item)
-        return super(StaticBatch, self).__getitem__(item)
+    def index_select(self, idx: IndexSlice) -> List[Data]:
+        r"""Creates a subset of :class:`~tsl.data.Data` objects from specified
+        indices :obj:`idx`.
+
+        Indices :obj:`idx` can be a slicing object, *e.g.*, :obj:`[2:5]`, a
+        list, a tuple, or a :obj:`torch.Tensor` or :obj:`np.ndarray` of type
+        long or bool."""
+        if isinstance(idx, slice):
+            idx = list(range(self._batch_size)[idx])
+
+        elif isinstance(idx, Tensor) and idx.dtype == torch.long:
+            idx = idx.flatten().tolist()
+
+        elif isinstance(idx, Tensor) and idx.dtype == torch.bool:
+            idx = idx.flatten().nonzero(as_tuple=False).flatten().tolist()
+
+        elif isinstance(idx, np.ndarray) and idx.dtype == np.int64:
+            idx = idx.flatten().tolist()
+
+        elif isinstance(idx, np.ndarray) and idx.dtype == bool:
+            idx = idx.flatten().nonzero()[0].flatten().tolist()
+
+        elif isinstance(idx, Sequence) and not isinstance(idx, str):
+            pass
+
+        else:
+            raise IndexError(
+                f"Only slices (':'), list, tuples, torch.tensor and "
+                f"np.ndarray of dtype long or bool are valid indices (got "
+                f"'{type(idx).__name__}')")
+
+        return [self.get_example(i) for i in idx]
+
+    def __getitem__(self, idx: Union[int, np.integer, str, IndexSlice]):
+        if (isinstance(idx, (int, np.integer))
+                or (isinstance(idx, Tensor) and idx.dim() == 0)
+                or (isinstance(idx, np.ndarray) and np.isscalar(idx))):
+            return self.get_example(idx)
+        elif isinstance(idx, str) or (isinstance(idx, tuple)
+                                      and isinstance(idx[0], str)):
+            # Accessing attributes or node/edge types:
+            return super().__getitem__(idx)
+        else:
+            return self.index_select(idx)
+
+    def to_data_list(self) -> List[Data]:
+        r"""Reconstructs the list of :class:`~tsl.data.Data` objects from the
+        :class:`~tsl.data.StaticBatch` object."""
+        return [self.get_example(i) for i in range(self.batch_size)]
 
     @property
     def batch_size(self) -> int:
@@ -407,11 +454,6 @@ class DisjointBatch(Batch):
                 data.pattern[key] = data.pattern[key][2:]
 
         return data
-
-    def __getitem__(self, item: int or str):
-        if isinstance(item, int):
-            return self.get_example(item)
-        return super(DisjointBatch, self).__getitem__(item)
 
     @property
     def batch_size(self) -> int:

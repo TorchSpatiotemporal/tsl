@@ -47,12 +47,27 @@ the same key in :obj:`Data.input` and :obj:`Data.target` cannot reference differ
 objects.
 
 
-The ``SpatioTemporalBatch`` object
-----------------------------------
+The ``StaticBatch`` object
+--------------------------
 
-    This page is still under development
+The :class:`tsl.data.StaticBatch` object models a temporal graph signal over a
+static graph: while data change over time, the topology does not. This object
+extends :class:`tsl.data.Data`, and has two additional methods for collating
+(and separating) ``Data`` objects into ``StaticBatch`` objects.
 
-The ``SpatioTemporalDataset`` object
-------------------------------------
+The class method :meth:`~tsl.data.StaticBatch.from_data_list` creates a new
+:class:`tsl.data.StaticBatch` object from a list of :class:`~tsl.data.Data`
+objects. The implicit assumption is that all objects in the list **share the
+same topology**, and only the graph in the first object is kept. Accordingly,
+all the tensors in the ``Data`` objects having a static signal (i.e., without
+temporal dimension) are not collated -- only one copy of them is kept. Instead,
+all time-varying data are stacked along the first dimension, as usually done
+in mini-batch collations. Also, :class:`~tsl.data.preprocessing.ScalerModule`
+objects are collated or copied in a similar fashion. Consider also that the
+changes made in the tensors are then reflected in the ``StaticBatch``
+object's patterns.
+
+The ``DisjointBatch`` object
+----------------------------
 
     This page is still under development

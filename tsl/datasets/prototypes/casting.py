@@ -78,3 +78,16 @@ def is_datetime_like_index(index):
     return isinstance(index, (pd.DatetimeIndex,
                               pd.PeriodIndex,
                               pd.TimedeltaIndex))
+
+
+def time_unit_to_nanoseconds(time_unit: str):
+    allowed_units = ['year', 'week', 'day', 'hour', 'minute', 'second',
+                     'millisecond', 'microsecond', 'nanosecond']
+    if time_unit not in allowed_units:
+        raise RuntimeError(f"'{time_unit}' is not a valid time unit."
+                           f"Allowed units are {', '.join(allowed_units)}.")
+    if time_unit == 'year':
+        return 365.2425 * 24 * 60 * 60 * 10 ** 9
+    elif time_unit == 'week':
+        time_unit = 'W'
+    return pd.Timedelta('1' + time_unit).delta
