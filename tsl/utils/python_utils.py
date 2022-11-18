@@ -1,7 +1,7 @@
 import inspect
 import os
 from argparse import ArgumentParser
-from typing import Any, Sequence, List, Union, Callable, Optional, Set, Type
+from typing import Any, Sequence, List, Union, Callable, Optional, Set, Type, Mapping
 
 
 def ensure_list(value: Any) -> List:
@@ -108,3 +108,20 @@ def remove_files(directory: str, extension: str = '.ckpt'):
     for file in filtered_files:
         path_to_file = os.path.join(directory, file)
         os.remove(path_to_file)
+
+
+def filter_kwargs(target: Union[Callable, Type], kwargs: Mapping):
+    """
+    Filters a dictionary to match the signature of an input class or function.
+
+    Args:
+        target: The target class or function.
+        kwargs: The dictionary to filter.
+
+    Returns:
+        The filtered dictionary.
+    """
+    signature = foo_signature(target)
+    if not signature['has_kwargs']:
+        kwargs = {k: v for k, v in kwargs.items() if k in signature['signature']}
+    return kwargs
