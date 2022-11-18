@@ -105,14 +105,6 @@ class TabularParsingMixin:
             raise TypeError('Invalid type for value "{}"'.format(type(value)))
 
 
-_PANDAS_UNITS = dict(week=pd.to_timedelta('1W').delta,
-                     year=365.2425 * 24 * 60 * 60 * 10 ** 9,
-                     **{un: pd.to_timedelta('1' + un).delta
-                        for un in ['day', 'hour', 'minute', 'second',
-                                   'millisecond', 'microsecond',
-                                   'nanosecond']})
-
-
 class TemporalFeaturesMixin:
 
     def __check_temporal_index(self):
@@ -130,9 +122,8 @@ class TemporalFeaturesMixin:
         index_nano = self.index.view(np.int64)
         datetime = dict()
         for unit in units:
-            if unit not in _PANDAS_UNITS:
-                raise RuntimeError(f"'{unit}' is not a valid datetime unit.")
-            nano_sec = index_nano * (2 * np.pi / _PANDAS_UNITS[unit])
+            nano_unit = casting.time_unit_to_nanoseconds(unit)
+            nano_sec = index_nano * (2 * np.pi / nano_unit)
             datetime[unit + '_sin'] = np.sin(nano_sec)
             datetime[unit + '_cos'] = np.cos(nano_sec)
         return pd.DataFrame(datetime, index=self.index, dtype=np.float32)
@@ -145,8 +136,8 @@ class TemporalFeaturesMixin:
         units = ensure_list(units)
         datetime = dict()
         for unit in units:
-            if unit not in _PANDAS_UNITS:
-                raise RuntimeError(f"'{unit}' is not a valid datetime unit.")
+            # check that unit is a valid datetime unit
+            nano_unit = casting.time_unit_to_nanoseconds(unit)
             datetime[unit] = getattr(self.index, unit)
         dummies = pd.get_dummies(pd.DataFrame(datetime, index=self.index),
                                  columns=units)

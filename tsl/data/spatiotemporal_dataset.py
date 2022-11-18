@@ -22,6 +22,7 @@ from .preprocessing.scalers import Scaler, ScalerModule
 from .synch_mode import SynchMode, WINDOW, HORIZON, STATIC
 from ..ops.connectivity import reduce_graph
 from ..ops.pattern import outer_pattern, broadcast, take, check_pattern
+from ..utils.casting import parse_index
 
 _WINDOWING_ = {
     'window': ['window', 'window_lag'],
@@ -217,7 +218,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     def __repr__(self):
         return "{}(n_samples={}, n_nodes={}, n_channels={})" \
-            .format(self.name, len(self), self.n_nodes, self.n_channels)
+            .format(self.name, self.n_samples, self.n_nodes, self.n_channels)
 
     def __getitem__(self, item) -> Data:
         if isinstance(item, int) and item < 0:
@@ -225,7 +226,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             item = self._indices.size(0) + item
         else:
             # convert slice to indexes
-            item = self._get_time_index(item, layout='index')
+            item = parse_index(item, length=self.n_samples, layout='index')
         item = self.get(item)
         if self.transform is not None:
             item = self.transform(item)
@@ -235,7 +236,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         return item in self.keys
 
     def __len__(self) -> int:
-        return len(self._indices)
+        return self.n_samples
 
     def __getattr__(self, item):
         if '_covariates' in self.__dict__ and item in self._covariates:
@@ -392,6 +393,11 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         """Indices of the dataset. The :obj:`i`-th item is mapped to
         :obj:`indices[i]`"""
         return self._indices
+
+    @property
+    def n_samples(self) -> int:
+        """Number of samples (i.e., items) in the dataset."""
+        return len(self._indices)
 
     # Covariates properties
 
@@ -678,41 +684,11 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
     def _get_time_index(self, time_index: IndexSlice = None,
                         layout: Literal['index', 'slice', 'mask'] = 'index'):
-        if time_index is None:
-            return slice(None) if layout == 'slice' else None
-        if isinstance(time_index, slice):
-            if layout == 'slice':
-                return time_index
-            time_index = torch.arange(max(time_index.start or 0, 0),
-                                      min(time_index.stop or len(self),
-                                          len(self)),
-                                      time_index.step or 1)
-        if not isinstance(time_index, Tensor):
-            time_index = torch.as_tensor(time_index, dtype=torch.long)
-        if layout == 'mask':
-            mask = torch.zeros(self.n_steps, dtype=torch.bool)
-            mask[time_index] = True
-            return mask
-        return time_index
+        return parse_index(time_index, length=self.n_steps, layout=layout)
 
     def _get_node_index(self, node_index: IndexSlice = None,
                         layout: Literal['index', 'slice', 'mask'] = 'index'):
-        if node_index is None:
-            return slice(None) if layout == 'slice' else None
-        if isinstance(node_index, slice):
-            if layout == 'slice':
-                return node_index
-            node_index = torch.arange(max(node_index.start or 0, 0),
-                                      min(node_index.stop or self.n_nodes,
-                                          self.n_nodes),
-                                      node_index.step or 1)
-        if not isinstance(node_index, Tensor):
-            node_index = torch.as_tensor(node_index, dtype=torch.long)
-        if layout == 'mask':
-            mask = torch.zeros(self.n_nodes, dtype=torch.bool)
-            mask[node_index] = True
-            return mask
-        return node_index
+        return parse_index(node_index, length=self.n_nodes, layout=layout)
 
     def _add_to_sample(self, out, synch_mode, endpoint='input',
                        time_index=None, node_index=None):
@@ -783,8 +759,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                 inferred from the input.
                 (default: :obj:`None`)
         """
-        self.edge_index, self.edge_weight = self._parse_connectivity(connectivity,
-                                                                     target_layout)
+        self.edge_index, self.edge_weight = self._parse_connectivity(
+            connectivity,
+            target_layout)
 
     # Setter for covariates
 
@@ -1125,7 +1102,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         self._indices = indices
 
     def expand_indices(self, indices=None, unique=False, merge=False):
-        indices = torch.arange(len(self)) if indices is None else indices
+        indices = torch.arange(self.n_samples) if indices is None else indices
 
         ds_indices = dict()
         if self.window > 0:

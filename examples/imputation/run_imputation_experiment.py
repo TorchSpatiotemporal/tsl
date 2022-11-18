@@ -13,6 +13,7 @@ from tsl.experiment import Experiment
 from tsl.metrics import torch as torch_metrics, numpy as numpy_metrics
 from tsl.nn.models import RNNImputerModel, BiRNNImputerModel, GRINModel
 from tsl.ops.imputation import add_missing_values
+from tsl.transforms import MaskInput
 from tsl.utils.casting import torch_to_numpy
 
 
@@ -61,6 +62,7 @@ def run_imputation(cfg: DictConfig):
     torch_dataset = ImputationDataset(target=dataset.dataframe(),
                                       eval_mask=dataset.eval_mask,
                                       input_mask=dataset.training_mask,
+                                      transform=MaskInput(),
                                       connectivity=adj,
                                       window=cfg.window,
                                       stride=cfg.stride)

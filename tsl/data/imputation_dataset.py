@@ -7,7 +7,6 @@ from .synch_mode import WINDOW
 from .batch_map import BatchMap, BatchMapItem
 from .preprocessing import Scaler
 from .spatiotemporal_dataset import SpatioTemporalDataset
-from ..transforms import MaskInput
 
 
 class ImputationDataset(SpatioTemporalDataset):
@@ -47,9 +46,6 @@ class ImputationDataset(SpatioTemporalDataset):
                                                        pattern='t n f',
                                                        preprocess=False)
 
-        if transform is None:
-            transform = MaskInput()
-
         horizon = window
         delay = - window
 
@@ -86,7 +82,7 @@ class ImputationDataset(SpatioTemporalDataset):
 
     @staticmethod
     def add_argparse_args(parser, **kwargs):
-        parser.add_argument('--window', type=int, default=24)
+        parser.add_argument('--window', type=int, default=12)
         parser.add_argument('--stride', type=int, default=1)
         parser.add_argument('--window-lag', type=int, default=1)
         parser.add_argument('--horizon-lag', type=int, default=1)

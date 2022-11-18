@@ -1,4 +1,4 @@
-from typing import Union, Any
+from typing import Union, Any, Literal
 
 import torch
 from einops import rearrange
@@ -7,6 +7,7 @@ from torch_geometric.data.storage import recursive_apply
 from torch_sparse import SparseTensor
 
 from tsl.ops.framearray import framearray_to_numpy
+from tsl.typing import IndexSlice
 from tsl.utils.python_utils import precision_stoi
 
 
@@ -57,3 +58,22 @@ def torch_to_numpy(tensors: Any) -> Any:
         Tensors casted to numpy arrays.
     """
     return recursive_apply(tensors, lambda t: t.detach().cpu().numpy())
+
+
+def parse_index(index: IndexSlice = None, length: int = None,
+                layout: Literal['index', 'slice', 'mask'] = 'index'):
+    if index is None:
+        return slice(None) if layout == 'slice' else None
+    if isinstance(index, slice):
+        if layout == 'slice':
+            return index
+        assert length is not None, "'length' cannot be None with 'slice' layout"
+        index = torch.tensor(range(length)[index])
+    if not isinstance(index, Tensor):
+        index = torch.as_tensor(index, dtype=torch.long)
+    if layout == 'mask':
+        assert length is not None, "'length' cannot be None with 'mask' layout"
+        mask = torch.zeros(length, dtype=torch.bool)
+        mask[index] = True
+        return mask
+    return index
