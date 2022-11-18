@@ -15,15 +15,23 @@ class Imputer(Predictor):
     spatiotemporal data.
 
     Args:
-        model_class (type): Class of :obj:`~torch.nn.Module` implementing the
-            imputer.
-        model_kwargs (mapping): Dictionary of arguments to be forwarded to
+        model (torch.nn.Module, optional): Model implementing the imputer. Ignored if argument `model_class` is not
+            null. This argument should mainly be used for inference.
+            (default: :obj:`None`)
+        model_class (type, optional): Class of :obj:`~torch.nn.Module` implementing the
+            imputer. If not `None`, argument `model` will be ignored.
+            (default: :obj:`None`)
+        model_kwargs (mapping, optional): Dictionary of arguments to be forwarded to
             :obj:`model_class` at instantiation.
-        optim_class (type): Class of :obj:`~torch.optim.Optimizer` implementing
+            (default: :obj:`None`)
+        optim_class (type, optional): Class of :obj:`~torch.optim.Optimizer` implementing
             the optimizer to be used for training the model.
-        optim_kwargs (mapping): Dictionary of arguments to be forwarded to
+            (default: :obj:`None`)
+        optim_kwargs (mapping, optional): Dictionary of arguments to be forwarded to
             :obj:`optim_class` at instantiation.
-        loss_fn (callable): Loss function to be used for training the model.
+            (default: :obj:`None`)
+        loss_fn (callable, optional): Loss function to be used for training the model.
+            (default: :obj:`None`)
         scale_target (bool): Whether to scale target before evaluating the loss.
             The metrics instead will always be evaluated in the original range.
             (default: :obj:`False`)
@@ -64,20 +72,24 @@ class Imputer(Predictor):
     """
 
     def __init__(self,
-                 model_class: Type,
-                 model_kwargs: Mapping,
-                 optim_class: Type,
-                 optim_kwargs: Mapping,
-                 loss_fn: Callable,
+                 model: Optional[torch.nn.Module] = None,
+                 loss_fn: Optional[Callable] = None,
                  scale_target: bool = False,
                  metrics: Optional[Mapping[str, Metric]] = None,
-                 scheduler_class: Optional = None,
-                 scheduler_kwargs: Optional[Mapping] = None,
+                 *,
                  whiten_prob: Optional[Union[float, List[float]]] = 0.05,
                  prediction_loss_weight: float = 1.0,
                  impute_only_missing: bool = True,
-                 warm_up_steps: Union[int, Tuple[int, int]] = 0):
-        super(Imputer, self).__init__(model_class=model_class,
+                 warm_up_steps: Union[int, Tuple[int, int]] = 0,
+                 model_class: Optional[Type] = None,
+                 model_kwargs: Optional[Mapping] = None,
+                 optim_class: Optional[Type] = None,
+                 optim_kwargs: Optional[Mapping] = None,
+                 scheduler_class: Optional = None,
+                 scheduler_kwargs: Optional[Mapping] = None,
+                 ):
+        super(Imputer, self).__init__(model=model,
+                                      model_class=model_class,
                                       model_kwargs=model_kwargs,
                                       optim_class=optim_class,
                                       optim_kwargs=optim_kwargs,

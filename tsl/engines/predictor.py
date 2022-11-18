@@ -11,22 +11,29 @@ from tsl.metrics.torch import MaskedMetric
 from tsl.nn.models import BaseModel
 from tsl.utils import foo_signature
 
-
 class Predictor(pl.LightningModule):
     """:class:`~pytorch_lightning.core.LightningModule` to implement predictors.
 
     Input data should follow the format [batch, steps, nodes, features].
 
     Args:
-        model_class (type): Class of :obj:`~torch.nn.Module` implementing the
-            predictor.
-        model_kwargs (mapping): Dictionary of arguments to be forwarded to
+        model (torch.nn.Module, optional): Model implementing the predictor. Ignored if argument `model_class` is not
+            null. This argument should mainly be used for inference.
+            (default: :obj:`None`)
+        model_class (type, optional): Class of :obj:`~torch.nn.Module` implementing the
+            predictor. If not `None`, argument `model` will be ignored.
+            (default: :obj:`None`)
+        model_kwargs (mapping, optional): Dictionary of arguments to be forwarded to
             :obj:`model_class` at instantiation.
-        optim_class (type): Class of :obj:`~torch.optim.Optimizer` implementing
+            (default: :obj:`None`)
+        optim_class (type, optional): Class of :obj:`~torch.optim.Optimizer` implementing
             the optimizer to be used for training the model.
-        optim_kwargs (mapping): Dictionary of arguments to be forwarded to
+            (default: :obj:`None`)
+        optim_kwargs (mapping, optional): Dictionary of arguments to be forwarded to
             :obj:`optim_class` at instantiation.
-        loss_fn (callable): Loss function to be used for training the model.
+            (default: :obj:`None`)
+        loss_fn (callable, optional): Loss function to be used for training the model.
+            (default: :obj:`None`)
         scale_target (bool): Whether to scale target before evaluating the loss.
             The metrics instead will always be evaluated in the original range.
             (default: :obj:`False`)
@@ -36,38 +43,37 @@ class Predictor(pl.LightningModule):
             :obj:`mae` will be logged as :obj:`train_mae` when evaluated during
             training).
             (default: :obj:`None`)
-        scheduler_class (type): Class of :obj:`~torch.optim.lr_scheduler._LRScheduler`
+        scheduler_class (type, optional): Class of :obj:`~torch.optim.lr_scheduler._LRScheduler`
             implementing the learning rate scheduler to be used during training.
             (default: :obj:`None`)
-        scheduler_kwargs (mapping): Dictionary of arguments to be forwarded to
+        scheduler_kwargs (mapping, optional): Dictionary of arguments to be forwarded to
             :obj:`scheduler_class` at instantiation.
             (default: :obj:`None`)
     """
 
     def __init__(self,
-                 model_class: Type,
-                 model_kwargs: Mapping,
-                 optim_class: Type,
-                 optim_kwargs: Mapping,
-                 loss_fn: Callable,
+                 model: Optional[torch.nn.Module] = None,
+                 loss_fn: Optional[Callable] = None,
                  scale_target: bool = False,
                  metrics: Optional[Mapping[str, Metric]] = None,
+                 *,
+                 model_class: Optional[Type] = None,
+                 model_kwargs: Optional[Mapping] = None,
+                 optim_class: Optional[Type] = None,
+                 optim_kwargs: Optional[Mapping] = None,
                  scheduler_class: Optional = None,
                  scheduler_kwargs: Optional[Mapping] = None):
         super(Predictor, self).__init__()
-        self.save_hyperparameters(ignore=['loss_fn'],
+        self.save_hyperparameters(ignore=['loss_fn', 'model'],
                                   logger=False)
         self.model_cls = model_class
-        self.model_kwargs = model_kwargs
+        self.model_kwargs = model_kwargs or dict()
         self._model_fwd_signature = None  # automatic set on model assignment
 
         self.optim_class = optim_class
-        self.optim_kwargs = optim_kwargs
+        self.optim_kwargs = optim_kwargs or dict()
         self.scheduler_class = scheduler_class
-        if scheduler_kwargs is None:
-            self.scheduler_kwargs = dict()
-        else:
-            self.scheduler_kwargs = scheduler_kwargs
+        self.scheduler_kwargs = scheduler_kwargs or dict()
 
         if loss_fn is not None:
             self.loss_fn = self._check_metric(loss_fn, on_step=True)
@@ -84,8 +90,7 @@ class Predictor(pl.LightningModule):
             # instantiate model
             self.model = self.model_cls(**self.model_kwargs)
         else:
-            # can be used to set the model manually later
-            self.model = None
+            self.model = model
 
     def __setattr__(self, key, value):
         super(Predictor, self).__setattr__(key, value)
