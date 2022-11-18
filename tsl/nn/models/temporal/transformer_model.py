@@ -7,13 +7,15 @@ from torch import nn, Tensor
 from tsl.nn.blocks.encoders import ConditionalBlock
 from tsl.nn.blocks.encoders.mlp import MLP
 from tsl.nn.blocks.encoders.transformer import Transformer
+from tsl.nn.layers.ops import Select
 from tsl.nn.layers.positional_encoding import PositionalEncoding
 from tsl.nn.models.base_model import BaseModel
-from tsl.nn.layers.ops import Select
 
 
 class TransformerModel(BaseModel):
-    r"""Simple Transformer for multistep time series forecasting.
+    r"""A Transformer from the paper `"Attention Is All You Need"
+    <https://arxiv.org/abs/1706.03762>`_ (Vaswani et al., NeurIPS 2017) for
+    multistep time series forecasting.
 
     Args:
         input_size (int): Input size.
@@ -26,7 +28,8 @@ class TransformerModel(BaseModel):
         n_layers (int, optional): Number of layers.
         dropout (float, optional): Dropout probability.
         axis (str, optional): Dimension on which to apply attention to update
-            the representations.
+            the representations. Can be either, 'time', 'nodes', or 'both'.
+            (default: :obj:`'time'`)
         activation (str, optional): Activation function.
     """
 

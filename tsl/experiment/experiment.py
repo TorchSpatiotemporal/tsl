@@ -1,5 +1,6 @@
 import inspect
 import os
+import os.path as osp
 import sys
 from functools import wraps
 from typing import Optional, Callable, List, Union
@@ -43,9 +44,9 @@ def _pre_experiment_routine(cfg: DictConfig):
                     # name=hconf.job.name,
                     dir=hconf.runtime.output_dir)
     if hconf.get('output_subdir') is not None:
-        run_args['tsl_subdir'] = os.path.join(cfg.run.dir, hconf.output_subdir)
+        run_args['tsl_subdir'] = osp.join(cfg.run.dir, hconf.output_subdir)
         # remove hydra conf from logging
-        os.unlink(os.path.join(run_args['tsl_subdir'], 'hydra.yaml'))
+        os.unlink(osp.join(run_args['tsl_subdir'], 'hydra.yaml'))
     # set run name
     run_args['name'] = "${now:%Y-%m-%d_%H-%M-%S}_${run.seed}"
     with flag_override(cfg, 'struct', False):
@@ -112,9 +113,9 @@ class Experiment:
         # config_path={config_path} same as --config-path {config_path}
         override_config_path = get_hydra_cli_arg('config_path', delete=True)
         config_path = override_config_path or config_path
-        if not os.path.isabs(config_path):
-            root_path = os.path.dirname(inspect.getfile(run_fn))
-            config_path = os.path.join(root_path, config_path)
+        if not osp.isabs(config_path):
+            root_path = osp.dirname(inspect.getfile(run_fn))
+            config_path = osp.abspath(osp.join(root_path, config_path))
         self.config_path = config_path
         # store config_dir in tsl config
         config.config_dir = self.config_path
@@ -164,7 +165,7 @@ class Experiment:
     def log_config(self) -> None:
         """Save config as ``.yaml`` file in
         :meth:`~tsl.experiment.Experiment.run_dir`."""
-        with open(os.path.join(self.run_dir, 'config.yaml'), 'w') as fp:
+        with open(osp.join(self.run_dir, 'config.yaml'), 'w') as fp:
             fp.write(OmegaConf.to_yaml(self.cfg, resolve=True))
 
     def __repr__(self):

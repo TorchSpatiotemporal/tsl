@@ -1,33 +1,41 @@
-from torch import nn
-
-from tsl.nn.base.attention import MultiHeadAttention
-from tsl.nn.layers.norm import LayerNorm
-from tsl.nn import utils
 from functools import partial
+from typing import Optional
 
 import torch.nn.functional as F
+from torch import nn, Tensor
+
+from tsl.nn import utils
+from tsl.nn.base.attention import MultiHeadAttention
+from tsl.nn.layers.norm import LayerNorm
 
 
 class TransformerLayer(nn.Module):
-    r"""
-    A TransformerLayer which can be instantiated to attent the temporal or spatial dimension.
+    r"""A Transformer layer from the paper `"Attention Is All You Need"
+    <https://arxiv.org/abs/1706.03762>`_ (Vaswani et al., NeurIPS 2017).
+
+    This layer can be instantiated to attend the temporal or spatial dimension.
 
     Args:
         input_size (int): Input size.
         hidden_size (int): Dimension of the learned representations.
         ff_size (int): Units in the MLP after self attention.
         n_heads (int, optional): Number of parallel attention heads.
-        axis (str, optional): Dimension on which to apply attention to update the representations.
-        causal (bool, optional): Whether to causally mask the attention scores (can be `True` only if `axis` is `steps`).
+        axis (str, optional): Dimension on which to apply attention to update
+            the representations. Can be either, 'time' or 'nodes'.
+            (default: :obj:`'time'`)
+        causal (bool, optional): If :obj:`True`, then causally mask attention
+            scores in temporal attention (has an effect only if :attr:`axis` is
+            :obj:`'time'`). (default: :obj:`True`)
         activation (str, optional): Activation function.
         dropout (float, optional): Dropout probability.
     """
+
     def __init__(self,
                  input_size,
                  hidden_size,
                  ff_size=None,
                  n_heads=1,
-                 axis='steps',
+                 axis='time',
                  causal=True,
                  activation='elu',
                  dropout=0.):
@@ -60,27 +68,32 @@ class TransformerLayer(nn.Module):
 
         self.activation = utils.get_functional_activation(activation)
 
-    def forward(self, x, mask=None):
+    def forward(self, x: Tensor, mask: Optional[Tensor] = None):
         """"""
         # x: [batch, steps, nodes, features]
-        x = self.skip_conn(x) + self.dropout(self.att(self.norm1(x), attn_mask=mask)[0])
+        x = self.skip_conn(x) + self.dropout(
+            self.att(self.norm1(x), attn_mask=mask)[0])
         x = x + self.mlp(x)
         return x
 
 
 class SpatioTemporalTransformerLayer(nn.Module):
-    r"""
-    A TransformerLayer which attend both the spatial and temporal dimensions by stacking two `MultiHeadAttention` layers.
+    r"""A :class:`~tsl.nn.blocks.encoders.TransformerLayer` which attend both
+    the spatial and temporal dimensions by stacking two
+    :class:`~tsl.nn.base.MultiHeadAttention` layers.
 
     Args:
         input_size (int): Input size.
         hidden_size (int): Dimension of the learned representations.
         ff_size (int): Units in the MLP after self attention.
         n_heads (int, optional): Number of parallel attention heads.
-        causal (bool, optional): Whether to causally mask the attention scores (can be `True` only if `axis` is `steps`).
+        causal (bool, optional): If :obj:`True`, then causally mask attention
+            scores in temporal attention.
+            (default: :obj:`True`)
         activation (str, optional): Activation function.
         dropout (float, optional): Dropout probability.
     """
+
     def __init__(self,
                  input_size,
                  hidden_size,
@@ -95,7 +108,7 @@ class SpatioTemporalTransformerLayer(nn.Module):
                                                kdim=input_size,
                                                vdim=input_size,
                                                heads=n_heads,
-                                               axis='steps',
+                                               axis='time',
                                                causal=causal)
 
         self.spatial_att = MultiHeadAttention(embed_dim=hidden_size,
@@ -122,19 +135,18 @@ class SpatioTemporalTransformerLayer(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, mask=None):
+    def forward(self, x: Tensor, mask: Optional[Tensor] = None):
         """"""
         # x: [batch, steps, nodes, features]
-
-        x = self.skip_conn(x) + self.dropout(self.temporal_att(self.norm1(x), attn_mask=mask)[0])
+        x = self.skip_conn(x) + self.dropout(
+            self.temporal_att(self.norm1(x), attn_mask=mask)[0])
         x = x + self.dropout(self.spatial_att(self.norm2(x), attn_mask=mask)[0])
         x = x + self.mlp(x)
         return x
 
 
 class Transformer(nn.Module):
-    r"""
-    A stack of Transformer layers.
+    r"""A stack of Transformer layers.
 
     Args:
         input_size (int): Input size.
@@ -143,11 +155,17 @@ class Transformer(nn.Module):
         output_size (int, optional): Size of an optional linear readout.
         n_layers (int, optional): Number of Transformer layers.
         n_heads (int, optional): Number of parallel attention heads.
-        axis (str, optional): Dimension on which to apply attention to update the representations.
-        causal (bool, optional): Whether to causally mask the attention scores (can be `True` only if `axis` is `steps`).
+        axis (str, optional): Dimension on which to apply attention to update
+            the representations. Can be either, 'time', 'nodes', or 'both'.
+            (default: :obj:`'time'`)
+        causal (bool, optional): If :obj:`True`, then causally mask attention
+            scores in temporal attention (has an effect only if :attr:`axis` is
+            :obj:`'time'` or :obj:`'both'`).
+            (default: :obj:`True`)
         activation (str, optional): Activation function.
         dropout (float, optional): Dropout probability.
     """
+
     def __init__(self,
                  input_size,
                  hidden_size,
@@ -155,7 +173,7 @@ class Transformer(nn.Module):
                  output_size=None,
                  n_layers=1,
                  n_heads=1,
-                 axis='steps',
+                 axis='time',
                  causal=True,
                  activation='elu',
                  dropout=0.):
@@ -165,7 +183,7 @@ class Transformer(nn.Module):
         if ff_size is None:
             ff_size = hidden_size
 
-        if axis in ['steps', 'nodes']:
+        if axis in ['time', 'nodes']:
             transformer_layer = partial(TransformerLayer, axis=axis)
         elif axis == 'both':
             transformer_layer = SpatioTemporalTransformerLayer
@@ -174,13 +192,14 @@ class Transformer(nn.Module):
 
         layers = []
         for i in range(n_layers):
-            layers.append(transformer_layer(input_size=input_size if i == 0 else hidden_size,
-                                            hidden_size=hidden_size,
-                                            ff_size=ff_size,
-                                            n_heads=n_heads,
-                                            causal=causal,
-                                            activation=activation,
-                                            dropout=dropout))
+            layers.append(transformer_layer(
+                input_size=input_size if i == 0 else hidden_size,
+                hidden_size=hidden_size,
+                ff_size=ff_size,
+                n_heads=n_heads,
+                causal=causal,
+                activation=activation,
+                dropout=dropout))
 
         self.net = nn.Sequential(*layers)
 
@@ -189,7 +208,7 @@ class Transformer(nn.Module):
         else:
             self.register_parameter('readout', None)
 
-    def forward(self, x):
+    def forward(self, x: Tensor):
         """"""
         x = self.net(x)
         if self.readout is not None:

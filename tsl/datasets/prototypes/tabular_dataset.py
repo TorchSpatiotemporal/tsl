@@ -19,7 +19,7 @@ from ...ops.pattern import outer_pattern, broadcast
 
 
 class TabularDataset(Dataset, TabularParsingMixin):
-    r"""Base :class:`~tsl.datasets.Dataset` class for tabular data.
+    r"""Base :class:`~tsl.datasets.prototypes.Dataset` class for tabular data.
 
     Tabular data are assumed to be 3-dimensional arrays where the dimensions
     represent time, nodes and features, respectively. They can be either
