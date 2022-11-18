@@ -12,7 +12,7 @@ environment or a `virtual env <https://docs.python.org/3/library/venv.html>`_.
    :class: caution
 
    Torch Spatiotemporal is built upon `PyTorch>=1.9 <https://pytorch.org/>`_ and
-   `PyG>=2.1 <https://github.com/pyg-team/pytorch_geometric/>`_. Make sure you have
+   `PyG>=2.0.3 <https://github.com/pyg-team/pytorch_geometric/>`_. Make sure you have
    both installed in your environment before installing tsl. In the following,
    we provide instructions on how to install them for the chosen installation
    procedure.

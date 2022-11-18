@@ -32,8 +32,8 @@ Pattern
 .. automodule:: tsl.ops.pattern
    :members:
 
-Test
-----
+AZ-Test
+-------
 
-.. automodule:: tsl.ops.test
+.. automodule:: tsl.ops.az_test
    :members:
