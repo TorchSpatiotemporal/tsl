@@ -27,9 +27,9 @@ def _gcn_gso(edge_index, num_nodes):
 
 
 class _GPVAR(GraphPolyVAR):
-    def forward(self, x, edge_index, edge_weight, h=None, t=None):
+    def forward(self, x, edge_index, edge_weight=None):
         out = super(_GPVAR, self).forward(x, edge_index, edge_weight)
-        return torch.tanh(out), None
+        return torch.tanh(out)
 
 
 class GPVARDataset(GaussianNoiseSyntheticDataset):

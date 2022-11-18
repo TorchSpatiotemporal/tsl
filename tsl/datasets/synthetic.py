@@ -1,25 +1,24 @@
 import math
 
-import os
-
 import numpy as np
 import torch
 from torch import nn
 
 from tsl.datasets import TabularDataset
 
-import tsl
 from tsl.typing import SparseTensArray
 from tsl.ops.connectivity import parse_connectivity
 from tsl.utils.casting import torch_to_numpy
+from tsl.utils.python_utils import filter_kwargs, foo_signature
 
 
 class GaussianNoiseSyntheticDataset(TabularDataset):
     r"""
     A generator of synthetic datasets from an input model and input graph.
 
-    The input model must be implemented as a torch model and must return the observation at the next step and the hidden
-    state for the next step (can be None). Gaussian noise will be added to the output of the model at each step.
+    The input model must be implemented as a torch model and must return the observation at the next step
+    and (optionally) the hidden state for the next step. Gaussian noise will be added to the output of the model at each
+    step.
 
      Args:
         num_features (int): Number of features in the generated dataset.
@@ -62,6 +61,9 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
             self.model = model
         else:
             self.model = model_class(**model_kwargs)
+
+        self._model_forward_signature = foo_signature(model.forward)
+
         self.sigma_noise = sigma_noise
         if connectivity is not None:
             self.connectivity = parse_connectivity(
@@ -88,6 +90,18 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
         """ E[|X|] of a Gaussian X"""
         return math.sqrt(2.0 / math.pi) * self.sigma_noise
 
+    def _filter_forward_kwargs(self, kwargs):
+        if not self._model_forward_signature['has_kwargs']:
+            kwargs = {k: v for k, v in kwargs.items() if k in self._model_forward_signature['signature']}
+        return kwargs
+
+    def _model_forward(self, *args, **kwargs):
+        kwargs = self._filter_forward_kwargs(kwargs)
+        out = self.model(*args, **kwargs)
+        if len(out) != 2:
+            return out, None
+        return out  # Assumes that if the output has length 2, it will contain [output, hidden_state].
+
     def generate_data(self, seed=None):
         r"""
         """
@@ -112,11 +126,11 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
         with torch.no_grad():
             h_t = None
             for t in range(self._min_window, self._min_window + self._num_steps):
-                x_t, h_t = self.model(x[None, t - self._min_window: t],
-                                      h=h_t,
-                                      t=t,
-                                      edge_index=edge_index,
-                                      edge_weight=edge_weight)
+                x_t, h_t = self._model_forward(x[None, t - self._min_window: t],
+                                               h=h_t,
+                                               t=t,
+                                               edge_index=edge_index,
+                                               edge_weight=edge_weight)
                 y_opt[t - self._min_window:t + 1 - self._min_window] = x_t[0]
                 # add noise
                 x_t = x_t + torch.zeros_like(x_t).normal_(generator=rng) * self.sigma_noise
