@@ -24,8 +24,8 @@ class GraphWaveNetModel(BaseModel):
         input_size (int): Number of features of the input sample.
         output_size (int): Number of output channels.
         horizon (int): Number of future time steps to forecast.
-        exog_size (int, optional): Number of features of the input covariate,
-            if any. (default: :obj:`None`)
+        exog_size (int): Number of features of the input covariate,
+            if any. (default: :obj:`0`)
         hidden_size (int): Number of hidden units.
             (default: :obj:`32`)
         ff_size (int): Number of units in the nonlinear readout.
@@ -56,7 +56,7 @@ class GraphWaveNetModel(BaseModel):
     """
 
     def __init__(self, input_size: int, output_size: int, horizon: int,
-                 exog_size: Optional[int] = None,
+                 exog_size: int = 0,
                  hidden_size: int = 32,
                  ff_size: int = 256,
                  n_layers: int = 8,

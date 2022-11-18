@@ -21,8 +21,8 @@ class TCNModel(BaseModel):
         input_size (int): Number of features of the input sample.
         output_size (int): Number of output channels.
         horizon (int): Number of future time steps to forecast.
-        exog_size (int, optional): Number of features of the input covariate,
-            if any. (default: 0)
+        exog_size (int): Number of features of the input covariate,
+            if any. (default: :ob:`0`)
         hidden_size (int): Number of hidden units.
             (default: :obj:`32`)
         ff_size (int): Number of units in the hidden layers of the decoder.
@@ -51,7 +51,7 @@ class TCNModel(BaseModel):
     """
 
     def __init__(self, input_size: int, output_size: int, horizon: int,
-                 exog_size: Optional[int] = 0,
+                 exog_size: int = 0,
                  hidden_size: int = 32,
                  ff_size: int = 32,
                  kernel_size: int = 2,
@@ -66,7 +66,7 @@ class TCNModel(BaseModel):
                  activation: str = 'relu'):
         super(TCNModel, self).__init__(return_type=Tensor)
 
-        if exog_size > 0:
+        if exog_size:
             self.input_encoder = ConditionalBlock(input_size=input_size,
                                                   exog_size=exog_size,
                                                   output_size=hidden_size,

@@ -34,7 +34,7 @@ class TransformerModel(BaseModel):
     """
 
     def __init__(self, input_size: int, output_size: int, horizon: int,
-                 exog_size: Optional[int] = None,
+                 exog_size: int = 0,
                  hidden_size: int = 32,
                  ff_size: int = 32,
                  n_heads: int = 1,
@@ -44,7 +44,7 @@ class TransformerModel(BaseModel):
                  activation: str = 'elu'):
         super(TransformerModel, self).__init__(return_type=Tensor)
 
-        if exog_size > 0:
+        if exog_size:
             self.input_encoder = ConditionalBlock(input_size=input_size,
                                                   exog_size=exog_size,
                                                   output_size=hidden_size,

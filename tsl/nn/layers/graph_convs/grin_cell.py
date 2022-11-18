@@ -42,7 +42,7 @@ class SpatialDecoder(nn.Module):
                  input_size: int,
                  hidden_size: int,
                  output_size: Optional[int] = None,
-                 exog_size: Optional[int] = None,
+                 exog_size: int = 0,
                  order: int = 1):
         super(SpatialDecoder, self).__init__()
 
@@ -51,7 +51,7 @@ class SpatialDecoder(nn.Module):
         self.output_size = output_size or input_size
         self.order = order
 
-        exog_size = exog_size or 0
+        exog_size = exog_size
         in_channels = input_size * 2 + hidden_size + exog_size
 
         self.lin_in = nn.Linear(in_channels, hidden_size)
@@ -108,7 +108,7 @@ class GRIL(nn.Module):
     def __init__(self,
                  input_size: int,
                  hidden_size: int,
-                 exog_size: Optional[int] = None,
+                 exog_size: int = 0,
                  n_layers: int = 1,
                  n_nodes: Optional[int] = None,
                  kernel_size: int = 2,
@@ -124,7 +124,7 @@ class GRIL(nn.Module):
         self.kernel_size = kernel_size
 
         # input + mask + (eventually) exogenous
-        rnn_input_size = 2 * self.input_size + (exog_size or 0)
+        rnn_input_size = 2 * self.input_size + exog_size
 
         # Spatio-temporal encoder (rnn_input_size -> hidden_size)
         self.cells = nn.ModuleList()

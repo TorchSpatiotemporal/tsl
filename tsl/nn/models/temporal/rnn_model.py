@@ -32,7 +32,7 @@ class RNNModel(BaseModel):
 
     def __init__(self, input_size: int, output_size: int,
                  horizon: int,
-                 exog_size: Optional[int] = None,
+                 exog_size: int = 0,
                  hidden_size: int = 32,
                  ff_size: int = 64,
                  rec_layers: int = 1,
@@ -43,7 +43,7 @@ class RNNModel(BaseModel):
                  activation: str = 'relu'):
         super(RNNModel, self).__init__(return_type=Tensor)
 
-        if exog_size is not None:
+        if exog_size:
             self.input_encoder = ConditionalBlock(input_size=input_size,
                                                   exog_size=exog_size,
                                                   output_size=hidden_size,
