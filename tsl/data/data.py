@@ -6,7 +6,7 @@ from typing import (Optional, Any, List, Iterable, Tuple,
 import torch
 from einops import rearrange
 from torch import Tensor
-from torch_geometric.data.data import Data as PyGData, size_repr
+from torch_geometric.data.data import Data as PyGData
 from torch_geometric.data.storage import BaseStorage
 from torch_geometric.data.view import KeysView, ValuesView, ItemsView
 from torch_geometric.typing import Adj
@@ -14,6 +14,17 @@ from torch_geometric.typing import Adj
 from tsl.ops.connectivity import reduce_graph
 from tsl.ops.pattern import take
 from tsl.utils.python_utils import ensure_list
+
+
+def pattern_size_repr(key: str, tensor: Tensor, pattern: str = None):
+    if pattern is not None:
+        pattern = pattern.replace(' ', '')
+        out = str([f'{token}={size}'
+                   for token, size in zip(pattern, tensor.size())])
+    else:
+        out = str(list(tensor.size()))
+    out = f"{key}={out}".replace("'", '')
+    return out
 
 
 class StorageView(BaseStorage):
@@ -185,14 +196,17 @@ class Data(PyGData):
         transform = transform if transform is not None else dict()
         self.transform: dict = transform  # noqa
         # Add patterns
-        pattern = pattern if pattern is not None else dict()
-        self.__dict__['pattern'] = pattern
+        self.__dict__['pattern'] = dict()
+        if pattern is not None:
+            self.pattern.update(pattern)
 
     def __repr__(self) -> str:
         cls = self.__class__.__name__
-        inputs = [size_repr(k, v) for k, v in self.input.items()]
+        inputs = [pattern_size_repr(k, v, self.pattern.get(k))
+                  for k, v in self.input.items()]
         inputs = 'input=({})'.format(', '.join(inputs))
-        targets = [size_repr(k, v) for k, v in self.target.items()]
+        targets = [pattern_size_repr(k, v, self.pattern.get(k))
+                   for k, v in self.target.items()]
         targets = 'target=({})'.format(', '.join(targets))
         info = [inputs, targets, "has_mask={}".format(self.has_mask)]
         if self.has_transform:
