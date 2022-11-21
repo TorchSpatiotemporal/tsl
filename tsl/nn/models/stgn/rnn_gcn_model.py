@@ -42,7 +42,7 @@ class RNNEncGCNDecModel(BaseModel):
                  activation='relu'):
         super(RNNEncGCNDecModel, self).__init__()
 
-        if exog_size > 0:
+        if exog_size:
             self.input_encoder = ConditionalBlock(input_size=input_size,
                                                   exog_size=exog_size,
                                                   output_size=hidden_size,

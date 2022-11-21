@@ -7,7 +7,7 @@ from tsl.nn import utils
 
 class GCNDecoder(nn.Module):
     r"""
-    GCN decoder for multi-step forecasting.
+    GCN decoder for multistep forecasting.
     Applies multiple graph convolutional layers followed by a feed-forward layer amd a linear readout.
 
     If the input representation has a temporal dimension, this model will simply take as input the representation

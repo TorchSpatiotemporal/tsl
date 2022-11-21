@@ -5,7 +5,7 @@ from einops.layers.torch import Rearrange
 
 class LinearReadout(nn.Module):
     r"""
-    Simple linear readout for multi-step forecasting.
+    Simple linear readout for multistep forecasting.
 
     If the input representation has a temporal dimension, this model will simply take the representation corresponding
     to the last step.

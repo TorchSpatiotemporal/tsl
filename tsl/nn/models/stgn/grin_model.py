@@ -52,7 +52,7 @@ class GRINModel(BaseModel):
                  hidden_size: int = 64,
                  ff_size: int = 128,
                  embedding_size: Optional[int] = None,
-                 exog_size: Optional[int] = None,
+                 exog_size: int = 0,
                  n_layers: int = 1,
                  n_nodes: Optional[int] = None,
                  kernel_size: int = 2,

@@ -8,7 +8,7 @@ from einops import rearrange
 
 class MLPDecoder(nn.Module):
     r"""
-    Simple MLP decoder for multi-step forecasting.
+    Simple MLP decoder for multistep forecasting.
 
     If the input representation has a temporal dimension, this model will take the flatten representations corresponding
     to the last `receptive_field` time steps.

@@ -24,7 +24,7 @@ class ARModel(BaseModel):
                  temporal_order: int,
                  output_size: int,
                  horizon: int,
-                 exog_size: Optional[int] = 0,
+                 exog_size: int = 0,
                  bias: bool = True):
         super(ARModel, self).__init__(return_type=Tensor)
 
@@ -64,7 +64,7 @@ class VARModel(ARModel):
                  output_size: int,
                  horizon: int,
                  n_nodes: int,
-                 exog_size: Optional[int] = 0,
+                 exog_size: int = 0,
                  bias: bool = True):
 
         super(VARModel, self).__init__(input_size=input_size * n_nodes,

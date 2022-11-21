@@ -19,9 +19,9 @@ class RNNImputerModel(BaseModel):
         input_size (int): Number of features of the input sample.
         hidden_size (int): Number of hidden units.
             (default: 64)
-        exog_size (int, optional): Number of features of the input covariate,
+        exog_size (int): Number of features of the input covariate,
             if any.
-            (default: :obj:`None`)
+            (default: :obj:`0`)
         cell (str): Type of recurrent cell to be used, one of [:obj:`gru`,
             :obj:`lstm`].
             (default: :obj:`gru`)
@@ -45,7 +45,7 @@ class RNNImputerModel(BaseModel):
     """
 
     def __init__(self, input_size: int, hidden_size: int = 64,
-                 exog_size: Optional[int] = None,
+                 exog_size: int = 0,
                  cell: str = 'gru',
                  concat_mask: bool = True,
                  fully_connected: bool = False,
@@ -79,7 +79,7 @@ class RNNImputerModel(BaseModel):
 
         if concat_mask:
             input_size = 2 * input_size
-        input_size = input_size + (exog_size or 0)
+        input_size = input_size + exog_size
         self.rnn_cell = cell(input_size=input_size, hidden_size=hidden_size)
 
         self.readout = nn.Linear(hidden_size, self.input_size)
@@ -152,7 +152,7 @@ class BiRNNImputerModel(BaseModel):
     r"""Fill the blanks with a bidirectional GRU 1-step-ahead predictor."""
 
     def __init__(self, input_size: int, hidden_size: int = 64,
-                 exog_size: Optional[int] = None,
+                 exog_size: int = 0,
                  cell: str = 'gru',
                  dropout=0.,
                  concat_mask: bool = True,
