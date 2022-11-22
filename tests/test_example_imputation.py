@@ -1,4 +1,5 @@
 import os
+import pytest
 
 import numpy as np
 import torch
@@ -7,119 +8,103 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from tsl import __path__ as tsl_path
-from tsl.data import SpatioTemporalDataset, SpatioTemporalDataModule
+from tsl.data import SpatioTemporalDataModule, ImputationDataset
 from tsl.data.preprocessing import StandardScaler
-from tsl.datasets import MetrLA, PemsBay
-from tsl.datasets.pems_benchmarks import PeMS03, PeMS04, PeMS07, PeMS08
-from tsl.engines import Predictor
+from tsl.datasets import MetrLA, PemsBay, AirQuality
+from tsl.engines import Predictor, Imputer
 from tsl.metrics import torch as torch_metrics, numpy as numpy_metrics
-from tsl.nn import models
+from tsl.nn.models import RNNImputerModel, BiRNNImputerModel, GRINModel
+from tsl.ops.imputation import add_missing_values
+from tsl.transforms import MaskInput
 from tsl.utils import remove_files
 from tsl.utils.casting import torch_to_numpy
 
-
 def get_model_class(model_str):
-    if model_str == 'dcrnn':
-        model = models.DCRNNModel
-    elif model_str == 'stcn':
-        model = models.STCNModel
-    elif model_str == 'gwnet':
-        model = models.GraphWaveNetModel
-    elif model_str == 'ar':
-        model = models.ARModel
-    elif model_str == 'var':
-        model = models.VARModel
-    elif model_str == 'rnn':
-        model = models.RNNModel
-    elif model_str == 'fcrnn':
-        model = models.FCRNNModel
-    elif model_str == 'tcn':
-        model = models.TCNModel
-    elif model_str == 'transformer':
-        model = models.TransformerModel
-    elif model_str == 'gatedgn':
-        model = models.GatedGraphNetworkModel
-    elif model_str == 'evolvegcn':
-        model = models.EvolveGCNModel
-    elif model_str == 'grugcn':
-        model = models.GRUGCNModel
-    elif model_str == 'agcrn':
-        model = models.AGCRNModel
+    if model_str == 'rnni':
+        model = RNNImputerModel
+    elif model_str == 'birnni':
+        model = BiRNNImputerModel
+    elif model_str == 'grin':
+        model = GRINModel
     else:
         raise NotImplementedError(f'Model "{model_str}" not available.')
     return model
 
 
-def get_dataset(dataset_name):
+def get_dataset(dataset_name: str, p_fault=0., p_noise=0.):
+    if dataset_name.startswith('air'):
+        return AirQuality(impute_nans=True, small=dataset_name[3:] == '36')
+    if dataset_name.endswith('_point'):
+        p_fault, p_noise = 0., 0.25
+        dataset_name = dataset_name[:-6]
+    if dataset_name.endswith('_block'):
+        p_fault, p_noise = 0.0015, 0.05
+        dataset_name = dataset_name[:-6]
     if dataset_name == 'la':
-        dataset = MetrLA(impute_zeros=True)
-    elif dataset_name == 'bay':
-        dataset = PemsBay()
-    elif dataset_name == 'pems3':
-        dataset = PeMS03()
-    elif dataset_name == 'pems4':
-        dataset = PeMS04()
-    elif dataset_name == 'pems7':
-        dataset = PeMS07()
-    elif dataset_name == 'pems8':
-        dataset = PeMS08()
-    else:
-        raise ValueError(f"Dataset {dataset_name} not available.")
-    return dataset
+        return add_missing_values(MetrLA(), p_fault=p_fault, p_noise=p_noise,
+                                  min_seq=12, max_seq=12 * 4, seed=9101112)
+    if dataset_name == 'bay':
+        return add_missing_values(PemsBay(), p_fault=p_fault, p_noise=p_noise,
+                                  min_seq=12, max_seq=12 * 4, seed=56789)
+    raise ValueError(f"Dataset {dataset_name} not available in this setting.")
+
 
 # force test folder to be cwd
 test_path = os.path.abspath(os.path.join(tsl_path[0], '..', 'tests'))
 os.chdir(test_path)
 
 # load cfg with hydra
-path_to_yamls = os.path.join('..', 'examples', 'forecasting', 'config', 'traffic')
-initialize(config_path=path_to_yamls, job_name='test_sample_train', version_base=None)
-cfg = compose(config_name='test', overrides=[])
+path_to_yamls = os.path.join('..', 'examples', 'imputation', 'config')
+with initialize(config_path=path_to_yamls, job_name='test_example_imputation', version_base=None):
+    cfg = compose(config_name='test', overrides=[])
 
 
-def test_example_training():
+@pytest.mark.slow
+@pytest.mark.integration
+def test_example_imputation():
     ########################################
     # data module                          #
     ########################################
-    dataset = get_dataset(cfg.dataset.name)
-
-    # encode time of the day and use it as exogenous variable
-    covariates = {'u': dataset.datetime_encoded('day').values}
+    dataset = get_dataset(cfg.dataset.name,
+                          p_fault=cfg.get('p_fault'),
+                          p_noise=cfg.get('p_noise'))
 
     # get adjacency matrix
     adj = dataset.get_connectivity(**cfg.dataset.connectivity)
 
-    torch_dataset = SpatioTemporalDataset(target=dataset.dataframe(),
-                                          mask=dataset.mask,
-                                          connectivity=adj,
-                                          covariates=covariates,
-                                          horizon=cfg.horizon,
-                                          window=cfg.window,
-                                          stride=cfg.stride)
-    transform = {
+    # instantiate dataset
+    torch_dataset = ImputationDataset(target=dataset.dataframe(),
+                                      eval_mask=dataset.eval_mask,
+                                      input_mask=dataset.training_mask,
+                                      transform=MaskInput(),
+                                      connectivity=adj,
+                                      window=cfg.window,
+                                      stride=cfg.stride)
+
+    scalers = {
         'target': StandardScaler(axis=(0, 1))
     }
 
     dm = SpatioTemporalDataModule(
         dataset=torch_dataset,
-        scalers=transform,
+        scalers=scalers,
         splitter=dataset.get_splitter(**cfg.dataset.splitting),
         batch_size=cfg.batch_size,
         workers=cfg.workers
     )
-    dm.setup()
+    dm.setup(stage='fit')
+
+    if cfg.get('in_sample', False):
+        dm.trainset = list(range(len(torch_dataset)))
 
     ########################################
-    # predictor                            #
+    # imputer                              #
     ########################################
 
     model_cls = get_model_class(cfg.model.name)
 
     model_kwargs = dict(n_nodes=torch_dataset.n_nodes,
-                        input_size=torch_dataset.n_channels,
-                        output_size=torch_dataset.n_channels,
-                        horizon=torch_dataset.horizon,
-                        exog_size=torch_dataset.input_map.u.shape[-1])
+                        input_size=torch_dataset.n_channels)
 
     model_cls.filter_model_args_(model_kwargs)
     model_kwargs.update(cfg.model.hparams)
@@ -127,19 +112,17 @@ def test_example_training():
     loss_fn = torch_metrics.MaskedMAE(compute_on_step=True)
 
     log_metrics = {'mae': torch_metrics.MaskedMAE(),
-                   'mse': torch_metrics.MaskedMSE(),
-                   'mape': torch_metrics.MaskedMAPE(),
-                   'mae_at_15': torch_metrics.MaskedMAE(at=2),  # 3rd is 15 min
-                   'mae_at_30': torch_metrics.MaskedMAE(at=5),  # 6th is 30 min
-                   'mae_at_60': torch_metrics.MaskedMAE(at=11)}  # 12th is 1 h
+                   'mape': torch_metrics.MaskedMAPE()}
+
     if cfg.lr_scheduler is not None:
-        scheduler_class = getattr(torch.optim.lr_scheduler, cfg.lr_scheduler.name)
+        scheduler_class = getattr(torch.optim.lr_scheduler,
+                                  cfg.lr_scheduler.name)
         scheduler_kwargs = dict(cfg.lr_scheduler.hparams)
     else:
         scheduler_class = scheduler_kwargs = None
 
-    # setup predictor
-    predictor = Predictor(
+    # setup imputer
+    imputer = Imputer(
         model_class=model_cls,
         model_kwargs=model_kwargs,
         optim_class=getattr(torch.optim, cfg.optimizer.name),
@@ -147,7 +130,11 @@ def test_example_training():
         loss_fn=loss_fn,
         metrics=log_metrics,
         scheduler_class=scheduler_class,
-        scheduler_kwargs=scheduler_kwargs
+        scheduler_kwargs=scheduler_kwargs,
+        whiten_prob=cfg.whiten_prob,
+        prediction_loss_weight=cfg.prediction_loss_weight,
+        impute_only_missing=cfg.impute_only_missing,
+        warm_up_steps=cfg.warm_up_steps
     )
 
     ########################################
@@ -169,33 +156,34 @@ def test_example_training():
 
     trainer = Trainer(max_epochs=cfg.epochs,
                       default_root_dir=os.getcwd(),
-                      logger=False,
+                      logger=None,
                       gpus=1 if torch.cuda.is_available() else None,
                       gradient_clip_val=cfg.grad_clip_val,
                       callbacks=[early_stop_callback, checkpoint_callback])
 
-    trainer.fit(predictor, datamodule=dm)
+    trainer.fit(imputer, datamodule=dm)
 
     ########################################
     # testing                              #
     ########################################
 
-    predictor.load_model(checkpoint_callback.best_model_path)
+    imputer.load_model(checkpoint_callback.best_model_path)
 
-    predictor.freeze()
-    res_test = trainer.test(predictor, datamodule=dm)
+    imputer.freeze()
+    res_test = trainer.test(imputer, datamodule=dm)
 
-    output = trainer.predict(predictor, dataloaders=dm.test_dataloader())
+    output = trainer.predict(imputer, dataloaders=dm.test_dataloader())
     output = torch_to_numpy(output)
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
                           output.get('mask', None)
     res_functional = dict(test_mae=numpy_metrics.mae(y_hat, y_true, mask),
-                          test_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
+                          test_mre=numpy_metrics.mre(y_hat, y_true, mask),
                           test_mape=numpy_metrics.mape(y_hat, y_true, mask))
 
-    res_val = trainer.validate(predictor, datamodule=dm)
-    output = trainer.predict(predictor, dataloaders=dm.val_dataloader())
+    res_val = trainer.validate(imputer, datamodule=dm)
+
+    output = trainer.predict(imputer, dataloaders=dm.val_dataloader())
     output = torch_to_numpy(output)
     y_hat, y_true, mask = output['y_hat'], \
                           output['y'], \
