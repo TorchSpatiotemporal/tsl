@@ -9,19 +9,22 @@ from tsl.nn.utils import get_layer_activation
 class GatedGraphNetwork(MessagePassing):
     r"""
 
-    Gate Graph Neural Network model inspired by
+    Gate Graph Neural Network layer (with residual connections) inspired by
     Satorras et al., "Multivariate Time Series Forecasting with Latent Graph Inference", arxiv 2022.
 
     Args:
         input_size (int): Input channels.
         output_size (int): Output channels.
         activation (str, optional): Activation function.
+        parametrized_skip_conn (bool, optional): Whether to add a linear layer in the residual connection even if input
+                                                 and output dimensions match.
     """
 
     def __init__(self,
                  input_size: int,
                  output_size: int,
-                 activation='silu'):
+                 activation:str = 'silu',
+                 parametrized_skip_conn: bool = False):
         super(GatedGraphNetwork, self).__init__(aggr="add", node_dim=-2)
 
         self.in_channels = input_size
@@ -45,12 +48,12 @@ class GatedGraphNetwork(MessagePassing):
             nn.Linear(output_size, output_size)
         )
 
-        if input_size != output_size:
+        if (input_size != output_size) or parametrized_skip_conn:
             self.skip_conn = nn.Linear(input_size, output_size)
         else:
             self.skip_conn = nn.Identity()
 
-    def forward(self, x, edge_index):
+    def forward(self, x, edge_index, edge_weight=None):
         """"""
 
         out = self.propagate(edge_index, x=x)
