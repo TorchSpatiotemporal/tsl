@@ -106,5 +106,5 @@ class Activation(nn.Module):
         activation_class = get_layer_activation(activation)
         self.activation = activation_class(**kwargs)
 
-    def foward(self, x):
+    def forward(self, x):
         return self.activation(x)
