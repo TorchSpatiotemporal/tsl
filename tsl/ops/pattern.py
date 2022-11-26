@@ -34,8 +34,9 @@ def check_pattern(pattern: str, split: bool = False, ndim: int = None,
     2. at most two (consecutive) 'n' dimensions, right after the 't' token or
        at the beginning of the pattern;
     3. at most one 'e' dimension, either as the first token or after a 't';
-    3. either 'n' or 'e' dimensions, but not both together;
-    4. all further tokens must be 'c' or 'f'.
+    4. either 'n' or 'e' dimensions, but not both together;
+    5. all further tokens must be 'c' or 'f'.
+
 
     Args:
         pattern (str): The input pattern, specifying with a token what an axis

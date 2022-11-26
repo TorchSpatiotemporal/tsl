@@ -22,7 +22,7 @@ class TCNModel(BaseModel):
         output_size (int): Number of output channels.
         horizon (int): Number of future time steps to forecast.
         exog_size (int): Number of features of the input covariate,
-            if any. (default: :ob:`0`)
+            if any. (default: :obj:`0`)
         hidden_size (int): Number of hidden units.
             (default: :obj:`32`)
         ff_size (int): Number of units in the hidden layers of the decoder.

@@ -30,7 +30,8 @@ extensions = [
     'sphinx_design',
     'sphinxext.opengraph',
     'sphinx_copybutton',
-    'myst_nb'
+    'myst_nb',
+    'hoverxref.extension'
 ]
 
 autosummary_generate = True
@@ -51,13 +52,14 @@ add_module_names = False
 napoleon_custom_sections = [("Shape", "params_style"),
                             ("Shapes", "params_style")]
 
+numfig = True  # Enumerate figures and tables
+
 # -- Options for intersphinx -------------------------------------------------
 #
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
-    'matplotlib': ('https://matplotlib.org/stable/', None),
     'pd': ('https://pandas.pydata.org/docs/', None),
     'PyTorch': ('https://pytorch.org/docs/stable/', None),
     'pytorch_lightning': (
@@ -109,6 +111,14 @@ nb_code_prompt_hide = 'Hide code cell outputs'
 
 ogp_site_url = "https://torch-spatiotemporal.readthedocs.io/en/latest/"
 ogp_image = ogp_site_url + "_static/tsl_logo.svg"
+
+# -- Hoverxref options -------------------------------------------------------
+#
+
+hoverxref_auto_ref = True
+hoverxref_roles = ['class', 'mod', 'doc', 'meth', 'func']
+hoverxref_mathjax = True
+hoverxref_intersphinx = ['PyTorch', 'PyG', 'pytorch_lightning']
 
 
 # -- Setup options -----------------------------------------------------------

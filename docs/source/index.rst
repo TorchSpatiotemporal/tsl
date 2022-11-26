@@ -82,21 +82,21 @@ Get started
     :padding: 0
 
     .. grid-item-card::  :octicon:`rocket;1em;sd-text-primary` Installation
-        :link: notes/quickstart
+        :link: usage/quickstart
         :link-type: doc
         :shadow: sm
 
         Read the guide on how to to install tsl on your system.
 
     .. grid-item-card::  :octicon:`gear;1em;sd-text-primary` Usage
-        :link: notes/spatiotemporal_data_representation
+        :link: usage/spatiotemporal_dataset
         :link-type: doc
         :shadow: sm
 
         Look at the basic functionalities of tsl for spatiotemporal data processing.
 
     .. grid-item-card::  :octicon:`file-code;1em;sd-text-primary` Notebooks
-        :link: notes/notebooks
+        :link: usage/notebooks
         :link-type: doc
         :shadow: sm
 
@@ -116,10 +116,10 @@ Get started
    :caption: Usage
    :hidden:
 
-   notes/quickstart
-   notes/data_structures
-   notes/spatiotemporal_data_representation
-   notes/notebooks
+   usage/quickstart
+   usage/data_structures
+   usage/spatiotemporal_dataset
+   usage/notebooks
 
 .. toctree::
    :glob:

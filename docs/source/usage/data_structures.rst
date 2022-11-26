@@ -168,4 +168,4 @@ the :class:`tsl.data.DisjointBatch` object, a subclass of
         :link-type: doc
         :shadow: sm
 
-        Check the related notebook.
+        Check the introductory notebook.
