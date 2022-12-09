@@ -36,7 +36,7 @@ class _GraphLSTMCell(torch.nn.Module):
         g = torch.tanh(self.cell_gate(x_gates, *args, **kwargs))
         o = torch.sigmoid(self.output_gate(x_gates, *args, **kwargs))
         c_new = f * c + i * g
-        h_new = o * torch.tan(c)
+        h_new = o * torch.tanh(c_new)
         return (h_new, c_new)
 
 

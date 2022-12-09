@@ -12,15 +12,18 @@ from tsl.nn import utils
 
 
 class GatedGraphNetworkModel(BaseModel):
-    r"""
-    Simple time-then-space model with an MLP with residual connections as encoder (flattened time dimension) and a
-    gated GN decoder with node identification.
+    r"""Simple time-then-space model with an MLP with residual connections as
+    encoder (flattened time dimension) and a gated GN decoder with node
+    identification.
 
-    Inspired by Satorras et al., "Multivariate Time Series Forecasting with Latent Graph Inference", arxiv 2022.
+    Inspired by the FC-GNN model from the paper `"Multivariate Time Series
+    Forecasting with Latent Graph Inference"
+    <https://arxiv.org/abs/2203.03423>`_ (Satorras et al., 2022).
 
     Args:
         input_size (int): Size of the input.
-        input_window_size (int): Size of the input window (this model cannot process sequences of variable lenght).
+        input_window_size (int): Size of the input window (this model cannot
+            process sequences of variable lenght).
         hidden_size (int): Number of hidden units in each hidden layer.
         output_size (int): Size of the output.
         horizon (int): Forecasting steps.
@@ -28,8 +31,8 @@ class GatedGraphNetworkModel(BaseModel):
         exog_size (int): Size of the optional exogenous variables.
         enc_layers (int): Number of layers in the MLP encoder.
         gnn_layers (int): Number of GNN layers in the decoder.
-        full_graph (int): Whether to use a full graph for the GNN.
-                          In that case the model turns into a dense spatial attention layer.
+        full_graph (int): Whether to use a full graph for the GNN. In that case,
+            the model turns into a dense spatial attention layer.
     """
     def __init__(self,
                  input_size,

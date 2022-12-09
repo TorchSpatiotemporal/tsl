@@ -70,7 +70,8 @@ class NeptuneLogger(LightningNeptuneLogger):
             capture_stdout=upload_stdout,
             mode=mode,
             **kwargs)
-        self.run['parameters'] = params
+        if params is not None:
+            self.run['parameters'] = params
         # self.log_hyperparams(params=params)
 
     def log_metric(self, metric_name: str,
