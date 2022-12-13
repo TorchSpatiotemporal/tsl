@@ -57,6 +57,7 @@ class RNNModel(BaseModel):
         self.rnn = RNN(input_size=hidden_size,
                        hidden_size=hidden_size,
                        n_layers=rec_layers,
+                       return_only_last_state=True,
                        dropout=rec_dropout,
                        cell=cell_type)
 
@@ -81,7 +82,7 @@ class RNNModel(BaseModel):
         else:
             x = self.input_encoder(x)
 
-        x = self.rnn(x, return_last_state=True)
+        x = self.rnn(x)
 
         return self.readout(x)
 

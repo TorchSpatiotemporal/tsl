@@ -55,6 +55,7 @@ class RNNEncGCNDecModel(BaseModel):
         self.encoder = RNN(input_size=hidden_size,
                            hidden_size=hidden_size,
                            n_layers=rnn_layers,
+                           return_only_last_state=True,
                            dropout=rnn_dropout,
                            cell=cell_type)
 
@@ -79,6 +80,6 @@ class RNNEncGCNDecModel(BaseModel):
         else:
             x = self.input_encoder(x)
 
-        x = self.encoder(x, return_last_state=True)
+        x = self.encoder(x)
 
         return self.decoder(x, edge_index, edge_weight)

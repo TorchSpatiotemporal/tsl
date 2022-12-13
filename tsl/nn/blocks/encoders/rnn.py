@@ -8,28 +8,29 @@ from ...utils import maybe_cat_exog
 
 
 class RNN(nn.Module):
-    r"""
-        Simple RNN encoder with optional linear readout.
+    """Simple RNN encoder with optional linear readout.
 
         Args:
-            input_size (int): Input size.
-            hidden_size (int): Units in the hidden layers.
-            exog_size (int, optional): Size of the optional exogenous variables.
-            output_size (int, optional): Size of the optional readout.
-            n_layers (int, optional): Number of hidden layers. (default: 1)
-            cell (str, optional): Type of cell that should be use (options: [`gru`, `lstm`]). (default: `gru`)
-            dropout (float, optional): Dropout probability.
+        input_size (int): Input size.
+        hidden_size (int): Units in the hidden layers.
+        exog_size (int, optional): Size of the optional exogenous variables.
+        output_size (int, optional): Size of the optional readout.
+        n_layers (int, optional): Number of hidden layers. (default: 1)
+        cell (str, optional): Type of cell that should be use (options: [`gru`,
+            `lstm`]). (default: `gru`)
+        dropout (float, optional): Dropout probability.
     """
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 exog_size=None,
-                 output_size=None,
-                 n_layers=1,
-                 dropout=0.,
-                 cell='gru'):
+    def __init__(self, input_size: int, hidden_size: int,
+                 exog_size: int = None, output_size: int = None,
+                 n_layers: int = 1, return_only_last_state: bool = False,
+                 cell: str = 'gru',
+                 bias: bool = True,
+                 dropout: float = 0.,
+                 **kwargs):
         super(RNN, self).__init__()
+
+        self.return_only_last_state = return_only_last_state
 
         if cell == 'gru':
             cell = nn.GRU
@@ -44,6 +45,7 @@ class RNN(nn.Module):
         self.rnn = cell(input_size=input_size,
                         hidden_size=hidden_size,
                         num_layers=n_layers,
+                        bias=bias,
                         dropout=dropout)
 
         if output_size is not None:
@@ -51,7 +53,7 @@ class RNN(nn.Module):
         else:
             self.register_parameter('readout', None)
 
-    def forward(self, x, u=None, return_last_state=False):
+    def forward(self, x, u=None):
         """
 
         Args:
@@ -65,7 +67,7 @@ class RNN(nn.Module):
         x, *_ = self.rnn(x)
         # [steps batches * nodes, features] -> [steps batches, nodes, features]
         x = rearrange(x, 's (b n) f -> b s n f', b=b)
-        if return_last_state:
+        if self.return_only_last_state:
             x = x[:, -1]
         if self.readout is not None:
             return self.readout(x)
