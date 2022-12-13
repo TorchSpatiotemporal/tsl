@@ -1,12 +1,11 @@
 from torch import nn
 
-from ...base.dense import Dense
+from ...base import Dense, ParallelLinear, ParallelDense
 from ...utils import maybe_cat_exog
 
 
 class MLP(nn.Module):
-    r"""
-    Simple Multi-layer Perceptron encoder with optional linear readout.
+    """Simple Multi-layer Perceptron encoder with optional linear readout.
 
     Args:
         input_size (int): Input size.
@@ -17,6 +16,7 @@ class MLP(nn.Module):
         activation (str, optional): Activation function. (default: `relu`)
         dropout (float, optional): Dropout probability.
     """
+
     def __init__(self,
                  input_size,
                  hidden_size,
@@ -52,8 +52,7 @@ class MLP(nn.Module):
 
 
 class ResidualMLP(nn.Module):
-    r"""
-    Multi-layer Perceptron with residual connections.
+    """Multi-layer Perceptron with residual connections.
 
     Args:
         input_size (int): Input size.
@@ -63,8 +62,10 @@ class ResidualMLP(nn.Module):
         n_layers (int, optional): Number of hidden layers. (default: 1)
         activation (str, optional): Activation function. (default: `relu`)
         dropout (float, optional): Dropout probability. (default: 0.)
-        parametrized_skip (bool, optional): Whether to use parametrized skip connections for the residuals.
+        parametrized_skip (bool, optional): Whether to use parametrized skip
+            connections for the residuals.
     """
+
     def __init__(self,
                  input_size,
                  hidden_size,
@@ -93,7 +94,8 @@ class ResidualMLP(nn.Module):
             if i == 0 and input_size != output_size:
                 self.skip_connections.append(nn.Linear(input_size, hidden_size))
             elif parametrized_skip:
-                self.skip_connections.append(nn.Linear(hidden_size, hidden_size))
+                self.skip_connections.append(
+                    nn.Linear(hidden_size, hidden_size))
             else:
                 self.skip_connections.append(nn.Identity())
 
@@ -111,3 +113,43 @@ class ResidualMLP(nn.Module):
             return self.readout(x)
         return x
 
+
+class ParallelMLP(nn.Module):
+    """Parallel multi-layer perceptron (MLP) encoder with optional linear
+    readout.
+
+    Args:
+        input_size (int): Input size.
+        hidden_size (int): Units in the hidden layers.
+        output_size (int, optional): Size of the optional readout.
+        exog_size (int, optional): Size of the optional exogenous variables.
+        n_layers (int, optional): Number of hidden layers. (default: 1)
+        activation (str, optional): Activation function. (default: `relu`)
+    """
+
+    def __init__(self, input_size: int, hidden_size: int, n_instances: int,
+                 parallel_dim: int = -2,
+                 output_size: int = None,
+                 exog_size: int = None,
+                 n_layers: int = 1,
+                 activation: str = 'relu',
+                 dropout: float = 0.):
+        super(ParallelMLP, self).__init__()
+        if exog_size is not None:
+            input_size += exog_size
+        layers = [ParallelDense(input_size if i == 0 else hidden_size,
+                                hidden_size, n_instances,
+                                parallel_dim=parallel_dim,
+                                dropout=dropout,
+                                activation=activation)
+                  for i in range(n_layers)]
+        if output_size is not None:
+            layers += [ParallelLinear(hidden_size, output_size, n_instances,
+                                      parallel_dim=parallel_dim)]
+        self.mlp = nn.Sequential(*layers)
+
+    def forward(self, x, u=None):
+        """"""
+        x = maybe_cat_exog(x, u)
+        out = self.mlp(x)
+        return out

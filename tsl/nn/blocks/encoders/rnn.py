@@ -1,9 +1,11 @@
 import torch
-
-from torch import nn
 from einops import rearrange
+from torch import nn
 
+from tsl.nn.base import ParallelGRUCell, ParallelLSTMCell
+from tsl.nn.base.recurrent import RNNBase
 from ...utils import maybe_cat_exog
+
 
 class RNN(nn.Module):
     r"""
@@ -18,6 +20,7 @@ class RNN(nn.Module):
             cell (str, optional): Type of cell that should be use (options: [`gru`, `lstm`]). (default: `gru`)
             dropout (float, optional): Dropout probability.
     """
+
     def __init__(self,
                  input_size,
                  hidden_size,
@@ -67,3 +70,28 @@ class RNN(nn.Module):
         if self.readout is not None:
             return self.readout(x)
         return x
+
+
+class ParallelRNN(RNNBase):
+
+    def __init__(self, input_size: int, hidden_size: int, n_instances: int,
+                 n_layers: int = 1, cat_states_layers: bool = False,
+                 return_only_last_state: bool = False,
+                 cell: str = 'gru',
+                 bias: bool = True,
+                 **kwargs):
+
+        if cell == 'gru':
+            cell = ParallelGRUCell
+        elif cell == 'lstm':
+            cell = ParallelLSTMCell
+        else:
+            raise NotImplementedError(f'"{cell}" cell not implemented.')
+
+        rnn_cells = [
+            cell(input_size if i == 0 else hidden_size, hidden_size,
+                 n_instances, bias=bias, **kwargs)
+            for i in range(n_layers)
+        ]
+        super(ParallelRNN, self).__init__(rnn_cells, cat_states_layers,
+                                          return_only_last_state)

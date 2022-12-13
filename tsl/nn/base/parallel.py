@@ -1,11 +1,12 @@
 import math
-from typing import Union, Optional, Tuple
+from typing import Union, Tuple
 
 import torch
 from einops import rearrange
 from torch import nn, Tensor
 from torch.nn import init, functional as F
 
+from tsl.nn.base.recurrent import GRUCell, LSTMCell
 from tsl.nn.layers.ops import Activation
 
 
@@ -212,54 +213,7 @@ class ParallelConv1D(nn.Module):
         return out
 
 
-class _ParallelRNNCell(nn.Module):
-    """Base class for multiple parallel recurrent neural network (RNN) cells.
-
-    Args:
-        input_size (int): The number of features in the instance input sample.
-        hidden_size (int): The number of features in the instance hidden state.
-        n_instances (int): The number of parallel RNN cells. Each cell has
-            different weights.
-    """
-
-    def __init__(self, input_size: int, hidden_size: int, n_instances: int):
-        super().__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.n_instances = n_instances
-
-    def __repr__(self) -> str:
-        extra_repr = 'input_size={}, hidden_size={}, n_instances={}'.format(
-            self.input_size, self.hidden_size, self.n_instances
-        )
-        return f'{self.__class__.__name__}({extra_repr})'
-
-    def reset_parameters(self):
-        for name, module in self.named_modules():
-            if name.endswith("_gate"):
-                module.reset_parameters()
-
-    def initialize_state(self, h, x, is_batched):
-        raise NotImplementedError
-
-    def forward(self, x: Tensor, h: Optional[Tensor] = None) -> Tensor:
-        assert x.dim() in (2, 3), \
-            "GRUCell: Expected input to be 2-D or 3-D but received " \
-            f"{x.dim()}-D tensor"
-        is_batched = x.dim() == 3
-        if not is_batched:
-            x = x.unsqueeze(0)
-
-        h = self.initialize_state(h, x, is_batched)
-        out = self.update(x, h)
-
-        if not is_batched:
-            out = out.squeeze(0)
-
-        return out
-
-
-class ParallelGRUCell(_ParallelRNNCell):
+class ParallelGRUCell(GRUCell):
     r"""Multiple parallel gated recurrent unit (GRU) cells.
 
     .. math::
@@ -304,44 +258,25 @@ class ParallelGRUCell(_ParallelRNNCell):
     def __init__(self, input_size: int, hidden_size: int, n_instances: int,
                  bias: bool = True,
                  device=None, dtype=None) -> None:
-        super().__init__(input_size, hidden_size, n_instances)
         factory_kwargs = {'device': device, 'dtype': dtype}
+        self.input_size = input_size
+        self.n_instances = n_instances
         # instantiate gates
         in_size = input_size + hidden_size
-        self.forget_gate = ParallelDense(in_size, hidden_size, n_instances,
-                                         bias=bias,
-                                         activation='sigmoid',
-                                         **factory_kwargs)
-        self.update_gate = ParallelDense(in_size, hidden_size, n_instances,
-                                         bias=bias,
-                                         activation='sigmoid',
-                                         **factory_kwargs)
-        self.candidate_gate = ParallelDense(in_size, hidden_size, n_instances,
-                                            bias=bias,
-                                            activation='tanh',
-                                            **factory_kwargs)
+        forget_gate = ParallelLinear(in_size, hidden_size, n_instances,
+                                     bias=bias, **factory_kwargs)
+        update_gate = ParallelLinear(in_size, hidden_size, n_instances,
+                                     bias=bias, **factory_kwargs)
+        candidate_gate = ParallelLinear(in_size, hidden_size, n_instances,
+                                        bias=bias, **factory_kwargs)
+        super().__init__(hidden_size, forget_gate, update_gate, candidate_gate)
 
-    def initialize_state(self, h, x, is_batched):
-        if h is None:
-            return torch.zeros(x.size(0), self.n_instances, self.hidden_size,
-                               dtype=x.dtype, device=x.device)
-        elif not is_batched:
-            return h.unsqueeze(0)
-        return h
-
-    def update(self, x: Tensor, h: Optional[Tensor] = None) -> Tensor:
-        """"""
-        # x: [batch, instances, channels]
-        # h: [batch, instances, channels]
-        x_gates = torch.cat([x, h], dim=-1)
-        r = self.forget_gate(x_gates)
-        u = self.update_gate(x_gates)
-        x_c = torch.cat([x, r * h], dim=-1)
-        c = self.candidate_gate(x_c)
-        return u * h + (1. - u) * c
+    def initialize_state(self, x) -> Tensor:
+        return torch.zeros(x.size(0), self.n_instances, self.hidden_size,
+                           dtype=x.dtype, device=x.device)
 
 
-class ParallelLSTMCell(_ParallelRNNCell):
+class ParallelLSTMCell(LSTMCell):
     r"""Multiple parallel long short-term memory (LSTM) cells.
 
     .. math::
@@ -388,49 +323,24 @@ class ParallelLSTMCell(_ParallelRNNCell):
     def __init__(self, input_size: int, hidden_size: int, n_instances: int,
                  bias: bool = True,
                  device=None, dtype=None) -> None:
-        super().__init__(input_size, hidden_size, n_instances)
         factory_kwargs = {'device': device, 'dtype': dtype}
+        self.input_size = input_size
+        self.n_instances = n_instances
         # instantiate gates
         in_size = input_size + hidden_size
-        self.input_gate = ParallelDense(in_size, hidden_size, n_instances,
-                                        bias=bias,
-                                        activation='sigmoid',
-                                        **factory_kwargs)
-        self.forget_gate = ParallelDense(in_size, hidden_size, n_instances,
-                                         bias=bias,
-                                         activation='sigmoid',
-                                         **factory_kwargs)
-        self.cell_gate = ParallelDense(in_size, hidden_size, n_instances,
-                                       bias=bias,
-                                       activation='tanh',
-                                       **factory_kwargs)
-        self.output_gate = ParallelDense(in_size, hidden_size, n_instances,
-                                         bias=bias,
-                                         activation='sigmoid',
-                                         **factory_kwargs)
+        input_gate = ParallelLinear(in_size, hidden_size, n_instances,
+                                    bias=bias, **factory_kwargs)
+        forget_gate = ParallelLinear(in_size, hidden_size, n_instances,
+                                     bias=bias, **factory_kwargs)
+        cell_gate = ParallelLinear(in_size, hidden_size, n_instances,
+                                   bias=bias, **factory_kwargs)
+        output_gate = ParallelLinear(in_size, hidden_size, n_instances,
+                                     bias=bias, **factory_kwargs)
+        super().__init__(hidden_size, input_gate, forget_gate,
+                         cell_gate, output_gate)
 
-    def initialize_state(self, h, x, is_batched):
-        if h is None:
-            return [torch.zeros(x.size(0), self.n_instances, self.hidden_size,
-                                dtype=x.dtype, device=x.device)
-                    for _ in range(2)]
-        elif not is_batched:
-            return [hi.unsqueeze(0) for hi in h]
-        return h
-
-    def update(self, x: Tensor, hc: Optional[Tensor] = None) \
-            -> Tuple[Tensor, Tensor]:
-        """"""
-        # x: [batch, instances, channels]
-        # hs: (h, c)
-        # h: [batch, instances, channels]
-        # c: [batch, instances, channels]
-        h, c = hc
-        x_gates = torch.cat([x, h], dim=-1)
-        i = self.input_gate(x_gates)
-        f = self.forget_gate(x_gates)
-        g = self.cell_gate(x_gates)
-        o = self.output_gate(x_gates)
-        c_new = f * c + i * g
-        h_new = o * torch.tanh(c_new)
-        return h_new, c_new
+    def initialize_state(self, x) -> Tuple[Tensor, Tensor]:
+        return (torch.zeros(x.size(0), self.n_instances, self.hidden_size,
+                            dtype=x.dtype, device=x.device),
+                torch.zeros(x.size(0), self.n_instances, self.hidden_size,
+                            dtype=x.dtype, device=x.device))

@@ -41,7 +41,8 @@ class AGCRNModel(BaseModel):
                           emb_size=emb_size,
                           num_nodes=n_nodes,
                           hidden_size=hidden_size,
-                          n_layers=n_layers)
+                          n_layers=n_layers,
+                          return_only_last_state=True)
 
         self.readout = LinearReadout(input_size=hidden_size,
                                      output_size=output_size,
@@ -51,5 +52,5 @@ class AGCRNModel(BaseModel):
         """"""
         x = utils.maybe_cat_exog(x, u)
         x = self.input_encoder(x)
-        h, _ = self.agrn(x)
-        return self.readout(h)
+        out = self.agrn(x)
+        return self.readout(out)
