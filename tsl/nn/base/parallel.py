@@ -80,16 +80,10 @@ class ParallelLinear(nn.Module):
         )
 
     def reset_parameters(self) -> None:
-        instance_weight = torch.Tensor(self.in_channels, self.out_channels)
-        init.kaiming_uniform_(instance_weight, a=math.sqrt(5))
-        with torch.no_grad():
-            self.weight.data[:] = instance_weight
+        bound = 1 / math.sqrt(self.in_channels)
+        init.uniform_(self.weight.data, -bound, bound)
         if self.bias is not None:
-            bound = 1 / math.sqrt(self.in_channels)
-            instance_bias = torch.Tensor(self.out_channels)
-            instance_bias = instance_bias.uniform_(-bound, bound)
-            with torch.no_grad():
-                self.bias.data[:] = instance_bias
+            init.uniform_(self.bias.data, -bound, bound)
 
     @torch.no_grad()
     def initialize_module(self, module, input):
@@ -134,17 +128,19 @@ class ParallelDense(ParallelLinear):
                                             bias=bias,
                                             device=device,
                                             dtype=dtype)
+        activation = activation or 'linear'
+        self.activation = activation.lower()
         if dropout > 0.:
-            self.activation = nn.Sequential(Activation(activation),
-                                            nn.Dropout(dropout))
+            self.out = nn.Sequential(Activation(self.activation),
+                                     nn.Dropout(dropout))
         else:
-            self.activation = Activation(activation)
+            self.out = Activation(self.activation)
 
     def forward(self, input: Tensor) -> Tensor:
         r"""Compute :math:`\mathbf{y} = \sigmoid\left([x_i W_i^T + b_i]
         _{i=0,\ldots,N}\right)`"""
         out = super().forward(input)
-        return self.activation(out)
+        return self.out(out)
 
 
 class ParallelConv1D(nn.Module):
@@ -184,19 +180,10 @@ class ParallelConv1D(nn.Module):
                f'kernel_size={self.kernel_size}, n_instances={self.n_instances}'
 
     def reset_parameters(self) -> None:
-        instance_weight = torch.Tensor(self.out_channels, self.in_channels,
-                                       self.kernel_size)
-        init.kaiming_uniform_(instance_weight, a=math.sqrt(5))
-        with torch.no_grad():
-            self.weight.data[:] = instance_weight.repeat(self.n_instances, 1, 1)
-
+        bound = 1 / math.sqrt(self.in_channels * self.kernel_size)
+        init.uniform_(self.weight.data, -bound, bound)
         if self.bias is not None:
-            instance_bias = torch.Tensor(1, self.out_channels)
-            fan_in, _ = init._calculate_fan_in_and_fan_out(instance_weight)
-            bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
-            instance_bias.uniform_(-bound, bound)
-            with torch.no_grad():
-                self.bias.data[:] = instance_bias
+            init.uniform_(self.bias.data, -bound, bound)
 
     def forward(self, x):
         x = rearrange(x, 'b t n f -> b (n f) t')
