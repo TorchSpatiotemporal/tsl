@@ -106,14 +106,29 @@ class Predictor(pl.LightningModule):
             self.model = None
 
     def load_model(self, filename: str):
-        """"""
-        model = torch.load(filename, lambda storage, loc: storage)
-        model_cls, model_kwargs = model['hyper_parameters']['model_class'], \
-                                  model['hyper_parameters']['model_kwargs']
-        assert model_cls == self.model_cls
-        for k, v in model_kwargs.items():
-            assert v == self.model_kwargs[k]
-        self.load_state_dict(model['state_dict'])
+        """Load model's weights from checkpoint at :attr:`filename`.
+
+        Differently from
+        :meth:`~pytorch_lightning.core.LightningModule.load_from_checkpoint`,
+        this method allows to load the state_dict also for models instantiated
+        outside the predictor, without checking that hyperparameters of the
+        checkpoint's model are the same of the predictor's model.
+        """
+        storage = torch.load(filename, lambda storage, loc: storage)
+        # if predictor.model has been instantiated inside predictor
+        if self.model_cls is not None:
+            model_cls = storage['hyper_parameters']['model_class']
+            model_kwargs = storage['hyper_parameters']['model_kwargs']
+            # check model class and hyperparameters are the same
+            assert model_cls == self.model_cls
+            if model_kwargs is not None:
+                for k, v in model_kwargs.items():
+                    assert v == self.model_kwargs[k]
+        else:
+            logger.warn("Predictor with already instantiated model is loading "
+                        f"a state_dict from {filename}. Cannot check if model "
+                        "hyperparameters are the same.")
+        self.load_state_dict(storage['state_dict'])
 
     @property
     def is_tsl_model(self):

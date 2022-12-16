@@ -1,12 +1,19 @@
-from typing import Union, Sequence, Tuple, List, Any, Optional
+from typing import Union, Tuple, List, Optional
 
 import torch
 from torch import Tensor, nn
 
 from tsl.utils import ensure_list
 
+StateType = Union[Tensor, Tuple[Tensor]]
 
-class GRUCell(nn.Module):
+
+class RNNCell(nn.Module):
+    def initialize_state(self, *args, **kwargs) -> StateType:
+        raise NotImplementedError
+
+
+class GRUCell(RNNCell):
     """Base class for implementing gated recurrent unit (GRU) cells."""
 
     def __init__(self, hidden_size: int,
@@ -49,7 +56,7 @@ class GraphGRUCell(GRUCell):
                            dtype=x.dtype, device=x.device)
 
 
-class LSTMCell(nn.Module):
+class LSTMCell(RNNCell):
     """Base class for implementing long short-term memory (LSTM) cells."""
 
     def __init__(self, hidden_size: int,
@@ -104,7 +111,7 @@ class GraphLSTMCell(LSTMCell):
 class RNNBase(nn.Module):
     r"""Base class for implementing recurrent neural networks (RNNs)."""
 
-    def __init__(self, cells: Union[nn.Module, nn.ModuleList, List],
+    def __init__(self, cells: Union[RNNCell, List[RNNCell], nn.ModuleList],
                  cat_states_layers: bool = False,
                  return_only_last_state: bool = False):
         super().__init__()
@@ -119,11 +126,11 @@ class RNNBase(nn.Module):
         for cell in self.cells:
             cell.reset_parameters()
 
-    def initialize_state(self, x: Tensor) -> List[Any]:
+    def initialize_state(self, x: Tensor) -> List[StateType]:
         return [cell.initialize_state(x) for cell in self.cells]
 
-    def single_pass(self, x: Tensor, h: Union[Tensor, Sequence[Tensor]],
-                    *args, **kwargs) -> List[Any]:
+    def single_pass(self, x: Tensor, h: List[StateType],
+                    *args, **kwargs) -> List[StateType]:
         # x: [batch, *, channels]
         # h[i]: [batch, *, channels]
         out = []
@@ -135,11 +142,13 @@ class RNNBase(nn.Module):
             out.append(h_new)
         return out
 
-    def forward(self, x: Tensor, *args, h: Optional[Any] = None,
-                **kwargs) -> Union[Tensor, Tuple[Tensor, Any]]:
+    def forward(self, x: Tensor, *args, h: Optional[List[StateType]] = None,
+                **kwargs) -> Union[Tensor, List[StateType]]:
         # x: [batch, time, *, features]
         if h is None:
             h = self.initialize_state(x)
+        elif not isinstance(h, list):
+            h = [h]
         # temporal conv
         out = []
         steps = x.size(1)
