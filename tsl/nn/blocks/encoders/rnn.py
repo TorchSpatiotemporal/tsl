@@ -2,7 +2,7 @@ import torch
 from einops import rearrange
 from torch import nn
 
-from tsl.nn.base import ParallelGRUCell, ParallelLSTMCell
+from tsl.nn.base import MultiheadGRUCell, MultiheadLSTMCell
 from tsl.nn.base.recurrent import RNNBase
 from ...utils import maybe_cat_exog
 
@@ -74,7 +74,7 @@ class RNN(nn.Module):
         return x
 
 
-class ParallelRNN(RNNBase):
+class MultiheadRNN(RNNBase):
 
     def __init__(self, input_size: int, hidden_size: int, n_instances: int,
                  n_layers: int = 1, cat_states_layers: bool = False,
@@ -84,9 +84,9 @@ class ParallelRNN(RNNBase):
                  **kwargs):
 
         if cell == 'gru':
-            cell = ParallelGRUCell
+            cell = MultiheadGRUCell
         elif cell == 'lstm':
-            cell = ParallelLSTMCell
+            cell = MultiheadLSTMCell
         else:
             raise NotImplementedError(f'"{cell}" cell not implemented.')
 
@@ -95,5 +95,5 @@ class ParallelRNN(RNNBase):
                  n_instances, bias=bias, **kwargs)
             for i in range(n_layers)
         ]
-        super(ParallelRNN, self).__init__(rnn_cells, cat_states_layers,
-                                          return_only_last_state)
+        super(MultiheadRNN, self).__init__(rnn_cells, cat_states_layers,
+                                           return_only_last_state)

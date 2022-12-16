@@ -3,8 +3,8 @@ from .dcrnn import DCRNNCell, DCRNN
 from .dense_dcrnn import DenseDCRNNCell, DenseDCRNN
 from .gcgru import GraphConvGRUCell, GraphConvGRU
 from .gclstm import GraphConvLSTMCell, GraphConvLSTM
-from .mlp import MLP, ResidualMLP, ParallelMLP
-from .rnn import RNN, ParallelRNN
+from .mlp import MLP, ResidualMLP, MultiheadMLP
+from .rnn import RNN, MultiheadRNN
 from .stcn import SpatioTemporalConvNet
 from .tcn import TemporalConvNet
 from .transformer import (TransformerLayer,

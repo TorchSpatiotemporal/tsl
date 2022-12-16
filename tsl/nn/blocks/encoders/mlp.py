@@ -1,6 +1,6 @@
 from torch import nn
 
-from ...base import Dense, ParallelLinear, ParallelDense
+from ...base import Dense, MultiheadLinear, MultiheadDense
 from ...utils import maybe_cat_exog
 
 
@@ -114,7 +114,7 @@ class ResidualMLP(nn.Module):
         return x
 
 
-class ParallelMLP(nn.Module):
+class MultiheadMLP(nn.Module):
     """Parallel multi-layer perceptron (MLP) encoder with optional linear
     readout.
 
@@ -134,18 +134,18 @@ class ParallelMLP(nn.Module):
                  n_layers: int = 1,
                  activation: str = 'relu',
                  dropout: float = 0.):
-        super(ParallelMLP, self).__init__()
+        super(MultiheadMLP, self).__init__()
         if exog_size is not None:
             input_size += exog_size
-        layers = [ParallelDense(input_size if i == 0 else hidden_size,
-                                hidden_size, n_instances,
-                                parallel_dim=parallel_dim,
-                                dropout=dropout,
-                                activation=activation)
+        layers = [MultiheadDense(input_size if i == 0 else hidden_size,
+                                 hidden_size, n_instances,
+                                 target_dim=parallel_dim,
+                                 dropout=dropout,
+                                 activation=activation)
                   for i in range(n_layers)]
         if output_size is not None:
-            layers += [ParallelLinear(hidden_size, output_size, n_instances,
-                                      parallel_dim=parallel_dim)]
+            layers += [MultiheadLinear(hidden_size, output_size, n_instances,
+                                       target_dim=parallel_dim)]
         self.mlp = nn.Sequential(*layers)
 
     def forward(self, x, u=None):

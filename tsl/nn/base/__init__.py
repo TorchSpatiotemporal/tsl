@@ -3,11 +3,11 @@ from .attention import *
 from .dense import Dense
 from .embedding import StaticGraphEmbedding
 from .graph_conv import GraphConv
-from .parallel import (ParallelLinear,
-                       ParallelDense,
-                       ParallelConv1D,
-                       ParallelGRUCell,
-                       ParallelLSTMCell)
+from .multihead import (MultiheadLinear,
+                        MultiheadDense,
+                        MultiheadConv1D,
+                        MultiheadGRUCell,
+                        MultiheadLSTMCell)
 from .temporal_conv import TemporalConv2d, GatedTemporalConv2d
 
 __all__ = [
@@ -16,11 +16,11 @@ __all__ = [
     'GraphConv',
     'TemporalConv2d',
     'GatedTemporalConv2d',
-    'ParallelLinear',
-    'ParallelDense',
-    'ParallelConv1D',
-    'ParallelGRUCell',
-    'ParallelLSTMCell',
+    'MultiheadLinear',
+    'MultiheadDense',
+    'MultiheadConv1D',
+    'MultiheadGRUCell',
+    'MultiheadLSTMCell',
     *attention.classes
 ]
 

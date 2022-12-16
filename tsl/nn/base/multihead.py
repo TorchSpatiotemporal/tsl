@@ -10,7 +10,7 @@ from tsl.nn.base.recurrent import GRUCell, LSTMCell
 from tsl.nn.layers.ops import Activation
 
 
-class ParallelLinear(nn.Module):
+class MultiheadLinear(nn.Module):
     """Applies multiple different linear transformations to the incoming
     data.
 
@@ -23,7 +23,7 @@ class ParallelLinear(nn.Module):
         out_channels (int): Size of instance output sample.
         n_instances (int): The number :math:`N` of parallel linear
             operations. Each operation has different weights and biases.
-        parallel_dim (int): Dimension of the instances (must match
+        target_dim (int): Dimension of the instances (must match
             :attr:`n_instances` at runtime).
             (default: :obj:`-2`)
         channels_dim (int): Dimension of the input channels.
@@ -38,7 +38,7 @@ class ParallelLinear(nn.Module):
 
     Examples:
 
-        >>> m = ParallelLinear(20, 32, 10)
+        >>> m = MultiheadLinear(20, 32, 10)
         >>> input = torch.randn(64, 12, 10, 20)
         >>> output = m(input)
         >>> print(output.size())
@@ -46,17 +46,17 @@ class ParallelLinear(nn.Module):
     """
 
     def __init__(self, in_channels: int, out_channels: int, n_instances: int,
-                 parallel_dim: int = -2,
+                 target_dim: int = -2,
                  channels_dim: int = -1,
                  bias: bool = True,
                  device=None, dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
-        super(ParallelLinear, self).__init__()
+        super(MultiheadLinear, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.n_instances = n_instances
 
-        self.parallel_dim = parallel_dim
+        self.target_dim = target_dim
         self.channels_dim = channels_dim
 
         self.weight = nn.Parameter(
@@ -88,7 +88,7 @@ class ParallelLinear(nn.Module):
     @torch.no_grad()
     def initialize_module(self, module, input):
         pattern = [chr(s + 97) for s in range(input[0].ndim)]  # 'a', 'b', ...
-        pattern[self.parallel_dim] = 'x'
+        pattern[self.target_dim] = 'x'
         pattern[self.channels_dim] = 'y'
         input_pattern = ''.join(pattern)
         pattern[self.channels_dim] = 'z'
@@ -97,7 +97,7 @@ class ParallelLinear(nn.Module):
 
         if self.bias is not None:
             shape = [1] * input[0].ndim
-            shape[self.parallel_dim] = self.n_instances
+            shape[self.target_dim] = self.n_instances
             shape[self.channels_dim] = self.out_channels
             self.bias = nn.Parameter(self.bias.view(*shape).contiguous())
 
@@ -112,22 +112,22 @@ class ParallelLinear(nn.Module):
         return out
 
 
-class ParallelDense(ParallelLinear):
+class MultiheadDense(MultiheadLinear):
 
     def __init__(self, in_channels: int, out_channels: int, n_instances: int,
-                 parallel_dim: int = -2,
+                 target_dim: int = -2,
                  channels_dim: int = -1,
                  bias: bool = True,
                  dropout: float = 0.,
                  activation: str = 'relu',
                  device=None, dtype=None) -> None:
-        super(ParallelDense, self).__init__(in_channels, out_channels,
-                                            n_instances=n_instances,
-                                            parallel_dim=parallel_dim,
-                                            channels_dim=channels_dim,
-                                            bias=bias,
-                                            device=device,
-                                            dtype=dtype)
+        super(MultiheadDense, self).__init__(in_channels, out_channels,
+                                             n_instances=n_instances,
+                                             target_dim=target_dim,
+                                             channels_dim=channels_dim,
+                                             bias=bias,
+                                             device=device,
+                                             dtype=dtype)
         activation = activation or 'linear'
         self.activation = activation.lower()
         if dropout > 0.:
@@ -143,7 +143,7 @@ class ParallelDense(ParallelLinear):
         return self.out(out)
 
 
-class ParallelConv1D(nn.Module):
+class MultiheadConv1D(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, n_instances: int,
                  kernel_size: int,
                  stride: int = 1,
@@ -152,7 +152,7 @@ class ParallelConv1D(nn.Module):
                  bias: bool = True,
                  device=None, dtype=None):
         factory_kwargs = {'device': device, 'dtype': dtype}
-        super(ParallelConv1D, self).__init__()
+        super(MultiheadConv1D, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -200,7 +200,7 @@ class ParallelConv1D(nn.Module):
         return out
 
 
-class ParallelGRUCell(GRUCell):
+class MultiheadGRUCell(GRUCell):
     r"""Multiple parallel gated recurrent unit (GRU) cells.
 
     .. math::
@@ -230,7 +230,7 @@ class ParallelGRUCell(GRUCell):
 
     Examples::
 
-        >>> rnn = ParallelGRUCell(20, 32, 10)
+        >>> rnn = MultiheadGRUCell(20, 32, 10)
         >>> input = torch.randn(64, 12, 10, 20)
         >>> h = None
         >>> output = []
@@ -250,12 +250,12 @@ class ParallelGRUCell(GRUCell):
         self.n_instances = n_instances
         # instantiate gates
         in_size = input_size + hidden_size
-        forget_gate = ParallelLinear(in_size, hidden_size, n_instances,
-                                     bias=bias, **factory_kwargs)
-        update_gate = ParallelLinear(in_size, hidden_size, n_instances,
-                                     bias=bias, **factory_kwargs)
-        candidate_gate = ParallelLinear(in_size, hidden_size, n_instances,
-                                        bias=bias, **factory_kwargs)
+        forget_gate = MultiheadLinear(in_size, hidden_size, n_instances,
+                                      bias=bias, **factory_kwargs)
+        update_gate = MultiheadLinear(in_size, hidden_size, n_instances,
+                                      bias=bias, **factory_kwargs)
+        candidate_gate = MultiheadLinear(in_size, hidden_size, n_instances,
+                                         bias=bias, **factory_kwargs)
         super().__init__(hidden_size, forget_gate, update_gate, candidate_gate)
 
     def initialize_state(self, x) -> Tensor:
@@ -263,7 +263,7 @@ class ParallelGRUCell(GRUCell):
                            dtype=x.dtype, device=x.device)
 
 
-class ParallelLSTMCell(LSTMCell):
+class MultiheadLSTMCell(LSTMCell):
     r"""Multiple parallel long short-term memory (LSTM) cells.
 
     .. math::
@@ -295,7 +295,7 @@ class ParallelLSTMCell(LSTMCell):
 
     Examples::
 
-        >>> rnn = ParallelLSTMCell(20, 32, 10)
+        >>> rnn = MultiheadLSTMCell(20, 32, 10)
         >>> input = torch.randn(64, 12, 10, 20)
         >>> h = None
         >>> output = []
@@ -315,14 +315,14 @@ class ParallelLSTMCell(LSTMCell):
         self.n_instances = n_instances
         # instantiate gates
         in_size = input_size + hidden_size
-        input_gate = ParallelLinear(in_size, hidden_size, n_instances,
+        input_gate = MultiheadLinear(in_size, hidden_size, n_instances,
+                                     bias=bias, **factory_kwargs)
+        forget_gate = MultiheadLinear(in_size, hidden_size, n_instances,
+                                      bias=bias, **factory_kwargs)
+        cell_gate = MultiheadLinear(in_size, hidden_size, n_instances,
                                     bias=bias, **factory_kwargs)
-        forget_gate = ParallelLinear(in_size, hidden_size, n_instances,
-                                     bias=bias, **factory_kwargs)
-        cell_gate = ParallelLinear(in_size, hidden_size, n_instances,
-                                   bias=bias, **factory_kwargs)
-        output_gate = ParallelLinear(in_size, hidden_size, n_instances,
-                                     bias=bias, **factory_kwargs)
+        output_gate = MultiheadLinear(in_size, hidden_size, n_instances,
+                                      bias=bias, **factory_kwargs)
         super().__init__(hidden_size, input_gate, forget_gate,
                          cell_gate, output_gate)
 
