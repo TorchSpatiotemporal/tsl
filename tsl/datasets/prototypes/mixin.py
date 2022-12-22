@@ -106,7 +106,7 @@ class TemporalFeaturesMixin:
                                  columns=units)
         return dummies
 
-    def holidays_onehot(self, country, subdiv=None):
+    def holidays_onehot(self, country, subdiv=None, observed=True):
         """Returns a DataFrame to indicate if dataset timestamps is holiday.
         See https://python-holidays.readthedocs.io/en/latest/
 
@@ -115,6 +115,7 @@ class TemporalFeaturesMixin:
                 "CH" for Switzerland.
             subdiv (dict, optional): optional country sub-division (state,
                 region, province, canton), e.g., "TI" for Ticino, Switzerland.
+            observed (bool, optional): flag to include or exclude observed holidays
 
         Returns: 
             pandas.DataFrame: DataFrame with one column ("holiday") as one-hot
@@ -127,7 +128,7 @@ class TemporalFeaturesMixin:
                                "'holidays' to call 'datetime_holidays'.")
 
         years = np.unique(self.index.year.values)
-        h = holidays.country_holidays(country, subdiv=subdiv, years=years)
+        h = holidays.country_holidays(country, subdiv=subdiv, years=years, observed=observed)
 
         # label all the timestamps, whether holiday or not
         out = pd.DataFrame(0, dtype=np.uint8,
