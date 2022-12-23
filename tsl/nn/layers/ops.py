@@ -4,15 +4,15 @@ import torch
 from torch import nn, Tensor
 
 from tsl.nn.functional import expand_then_cat
+from tsl.nn.utils import get_layer_activation
 
 __all__ = [
     'Lambda',
     'Concatenate',
     'Select',
-    'GradNorm'
+    'GradNorm',
+    'Activation'
 ]
-
-from tsl.nn.utils import get_layer_activation
 
 
 class Lambda(nn.Module):
@@ -101,10 +101,11 @@ class Activation(nn.Module):
         activation (str): Name of the activation function.
         **kwargs: Keyword arguments for the activation layer.
     """
-    def __init__(self, activation, **kwargs):
+
+    def __init__(self, activation: str, **kwargs):
         super(Activation, self).__init__()
         activation_class = get_layer_activation(activation)
-        self.activation = activation_class(**kwargs)
+        self.activation: nn.Module = activation_class(**kwargs)
 
     def forward(self, x):
         return self.activation(x)

@@ -10,7 +10,7 @@ from tsl.nn.base.recurrent import GRUCell, LSTMCell
 from tsl.nn.layers.ops import Activation
 
 
-class MultiheadLinear(nn.Module):
+class MultiLinear(nn.Module):
     """Applies multiple different linear transformations to the incoming
     data.
 
@@ -23,10 +23,10 @@ class MultiheadLinear(nn.Module):
         out_channels (int): Size of instance output sample.
         n_instances (int): The number :math:`N` of parallel linear
             operations. Each operation has different weights and biases.
-        target_dim (int): Dimension of the instances (must match
+        instance_dim (int or str): Dimension of the instances (must match
             :attr:`n_instances` at runtime).
             (default: :obj:`-2`)
-        channels_dim (int): Dimension of the input channels.
+        channel_dim (int or str): Dimension of the input channels.
             (default: :obj:`-1`)
         bias (bool): If :obj:`True`, then the layer will learn an additive
             bias for each instance.
@@ -38,38 +38,81 @@ class MultiheadLinear(nn.Module):
 
     Examples:
 
-        >>> m = MultiheadLinear(20, 32, 10)
-        >>> input = torch.randn(64, 12, 10, 20)
+        >>> m = MultiLinear(20, 32, 10, pattern='t n f', instance_dim='n')
+        >>> input = torch.randn(64, 12, 10, 20)  # shape: [b t n f]
         >>> output = m(input)
         >>> print(output.size())
         torch.Size([64, 24, 10, 32])
     """
 
     def __init__(self, in_channels: int, out_channels: int, n_instances: int,
-                 target_dim: int = -2,
-                 channels_dim: int = -1,
+                 *,
+                 ndim: int = None, pattern: str = None,
+                 instance_dim: Union[int, str] = -2,
+                 channel_dim: Union[int, str] = -1,
                  bias: bool = True,
                  device=None, dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
-        super(MultiheadLinear, self).__init__()
+        super(MultiLinear, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.n_instances = n_instances
 
-        self.target_dim = target_dim
-        self.channels_dim = channels_dim
+        self.ndim = ndim
+        self.instance_dim = instance_dim
+        self.channel_dim = channel_dim
 
-        self.weight = nn.Parameter(
+        # initialize by pattern, e.g.:
+        #   pattern='t n f', instance_dim='n', instance_dim=-1
+        #   pattern='t n f', instance_dim=-2, instance_dim=-1
+        if pattern is not None:
+            pattern = pattern.replace(' ', '')
+            self.instance_dim = instance_dim if isinstance(instance_dim, str) \
+                else pattern[instance_dim]
+            self.channel_dim = channel_dim if isinstance(channel_dim, str) \
+                else pattern[channel_dim]
+            self.einsum_pattern = self._compute_einsum_pattern(pattern=pattern)
+            self.bias_shape = self._compute_bias_shape(pattern=pattern)
+            self.reshape_bias = False
+        # initialize negative dim indexing (default), e.g.:
+        #   instance_dim=-2, instance_dim=-1 (pattern=None, ndim=None)
+        elif ndim is None and instance_dim < 0 and channel_dim < 0:
+            ndim = abs(min(instance_dim, channel_dim))
+            self.einsum_pattern = self._compute_einsum_pattern(ndim)
+            self.bias_shape = self._compute_bias_shape(ndim)
+            self.reshape_bias = False
+        # initialize with ndim and dim (positive/negative) indexing, e.g.:
+        #   ndim=3, instance_dim=1, instance_dim=-1
+        elif ndim is not None:
+            # initialize with lazy ndim calculation, e.g.:
+            #   ndim=-1, instance_dim=1, instance_dim=-1
+            if ndim < 0:
+                # lazy initialize einsum pattern
+                self.einsum_pattern = None
+                self.bias_shape = (n_instances, out_channels)
+                self.reshape_bias = True
+                self._hook = self.register_forward_pre_hook(
+                    self.initialize_module)
+            else:
+                self.einsum_pattern = self._compute_einsum_pattern(ndim)
+                self.bias_shape = self._compute_bias_shape(ndim)
+                self.reshape_bias = False
+        # cannot initialize if all:
+        #   1. pattern is None
+        #   2. ndim is None and instance_dim >= 0 or channel_dim >= 0
+        else:
+            raise ValueError("One of 'pattern' or 'ndim' must be given if one "
+                             "of 'instance_dim' or 'channel_dim' is positive.")
+
+        self.weight: nn.Parameter = nn.Parameter(
             torch.empty((n_instances, in_channels, out_channels),
                         **factory_kwargs))
+
         if bias:
-            self.bias = nn.Parameter(torch.empty(n_instances, out_channels,
-                                                 **factory_kwargs))
+            self.bias: nn.Parameter = nn.Parameter(torch.empty(*self.bias_shape,
+                                                               **factory_kwargs))
         else:
             self.register_parameter('bias', None)
-
-        self.einsum_pattern = None
-        self._hook = self.register_forward_pre_hook(self.initialize_module)
 
         self.reset_parameters()
 
@@ -85,22 +128,47 @@ class MultiheadLinear(nn.Module):
         if self.bias is not None:
             init.uniform_(self.bias.data, -bound, bound)
 
+    def _compute_bias_shape(self, ndim: int = None, pattern: str = None):
+        if ndim is not None:
+            bias_shape = [1] * ndim
+            bias_shape[self.instance_dim] = self.n_instances
+            bias_shape[self.channel_dim] = self.out_channels
+        elif pattern is not None:
+            pattern = pattern.replace(' ', '')
+            bias_shape = []
+            for token in pattern:
+                if token == self.channel_dim:
+                    bias_shape.append(self.out_channels)
+                elif token == self.instance_dim:
+                    bias_shape.append(self.n_instances)
+                else:
+                    bias_shape.append(1)
+        else:
+            raise ValueError("One of 'pattern' or 'ndim' must be given.")
+        return tuple(bias_shape)
+
+    def _compute_einsum_pattern(self, ndim: int = None, pattern: str = None):
+        if ndim is not None:
+            pattern = [chr(s + 97) for s in range(ndim)]  # 'a', 'b', ...
+            pattern[self.instance_dim] = 'x'
+            pattern[self.channel_dim] = 'y'
+            input_pattern = ''.join(pattern)
+            pattern[self.channel_dim] = 'z'
+            output_pattern = ''.join(pattern)
+            weight_pattern = 'xyz'
+        elif pattern is not None:
+            input_pattern = pattern.replace(' ', '')
+            output_pattern = input_pattern.replace(self.channel_dim, 'z')
+            weight_pattern = f'{self.instance_dim}{self.channel_dim}z'
+        else:
+            raise ValueError("One of 'pattern' or 'ndim' must be given.")
+        return f"...{input_pattern},{weight_pattern}->...{output_pattern}"
+
     @torch.no_grad()
     def initialize_module(self, module, input):
-        pattern = [chr(s + 97) for s in range(input[0].ndim)]  # 'a', 'b', ...
-        pattern[self.target_dim] = 'x'
-        pattern[self.channels_dim] = 'y'
-        input_pattern = ''.join(pattern)
-        pattern[self.channels_dim] = 'z'
-        output_pattern = ''.join(pattern)
-        self.einsum_pattern = f"{input_pattern},xyz->{output_pattern}"
-
-        if self.bias is not None:
-            shape = [1] * input[0].ndim
-            shape[self.target_dim] = self.n_instances
-            shape[self.channels_dim] = self.out_channels
-            self.bias = nn.Parameter(self.bias.view(*shape).contiguous())
-
+        self.ndim = input[0].ndim
+        self.einsum_pattern = self._compute_einsum_pattern(self.ndim)
+        self.bias_shape = self._compute_bias_shape(self.ndim)
         self._hook.remove()
         delattr(self, '_hook')
 
@@ -108,26 +176,30 @@ class MultiheadLinear(nn.Module):
         r"""Compute :math:`\mathbf{y} = [x_i W_i^T + b_i]_{i=0,\ldots,N}`"""
         out = torch.einsum(self.einsum_pattern, input, self.weight)
         if self.bias is not None:
-            out = out + self.bias
+            if self.reshape_bias:
+                out = out + self.bias.view(*self.bias_shape).contiguous()
+            else:
+                out = out + self.bias
         return out
 
 
-class MultiheadDense(MultiheadLinear):
+class MultiDense(MultiLinear):
 
     def __init__(self, in_channels: int, out_channels: int, n_instances: int,
-                 target_dim: int = -2,
-                 channels_dim: int = -1,
+                 *,
+                 ndim: int = None, pattern: str = None,
+                 instance_dim: int = -2,
+                 channel_dim: int = -1,
                  bias: bool = True,
                  dropout: float = 0.,
                  activation: str = 'relu',
                  device=None, dtype=None) -> None:
-        super(MultiheadDense, self).__init__(in_channels, out_channels,
-                                             n_instances=n_instances,
-                                             target_dim=target_dim,
-                                             channels_dim=channels_dim,
-                                             bias=bias,
-                                             device=device,
-                                             dtype=dtype)
+        super(MultiDense, self).__init__(in_channels, out_channels,
+                                         n_instances=n_instances,
+                                         ndim=ndim, pattern=pattern,
+                                         instance_dim=instance_dim,
+                                         channel_dim=channel_dim, bias=bias,
+                                         device=device, dtype=dtype)
         activation = activation or 'linear'
         self.activation = activation.lower()
         if dropout > 0.:
@@ -143,7 +215,7 @@ class MultiheadDense(MultiheadLinear):
         return self.out(out)
 
 
-class MultiheadConv1D(nn.Module):
+class MultiConv1d(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, n_instances: int,
                  kernel_size: int,
                  stride: int = 1,
@@ -152,7 +224,7 @@ class MultiheadConv1D(nn.Module):
                  bias: bool = True,
                  device=None, dtype=None):
         factory_kwargs = {'device': device, 'dtype': dtype}
-        super(MultiheadConv1D, self).__init__()
+        super(MultiConv1d, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -186,13 +258,13 @@ class MultiheadConv1D(nn.Module):
             init.uniform_(self.bias.data, -bound, bound)
 
     def forward(self, x):
-        x = rearrange(x, 'b t n f -> b (n f) t')
+        x = rearrange(x, '... t n f -> ... (n f) t')
 
         out = F.conv1d(x, weight=self.weight, bias=None, stride=self.stride,
                        dilation=self.dilation, groups=self.n_instances,
                        padding=self.padding)
 
-        out = rearrange(out, 'b (n f) t -> b t n f', f=self.out_channels)
+        out = rearrange(out, '... (n f) t -> ... t n f', f=self.out_channels)
 
         if self.bias is not None:
             out = out + self.bias
@@ -200,7 +272,7 @@ class MultiheadConv1D(nn.Module):
         return out
 
 
-class MultiheadGRUCell(GRUCell):
+class MultiGRUCell(GRUCell):
     r"""Multiple parallel gated recurrent unit (GRU) cells.
 
     .. math::
@@ -230,7 +302,7 @@ class MultiheadGRUCell(GRUCell):
 
     Examples::
 
-        >>> rnn = MultiheadGRUCell(20, 32, 10)
+        >>> rnn = MultiGRUCell(20, 32, 10)
         >>> input = torch.randn(64, 12, 10, 20)
         >>> h = None
         >>> output = []
@@ -250,12 +322,12 @@ class MultiheadGRUCell(GRUCell):
         self.n_instances = n_instances
         # instantiate gates
         in_size = input_size + hidden_size
-        forget_gate = MultiheadLinear(in_size, hidden_size, n_instances,
-                                      bias=bias, **factory_kwargs)
-        update_gate = MultiheadLinear(in_size, hidden_size, n_instances,
-                                      bias=bias, **factory_kwargs)
-        candidate_gate = MultiheadLinear(in_size, hidden_size, n_instances,
-                                         bias=bias, **factory_kwargs)
+        forget_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
+                                  **factory_kwargs)
+        update_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
+                                  **factory_kwargs)
+        candidate_gate = MultiLinear(in_size, hidden_size, n_instances,
+                                     bias=bias, **factory_kwargs)
         super().__init__(hidden_size, forget_gate, update_gate, candidate_gate)
 
     def initialize_state(self, x) -> Tensor:
@@ -263,7 +335,7 @@ class MultiheadGRUCell(GRUCell):
                            dtype=x.dtype, device=x.device)
 
 
-class MultiheadLSTMCell(LSTMCell):
+class MultiLSTMCell(LSTMCell):
     r"""Multiple parallel long short-term memory (LSTM) cells.
 
     .. math::
@@ -295,7 +367,7 @@ class MultiheadLSTMCell(LSTMCell):
 
     Examples::
 
-        >>> rnn = MultiheadLSTMCell(20, 32, 10)
+        >>> rnn = MultiLSTMCell(20, 32, 10)
         >>> input = torch.randn(64, 12, 10, 20)
         >>> h = None
         >>> output = []
@@ -315,14 +387,14 @@ class MultiheadLSTMCell(LSTMCell):
         self.n_instances = n_instances
         # instantiate gates
         in_size = input_size + hidden_size
-        input_gate = MultiheadLinear(in_size, hidden_size, n_instances,
-                                     bias=bias, **factory_kwargs)
-        forget_gate = MultiheadLinear(in_size, hidden_size, n_instances,
-                                      bias=bias, **factory_kwargs)
-        cell_gate = MultiheadLinear(in_size, hidden_size, n_instances,
-                                    bias=bias, **factory_kwargs)
-        output_gate = MultiheadLinear(in_size, hidden_size, n_instances,
-                                      bias=bias, **factory_kwargs)
+        input_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
+                                 **factory_kwargs)
+        forget_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
+                                  **factory_kwargs)
+        cell_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
+                                **factory_kwargs)
+        output_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
+                                  **factory_kwargs)
         super().__init__(hidden_size, input_gate, forget_gate,
                          cell_gate, output_gate)
 

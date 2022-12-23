@@ -3,8 +3,8 @@ from .dcrnn import DCRNNCell, DCRNN
 from .dense_dcrnn import DenseDCRNNCell, DenseDCRNN
 from .gcgru import GraphConvGRUCell, GraphConvGRU
 from .gclstm import GraphConvLSTMCell, GraphConvLSTM
-from .mlp import MLP, ResidualMLP, MultiheadMLP
-from .rnn import RNN, MultiheadRNN
+from .mlp import MLP, ResidualMLP, MultiMLP
+from .rnn import RNN, MultiRNN
 from .stcn import SpatioTemporalConvNet
 from .tcn import TemporalConvNet
 from .transformer import (TransformerLayer,
@@ -19,9 +19,9 @@ general_classes = [
     'ConditionalTCNBlock',
     'MLP',
     'ResidualMLP',
-    'ParallelMLP',
+    'MultiMLP',
     'RNN',
-    'ParallelRNN'
+    'MultiRNN'
 ]
 
 cell_classes = [

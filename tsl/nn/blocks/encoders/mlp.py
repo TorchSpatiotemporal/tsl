@@ -1,6 +1,6 @@
 from torch import nn
 
-from ...base import Dense, MultiheadLinear, MultiheadDense
+from ...base import Dense, MultiLinear, MultiDense
 from ...utils import maybe_cat_exog
 
 
@@ -114,7 +114,7 @@ class ResidualMLP(nn.Module):
         return x
 
 
-class MultiheadMLP(nn.Module):
+class MultiMLP(nn.Module):
     """Parallel multi-layer perceptron (MLP) encoder with optional linear
     readout.
 
@@ -128,24 +128,26 @@ class MultiheadMLP(nn.Module):
     """
 
     def __init__(self, input_size: int, hidden_size: int, n_instances: int,
-                 parallel_dim: int = -2,
+                 *,
+                 ndim: int = None, pattern: str = None,
+                 instance_dim: int = -2,
                  output_size: int = None,
                  exog_size: int = None,
                  n_layers: int = 1,
                  activation: str = 'relu',
                  dropout: float = 0.):
-        super(MultiheadMLP, self).__init__()
+        super(MultiMLP, self).__init__()
         if exog_size is not None:
             input_size += exog_size
-        layers = [MultiheadDense(input_size if i == 0 else hidden_size,
-                                 hidden_size, n_instances,
-                                 target_dim=parallel_dim,
-                                 dropout=dropout,
-                                 activation=activation)
+        layers = [MultiDense(input_size if i == 0 else hidden_size, hidden_size,
+                             n_instances, ndim=ndim, pattern=pattern,
+                             instance_dim=instance_dim,
+                             dropout=dropout, activation=activation)
                   for i in range(n_layers)]
         if output_size is not None:
-            layers += [MultiheadLinear(hidden_size, output_size, n_instances,
-                                       target_dim=parallel_dim)]
+            layers += [MultiLinear(hidden_size, output_size, n_instances,
+                                   ndim=ndim, pattern=pattern,
+                                   instance_dim=instance_dim)]
         self.mlp = nn.Sequential(*layers)
 
     def forward(self, x, u=None):
