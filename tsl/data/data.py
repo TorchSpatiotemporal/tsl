@@ -19,7 +19,7 @@ from tsl.utils.python_utils import ensure_list
 def pattern_size_repr(key: str, tensor: Tensor, pattern: str = None):
     if pattern is not None:
         pattern = pattern.replace(' ', '')
-        out = str([f'{token}={size}'
+        out = str([f'{token}={size}' if not token.isnumeric() else str(size)
                    for token, size in zip(pattern, tensor.size())])
     else:
         out = str(list(tensor.size()))

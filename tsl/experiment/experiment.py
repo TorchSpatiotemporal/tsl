@@ -3,6 +3,7 @@ import os
 import os.path as osp
 import random
 import sys
+from contextlib import contextmanager
 from functools import wraps
 from typing import Optional, Callable, List, Union
 
@@ -38,7 +39,9 @@ def _pre_experiment_routine(cfg: DictConfig):
 
     # set the seed for the run
     # if None, then use random positive int32 (for logging compatibilities)
-    seed = cfg.get('seed', random.randrange(0, 10**9))
+    seed = cfg.get('seed')
+    if seed is None:
+        seed = random.randrange(0, 10**9)
     seed = seed_everything(seed)
 
     # add run args to cfg
@@ -188,6 +191,11 @@ class Experiment:
 
     def get_config_dict(self) -> dict:
         return OmegaConf.to_object(self.cfg)
+
+    @contextmanager
+    def edit_config(self):
+        with flag_override(self.cfg, 'struct', False) as cfg:
+            yield cfg
 
     def run(self):
         """Run the experiment routine."""
