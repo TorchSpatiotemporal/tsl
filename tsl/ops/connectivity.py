@@ -9,7 +9,7 @@ from scipy.sparse import coo_matrix
 from torch import Tensor
 from torch_geometric.data.storage import recursive_apply
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
-from torch_geometric.typing import Adj
+from torch_geometric.typing import Adj, OptTensor
 from torch_geometric.utils import add_remaining_self_loops, subgraph
 from torch_sparse import SparseTensor, fill_diag
 
@@ -283,19 +283,20 @@ def asymmetric_norm(edge_index: SparseTensArray,
 
 
 def normalize_connectivity(edge_index, edge_weight, symmetric, num_nodes,
-                           add_self_loops=False):
+                           add_self_loops=False) -> Tuple[Adj, OptTensor]:
     if symmetric:
-        edge_index, edge_weight = gcn_norm(edge_index,
-                                           edge_weight,
-                                           num_nodes,
-                                           add_self_loops=add_self_loops)
-    else:
-        edge_index, edge_weight = asymmetric_norm(edge_index,
-                                                  edge_weight,
-                                                  dim=1,
-                                                  num_nodes=num_nodes,
-                                                  add_self_loops=add_self_loops)
-    return edge_index, edge_weight
+        norm_edge_index = gcn_norm(edge_index,
+                                   edge_weight,
+                                   num_nodes,
+                                   add_self_loops=add_self_loops)
+        if isinstance(edge_index, SparseTensor):
+            return norm_edge_index, None
+        return norm_edge_index
+    return asymmetric_norm(edge_index,
+                           edge_weight,
+                           dim=1,
+                           num_nodes=num_nodes,
+                           add_self_loops=add_self_loops)
 
 
 def power_series(edge_index: TensArray, edge_weights: OptTensArray = None,
