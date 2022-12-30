@@ -49,7 +49,7 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
         model = cls(spatial_order=spatial_order,
                     temporal_order=temporal_order,
                     gcn_norm=gcn_norm)
-        model.weight = torch.nn.Parameter(filter_params)
+        model.weight.data.copy_(filter_params)
         return model
 
     def forward(self, x, edge_index, edge_weight=None):
