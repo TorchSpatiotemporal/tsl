@@ -97,8 +97,8 @@ def az_whiteness_test(x: TensArray,
     NeurIPS 2022).
 
     Args:
-        x (TensArray): graph signal, typically with pattern "t n f".
-            (default: :obj:`None`)
+        x (TensArray): graph signal, typically with pattern "t n f" and 
+            representing the prediction residuals.
         edge_index (TensArray): indices of the spatial edges with shape (2, E).
             Current implementation supports only a static topology.
         mask (TensArray, optional): boolean mask of signal :obj:`x`, with same
@@ -143,14 +143,15 @@ def az_whiteness_test(x: TensArray,
 
     # data to numpy.ndarray
     x = _to_numpy(x)
+    assert x.ndim == 3
     mask = _to_numpy(mask)
     edge_index_spatial = _to_numpy(edge_index)
     edge_weight_spatial = _to_numpy(edge_weight)
 
     if remove_median:
-        x_ = x + 0.0
-        x_[mask] = np.nan
-        x_median = np.nanmedian(x_, axis=F_DIM)
+        x_ = x.copy()
+        x_[np.logical_not(mask)] = np.nan
+        x_median = np.nanmedian(x_, axis=[T_DIM, N_DIM], keepdims=True)
         x -= x_median
 
     F = x.shape[F_DIM]
