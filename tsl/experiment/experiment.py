@@ -19,6 +19,8 @@ if _HYDRA_AVAILABLE:
     from hydra.core.hydra_config import HydraConfig
     from omegaconf import DictConfig, OmegaConf, flag_override
     from omegaconf.errors import ConfigAttributeError
+    from .resolvers import register_resolvers
+    register_resolvers()
 else:
     hydra = DictConfig = None
 
