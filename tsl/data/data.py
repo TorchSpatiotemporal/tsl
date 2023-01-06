@@ -225,6 +225,11 @@ class Data(PyGData):
     def __cat_dim__(self, key: str, value: Any, *args, **kwargs) -> Any:
         if key in self.pattern:
             if 'n' in self.pattern[key]:  # cat along node dimension
+                if isinstance(value, SparseTensor):
+                    # allow for multi-dim cat for SparseTensor (e.g., adj)
+                    return tuple(dim for dim, tkn
+                                 in enumerate(self.pattern[key].split(' '))
+                                 if tkn == 'n')
                 return self.pattern[key].split(' ').index('n')
             elif 'e' in self.pattern[key]:  # cat along edge dimension
                 return self.pattern[key].split(' ').index('e')
