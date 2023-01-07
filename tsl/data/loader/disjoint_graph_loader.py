@@ -19,6 +19,9 @@ class DisjointGraphLoader(data.DataLoader):
         shuffle (bool, optional): If :obj:`True`, then data will be
             reshuffled at every epoch.
             (default: :obj:`False`)
+        force_batch (bool): If :obj:`True`, then add add dummy batch
+            dimension for time-varying elements.
+            (default: :obj:`False`)
         follow_batch (List[str], optional): Creates assignment batch
             vectors for each key in the list.
             (default: :obj:`None`)
@@ -31,6 +34,7 @@ class DisjointGraphLoader(data.DataLoader):
     def __init__(self, dataset: Union[SpatioTemporalDataset, List[Data]],
                  batch_size: int = 1,
                  shuffle: bool = False,
+                 force_batch: bool = False,
                  follow_batch: List[str] = None,
                  exclude_keys: List[str] = None,
                  **kwargs):
@@ -49,6 +53,7 @@ class DisjointGraphLoader(data.DataLoader):
         self.exclude_keys = exclude_keys
 
         collate_fn = partial(DisjointBatch.from_data_list,
+                             force_batch=force_batch,
                              follow_batch=follow_batch,
                              exclude_keys=exclude_keys)
 
