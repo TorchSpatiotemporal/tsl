@@ -779,7 +779,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                       pattern: Optional[str] = None,
                       add_to_input_map: bool = True,
                       synch_mode: Optional[SynchMode] = None,
-                      preprocess: bool = True):
+                      preprocess: bool = True,
+                      convert_precision: bool = True):
         r"""Add covariate to the dataset. Examples of covariate are
         exogenous signals (in the form of dynamic multidimensional data) or
         static attributes (e.g., graph/node metadata). Parameter :obj:`pattern`
@@ -818,10 +819,14 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             preprocess (bool): If :obj:`True` and the dataset has a scaler with
                 same key, then data are scaled when calling :obj:`get` methods.
                 (default: :obj:`True`)
+            convert_precision (bool): If :obj:`True`, then cast :attr:`value`
+                with dataset's precision.
+                (default: :obj:`True`)
         """
         # validate name. name cannot be an attribute of self, but allow override
         self._check_name(name)
-        value, pattern = self._parse_covariate(value, pattern, name=name)
+        value, pattern = self._parse_covariate(
+            value, pattern, name=name, convert_precision=convert_precision)
         self._covariates[name] = dict(value=value, pattern=pattern)
         if add_to_input_map:
             self.input_map[name] = BatchMapItem(name, synch_mode, preprocess,
@@ -1017,7 +1022,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                                                        cat_dim=bm_item.cat_dim,
                                                        return_pattern=False)
                     self._batch_scalers[bm_key] = scaler
-
 
     # Dataset trimming ########################################################
 
