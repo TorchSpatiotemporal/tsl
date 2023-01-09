@@ -80,12 +80,19 @@ def is_datetime_like_index(index):
                               pd.TimedeltaIndex))
 
 
-def time_unit_to_nanoseconds(time_unit: str):
-    allowed_units = ['year', 'week', 'day', 'hour', 'minute', 'second',
-                     'millisecond', 'microsecond', 'nanosecond']
+def check_time_unit(time_unit: str, include_onehot: bool = False):
+    allowed_units = {'year', 'week', 'day', 'hour', 'minute', 'second',
+                     'millisecond', 'microsecond', 'nanosecond'}
+    if include_onehot:
+        allowed_units.update({'weekday', 'day_of_week', 'dayofweek',
+                              'weekofyear'})
     if time_unit not in allowed_units:
-        raise RuntimeError(f"'{time_unit}' is not a valid time unit."
+        raise RuntimeError(f"'{time_unit}' is not a valid time unit. "
                            f"Allowed units are {', '.join(allowed_units)}.")
+
+
+def time_unit_to_nanoseconds(time_unit: str):
+    check_time_unit(time_unit)
     if time_unit == 'year':
         return 365.2425 * 24 * 60 * 60 * 10 ** 9
     elif time_unit == 'week':
