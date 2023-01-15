@@ -35,19 +35,21 @@ class GatedGraphNetworkModel(BaseModel):
             the model turns into a dense spatial attention layer.
     """
     def __init__(self,
-                 input_size,
-                 input_window_size,
-                 hidden_size,
-                 output_size,
-                 horizon,
-                 n_nodes,
-                 exog_size,
-                 enc_layers,
-                 gnn_layers,
-                 full_graph,
-                 activation='silu'):
+                 input_size: int,
+                 input_window_size: int,
+                 horizon: int,
+                 n_nodes: int,
+                 hidden_size: int,
+                 output_size: int = None,
+                 exog_size: int = 0,
+                 enc_layers: int = 1,
+                 gnn_layers: int = 1,
+                 full_graph: bool = True,
+                 activation: str = 'silu'):
         super(GatedGraphNetworkModel, self).__init__()
 
+        self.input_size = input_size
+        self.output_size = output_size or input_size
         self.input_window_size = input_window_size
         self.full_graph = full_graph
 
@@ -81,8 +83,8 @@ class GatedGraphNetworkModel(BaseModel):
         )
 
         self.readout = nn.Sequential(
-            nn.Linear(hidden_size, horizon * output_size),
-            Rearrange('b n (h f) -> b h n f', h=horizon, f=output_size)
+            nn.Linear(hidden_size, horizon * self.output_size),
+            Rearrange('b n (h f) -> b h n f', h=horizon, f=self.output_size)
         )
 
     def forward(self, x, edge_index=None, u=None):
