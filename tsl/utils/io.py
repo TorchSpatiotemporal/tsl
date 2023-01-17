@@ -75,10 +75,10 @@ def load_pickle(filename: str) -> Any:
 
 
 def save_figure(fig, filename: str, as_html=False, as_pickle=False):
-    if filename.endswith('html'):
+    if filename.endswith('.html'):
         as_html = True
         filename = filename[:-5]
-    elif filename.endswith('pkl'):
+    elif filename.endswith('.pkl'):
         as_pickle = True
         filename = filename[:-4]
     if not (as_html or as_pickle):
