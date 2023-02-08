@@ -131,12 +131,11 @@ class Imputer(Predictor):
 
     # Imputation data hooks ###################################################
 
-    def on_train_batch_start(self, batch, batch_idx: int,
-                             unused: Optional[int] = 0) -> None:
+    def on_train_batch_start(self, batch, batch_idx: int) -> None:
         r"""For every training batch, randomly mask out value with probability
         :obj:`p = self.whiten_prob`. Then, whiten missing values in
         :obj:`batch.input.x`."""
-        super(Imputer, self).on_train_batch_start(batch, batch_idx, unused)
+        super(Imputer, self).on_train_batch_start(batch, batch_idx)
         if self.whiten_prob is not None:
             # randomly mask out value with probability p = whiten_prob
             batch.original_mask = mask = batch.input_mask
