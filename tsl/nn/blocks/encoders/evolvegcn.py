@@ -2,19 +2,15 @@ import math
 from typing import Optional, Tuple
 
 import torch
-from einops import rearrange, repeat
-from torch.nn import Parameter
 import torch.nn.functional as F
+from einops import rearrange, repeat
+from torch import nn, Tensor
+from torch.nn import Parameter
 from torch_geometric.nn import MessagePassing
 from torch_sparse import SparseTensor, matmul
 
-from tsl.nn.blocks.encoders.gcrnn import _GraphGRUCell, _GraphRNN
-
-from torch import nn, Tensor
-
 from tsl.nn.layers.graph_convs.mixin import NormalizedAdjacencyMixin
 from tsl.nn.utils import get_functional_activation
-from tsl.ops.connectivity import normalize_connectivity
 
 
 class _TopK(torch.nn.Module):

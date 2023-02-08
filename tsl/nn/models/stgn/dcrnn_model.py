@@ -58,7 +58,8 @@ class DCRNNModel(BaseModel):
         self.dcrnn = DCRNN(input_size=hidden_size,
                            hidden_size=hidden_size,
                            n_layers=n_layers,
-                           k=kernel_size)
+                           k=kernel_size,
+                           return_only_last_state=True)
 
         self.readout = MLPDecoder(input_size=hidden_size,
                                   hidden_size=ff_size,
@@ -77,5 +78,5 @@ class DCRNNModel(BaseModel):
         else:
             x = self.input_encoder(x)
 
-        h, _ = self.dcrnn(x, edge_index, edge_weight)
-        return self.readout(h)
+        out = self.dcrnn(x, edge_index, edge_weight)
+        return self.readout(out)

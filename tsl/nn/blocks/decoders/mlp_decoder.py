@@ -18,7 +18,8 @@ class MLPDecoder(nn.Module):
         hidden_size (int): Hidden size.
         output_size (int): Output size.
         horizon (int): Output steps.
-        n_layers (int, optional): Number of layers in the decoder. (default: 1)
+        n_layers (int, optional): Number of hidden layers in the decoder.
+            (default: :obj:`1`)
         receptive_field (int, optional): Number of steps to consider for decoding. (default: 1)
         activation (str, optional): Activation function to use.
         dropout (float, optional): Dropout probability applied in the hidden layers.

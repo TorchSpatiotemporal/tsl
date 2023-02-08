@@ -1,7 +1,9 @@
 import inspect
 import os
 import os.path as osp
+import random
 import sys
+from contextlib import contextmanager
 from functools import wraps
 from typing import Optional, Callable, List, Union
 
@@ -17,6 +19,8 @@ if _HYDRA_AVAILABLE:
     from hydra.core.hydra_config import HydraConfig
     from omegaconf import DictConfig, OmegaConf, flag_override
     from omegaconf.errors import ConfigAttributeError
+    from .resolvers import register_resolvers
+    register_resolvers()
 else:
     hydra = DictConfig = None
 
@@ -36,7 +40,10 @@ def _pre_experiment_routine(cfg: DictConfig):
     hconf = HydraConfig.get()
 
     # set the seed for the run
-    seed = cfg.get('seed', None)
+    # if None, then use random positive int32 (for logging compatibilities)
+    seed = cfg.get('seed')
+    if seed is None:
+        seed = random.randrange(0, 10**9)
     seed = seed_everything(seed)
 
     # add run args to cfg
@@ -99,10 +106,14 @@ class Experiment:
     def __init__(self, run_fn: Callable,
                  config_path: Optional[str] = None,
                  config_name: Optional[str] = None,
-                 pre_run_hooks: Union[Callable, List[Callable]] = None):
+                 pre_run_hooks: Union[Callable, List[Callable]] = None,
+                 save_cfg_as_yaml=True):
         if not _HYDRA_AVAILABLE:
             raise RuntimeError("Install optional dependency 'hydra-core'"
                                f" to use {self.__class__.__name__}.")
+        # wheter or not to store immediately the cfg in run.dir
+        self.save_cfg_as_yaml = save_cfg_as_yaml
+
         # store the run configuration
         self.cfg: Optional[DictConfig] = None
 
@@ -152,7 +163,9 @@ class Experiment:
                     hook(cfg)
                 # store final config
                 self.cfg = cfg
-                self.log_config()
+                if self.save_cfg_as_yaml:
+                    self.log_config()
+
                 self.run_output = func(cfg)
                 return self.run_output
 
@@ -161,12 +174,6 @@ class Experiment:
         return hydra.main(config_path=self.config_path,
                           config_name=self.config_name,
                           version_base=None)(run_fn_decorator(run_fn))
-
-    def log_config(self) -> None:
-        """Save config as ``.yaml`` file in
-        :meth:`~tsl.experiment.Experiment.run_dir`."""
-        with open(osp.join(self.run_dir, 'config.yaml'), 'w') as fp:
-            fp.write(OmegaConf.to_yaml(self.cfg, resolve=True))
 
     def __repr__(self):
         return "{}(config_path={}, config_name={}, run_fn={})".format(
@@ -183,6 +190,20 @@ class Experiment:
             except ConfigAttributeError:
                 return None
         return None
+
+    def log_config(self) -> None:
+        """Save config as ``.yaml`` file in
+        :meth:`~tsl.experiment.Experiment.run_dir`."""
+        with open(osp.join(self.run_dir, 'config.yaml'), 'w') as fp:
+            fp.write(OmegaConf.to_yaml(self.cfg, resolve=True))
+
+    def get_config_dict(self) -> dict:
+        return OmegaConf.to_object(self.cfg)
+
+    @contextmanager
+    def edit_config(self):
+        with flag_override(self.cfg, 'struct', False) as cfg:
+            yield cfg
 
     def run(self):
         """Run the experiment routine."""

@@ -44,6 +44,7 @@ class GRUGCNModel(BaseModel):
         self.input_encoder = RNN(input_size=input_size,
                                  hidden_size=hidden_size,
                                  n_layers=enc_layers,
+                                 return_only_last_state=True,
                                  cell='gru')
 
         if encode_edges:
@@ -51,8 +52,8 @@ class GRUGCNModel(BaseModel):
                 RNN(input_size=input_size,
                     hidden_size=hidden_size,
                     n_layers=enc_layers,
+                    return_only_last_state=True,
                     cell='gru'),
-                Select(1, -1),
                 nn.Linear(hidden_size, 1),
                 nn.Softplus(),
                 Rearrange('e f -> (e f)', f=1)
@@ -84,7 +85,7 @@ class GRUGCNModel(BaseModel):
         x = utils.maybe_cat_exog(x, u)
 
         # flat time dimension
-        x = self.input_encoder(x, return_last_state=True)
+        x = self.input_encoder(x)
         if self.edge_encoder is not None:
             assert edge_weight is None
             edge_weight = self.edge_encoder(edge_features)

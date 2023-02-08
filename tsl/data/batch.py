@@ -271,7 +271,8 @@ def separate_scaler_params(value: Tensor, slices, idx: int, is_repeated: bool,
 
 
 def disjoint_scaler_collate(data_list: List[Data],
-                            batch_index: Optional[Tensor] = None):
+                            batch_index: Optional[Tensor] = None,
+                            force_batch: bool = False):
     elem = data_list[0]
     transform = data_list[0].transform
 
@@ -294,8 +295,12 @@ def disjoint_scaler_collate(data_list: List[Data],
             pattern = scaler.pattern
         else:
             pattern = elem.pattern.get(key)
-        if cat_dim is None and pattern is not None:
-            pattern = 'n ' + pattern
+        if pattern is not None:
+            if cat_dim is None:
+                pattern = 'n ' + pattern
+            if 't' in pattern and force_batch:
+                params = {k: param[None] for k, param in params.items()}
+                pattern = 'b ' + pattern
 
         out[key] = ScalerModule(**params, pattern=pattern)
         out[key]._repeated_params = rep_params
@@ -345,6 +350,7 @@ class DisjointBatch(Batch):
 
     @classmethod
     def from_data_list(cls, data_list: List[Data],
+                       force_batch: bool = False,
                        follow_batch: Optional[List[str]] = None,
                        exclude_keys: Optional[List[str]] = None,
                        graph_attributes: Optional[List[str]] = None):
@@ -358,6 +364,9 @@ class DisjointBatch(Batch):
 
         Args:
             data_list (list): The list of :class:`tsl.data.Data` objects.
+            force_batch (bool): If :obj:`True`, then add add dummy batch
+                dimension for time-varying elements.
+                (default: :obj:`False`)
             follow_batch (list, optional): Create an assignment vector for each
                 key in :attr:`follow_batch`.
                 (default: :obj:`None`)
@@ -388,18 +397,21 @@ class DisjointBatch(Batch):
             exclude_keys=exclude_keys,
         )
 
-        scalers = disjoint_scaler_collate(data_list, batch_index=batch.batch)
+        scalers = disjoint_scaler_collate(data_list, batch_index=batch.batch,
+                                          force_batch=force_batch)
         batch.transform.update(scalers)
 
         # repeat node-invariant item element along node dimension to not lose
         # coupling with item in the batch
-        repeated_keys = []
-        for key, value in batch:
+        repeated_keys = dict()
+        for key, value in batch.items():
+            if key in ['transform', 'batch', 'ptr']:
+                continue
             if batch.__cat_dim__(key, value) is None:
                 if key not in graph_attributes:
                     batch[key] = value[batch.batch]
                     slice_dict[key] = batch.ptr
-                    repeated_keys.append(key)
+                    repeated_keys[key] = 0
                 if key in batch.pattern:
                     dims = batch.pattern[key].split(' ')
                     # '... -> b ...'
@@ -407,13 +419,26 @@ class DisjointBatch(Batch):
                         dims.insert(0, 'b')
                     # 'n t ... -> t n ...'
                     elif 't' in dims:
+                        # invert batch dimension (after collate) with time to
+                        # follow time_then_node convention
                         batch[key] = torch.transpose(batch[key], 0, 1). \
                             contiguous()
+                        # adjust pattern and repeated axis
                         dims.insert(1, 'n')
+                        repeated_keys[key] = 1
                     # '... -> n ...'
                     else:
                         dims.insert(0, 'n')
                     batch.pattern[key] = ' '.join(dims)
+            # if `force_batch` add dummy batch dimension for time-varying elems
+            if force_batch and key in batch.pattern:
+                if 't' in batch.pattern[key]:
+                    batch[key] = batch[key][None]
+                    batch.pattern[key] = 'b ' + batch.pattern[key]
+                    if key in repeated_keys:
+                        repeated_keys[key] = [0, repeated_keys[key]+1]
+                    else:
+                        repeated_keys[key] = [0]
 
         batch._num_graphs = len(data_list)
         batch._slice_dict = slice_dict
@@ -447,11 +472,15 @@ class DisjointBatch(Batch):
         scalers = get_disjoint_scaler(self, idx=idx)
         data.transform.update(scalers)
 
-        for key in self._repeated_keys:
-            data[key] = data[key][0]
+        for key, dims in self._repeated_keys.items():
+            idx = [0 if i in dims else slice(None)  # e.g. dims=[1] -> [:, 0, :]
+                   for i in range(data[key].ndim)]
+            data[key] = data[key][idx]
             if key in data.pattern:
-                # was 'n ' + previous_pattern, remove 'n '
-                data.pattern[key] = data.pattern[key][2:]
+                pattern_dims = data.pattern[key].split(' ')
+                pattern_dims = [tkn for i, tkn in enumerate(pattern_dims)
+                                if i not in dims]
+                data.pattern[key] = ' '.join(pattern_dims)
 
         return data
 

@@ -3,13 +3,14 @@ import math
 import numpy as np
 import torch
 from torch import nn
+from tqdm import tqdm
 
 from tsl.datasets import TabularDataset
 
 from tsl.typing import SparseTensArray
 from tsl.ops.connectivity import parse_connectivity
 from tsl.utils.casting import torch_to_numpy
-from tsl.utils.python_utils import filter_kwargs, foo_signature
+from tsl.utils.python_utils import foo_signature
 
 
 class GaussianNoiseSyntheticDataset(TabularDataset):
@@ -125,7 +126,9 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
 
         with torch.no_grad():
             h_t = None
-            for t in range(self._min_window, self._min_window + self._num_steps):
+            for t in tqdm(range(self._min_window,
+                                self._min_window + self._num_steps),
+                          desc=f"Generating {self.__class__.__name__} data"):
                 x_t, h_t = self._model_forward(x[None, t - self._min_window: t],
                                                h=h_t,
                                                t=t,

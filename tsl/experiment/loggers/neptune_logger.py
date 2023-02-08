@@ -36,6 +36,10 @@ class NeptuneLogger(LightningNeptuneLogger):
         params (Mapping, optional): Mapping of the run's parameters (are logged
             as :obj:`"parameters"` on Neptune).
             (default: :obj:`None`)
+        save_dir (str, optional): Save directory of the experiment, used to
+            temporarily log artifacts before upload. If :obj:`None`, then
+            defaults to ``.neptune``.
+            (default: :obj:`None`)
         debug (bool): If :obj:`True`, then do not log online (i.e., log in
             :obj:`"debug"` mode). Otherwise log online in :obj:`"async"` mode.
             (default: :obj:`False`)
@@ -53,6 +57,7 @@ class NeptuneLogger(LightningNeptuneLogger):
                  experiment_name: Optional[str] = None,
                  tags: Optional[Union[str, List]] = None,
                  params: Optional[Mapping] = None,
+                 save_dir: Optional[str] = None,
                  debug: bool = False,
                  prefix: Optional[str] = 'logs',
                  upload_stdout: bool = False,
@@ -70,14 +75,49 @@ class NeptuneLogger(LightningNeptuneLogger):
             capture_stdout=upload_stdout,
             mode=mode,
             **kwargs)
-        self.run['parameters'] = params
-        # self.log_hyperparams(params=params)
+        self.save_dir = save_dir
+        if params is not None:
+            self.run['parameters'] = params
+
+    @property
+    def save_dir(self) -> Optional[str]:
+        """Gets the save directory of the experiment.
+
+        Returns:
+            the root directory where experiment logs get saved
+        """
+        return self._save_dir
+
+    @save_dir.setter
+    def save_dir(self, value):
+        if value is not None:
+            self._save_dir = os.path.abspath(value)
+        else:
+            self._save_dir = os.path.join(os.getcwd(), ".neptune")
 
     def log_metric(self, metric_name: str,
                    metric_value: Union[Tensor, float, str],
                    step: Optional[int] = None):
         # todo log metric series at once
         self.run[f'logs/{metric_name}'].log(metric_value, step)
+
+    def _artifact_storage_path(self, name, extension: str = None):
+        # add extension to name
+        if extension is not None:
+            if not extension.startswith('.'):
+                extension = '.' + extension
+            if not name.endswith(extension):
+                name += extension
+        else:
+            _, extension = os.path.splitext(name)
+        # save artifact with temporary random id
+        from random import choice
+        from string import ascii_letters
+        rnd = ''.join([choice(ascii_letters) for _ in range(16)]) + extension
+        # create artifact path
+        os.makedirs(self.save_dir, exist_ok=True)
+        id_path = os.path.join(self.save_dir, rnd)
+        return id_path, name
 
     def log_artifact(self, filename: str, artifact_name: Optional[str] = None,
                      delete_after: bool = False):
@@ -90,16 +130,45 @@ class NeptuneLogger(LightningNeptuneLogger):
         else:
             self.run[f"artifacts/{artifact_name}"].upload(filename)
 
-    def log_numpy(self, array, name="array"):
-        if not name.endswith('.npy'):
-            name += '.npy'
-        np.save(name, array)
-        self.log_artifact(name, delete_after=True)
+    def log_numpy(self, array, name: str = "array"):
+        """Log a numpy array object.
+
+        Args:
+            array (array_like): The array to be logged.
+            name (str): The name of the file. (default: :obj:`'array'`)
+        """
+        path, name = self._artifact_storage_path(name, extension='.npy')
+        np.save(path, array)
+        self.log_artifact(path, artifact_name=name, delete_after=True)
+
+    def log_dataframe(self, df: pd.DataFrame, name: str = 'dataframe'):
+        """Log a dataframe as csv.
+
+        Args:
+            df (DataFrame): The dataframe to be logged.
+            name (str): The name of the file. (default: :obj:`'dataframe'`)
+        """
+        path, name = self._artifact_storage_path(name, extension='.csv')
+        df.to_csv(path, index=True, index_label='index')
+        self.log_artifact(path, artifact_name=name, delete_after=True)
+
+    def log_figure(self, fig, name: str = 'figure'):
+        """Log a matplotlib figure as html.
+
+        Args:
+            fig (Figure): The matplotlib figure to be logged.
+            name (str): The name of the file. (default: :obj:`'figure'`)
+        """
+        path, name = self._artifact_storage_path(name, extension='.html')
+        save_figure(fig, path)
+        self.log_artifact(path, artifact_name=name, delete_after=True)
+
+    # OLD METHODS
 
     def log_pred_df(self, name, idx, y, yhat, label_y='true',
                     label_yhat='pred'):
-        """
-        Log a csv containing predictions and true values. Only works for univariate timeseries.
+        """Log a csv containing predictions and true values. Only works for
+        univariate timeseries.
 
         :param name: name of the file
         :param idx: dataframe idx
@@ -121,27 +190,3 @@ class NeptuneLogger(LightningNeptuneLogger):
         df.to_csv(name, index=True, index_label='datetime')
         self.experiment.log_artifact(name)
         os.remove(name)
-
-    def log_dataframe(self, df: pd.DataFrame, name: str = 'dataframe'):
-        """Log a dataframe as csv.
-
-        Args:
-            df (DataFrame): The dataframe to be logged.
-            name (str): The name of the file. (default: :obj:`'dataframe'`)
-        """
-        if not name.endswith('.csv'):
-            name += '.csv'
-        df.to_csv(name, index=True, index_label='index')
-        self.log_artifact(name, delete_after=True)
-
-    def log_figure(self, fig, name: str = 'figure'):
-        """Log a matplotlib figure as html.
-
-        Args:
-            fig (Figure): The matplotlib figure to be logged
-            name (str): The name of the file. (default: :obj:`'figure'`)
-        """
-        if not name.endswith('.html'):
-            name += '.html'
-        save_figure(fig, name)
-        self.log_artifact(name, delete_after=True)

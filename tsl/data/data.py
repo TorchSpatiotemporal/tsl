@@ -1,5 +1,5 @@
 import copy
-from typing import Iterator, Callable, Dict
+from typing import Iterator, Callable, Dict, Union
 from typing import (Optional, Any, List, Iterable, Tuple,
                     Mapping)
 
@@ -10,19 +10,28 @@ from torch_geometric.data.data import Data as PyGData
 from torch_geometric.data.storage import BaseStorage
 from torch_geometric.data.view import KeysView, ValuesView, ItemsView
 from torch_geometric.typing import Adj
+from torch_sparse import SparseTensor
 
 from tsl.ops.connectivity import reduce_graph
 from tsl.ops.pattern import take
 from tsl.utils.python_utils import ensure_list
 
 
-def pattern_size_repr(key: str, tensor: Tensor, pattern: str = None):
+def get_size(x: Union[Tensor, SparseTensor]) -> Tuple:
+    if isinstance(x, Tensor):
+        return tuple(x.size())
+    elif isinstance(x, SparseTensor):
+        return tuple(x.sizes())
+
+
+def pattern_size_repr(key: str, x: Union[Tensor, SparseTensor],
+                      pattern: str = None):
     if pattern is not None:
         pattern = pattern.replace(' ', '')
-        out = str([f'{token}={size}'
-                   for token, size in zip(pattern, tensor.size())])
+        out = str([f'{token}={size}' if not token.isnumeric() else str(size)
+                   for token, size in zip(pattern, get_size(x))])
     else:
-        out = str(list(tensor.size()))
+        out = str(list(get_size(x)))
     out = f"{key}={out}".replace("'", '')
     return out
 
@@ -40,7 +49,7 @@ class StorageView(BaseStorage):
 
     def __repr__(self) -> str:
         cls = self.__class__.__name__
-        info = [size_repr(k, v) for k, v in self.items()]
+        info = [pattern_size_repr(k, v) for k, v in self.items()]
         return '{}({})'.format(cls, ', '.join(info))
 
     def __setattr__(self, key, value):
@@ -216,6 +225,11 @@ class Data(PyGData):
     def __cat_dim__(self, key: str, value: Any, *args, **kwargs) -> Any:
         if key in self.pattern:
             if 'n' in self.pattern[key]:  # cat along node dimension
+                if isinstance(value, SparseTensor):
+                    # allow for multi-dim cat for SparseTensor (e.g., adj)
+                    return tuple(dim for dim, tkn
+                                 in enumerate(self.pattern[key].split(' '))
+                                 if tkn == 'n')
                 return self.pattern[key].split(' ').index('n')
             elif 'e' in self.pattern[key]:  # cat along edge dimension
                 return self.pattern[key].split(' ').index('e')

@@ -93,7 +93,9 @@ class Scaler:
         if not inplace:
             scaler = deepcopy(self)
         for name, param in scaler.params().items():
-            param = torch.atleast_1d(torch.as_tensor(param))
+            if not isinstance(param, Tensor):
+                param = torch.as_tensor(param, dtype=torch.float32)
+            param = torch.atleast_1d(param)
             setattr(scaler, name, param)
         return scaler
 
@@ -115,7 +117,7 @@ class Scaler:
 
     def transform(self, x: TensArray):
         """Apply transformation :math:`f(x) = (x - \mu) / \sigma`."""
-        return (x - self.bias) / self.scale + tsl.epsilon
+        return (x - self.bias) / (self.scale + tsl.epsilon)
 
     def inverse_transform(self, x: TensArray):
         """Apply inverse transformation
@@ -128,17 +130,23 @@ class Scaler:
         self.fit(x, *args, **kwargs)
         return self.transform(x)
 
-    def save(self, filename: str) -> str:
+    def save(self, filename: str, make_dir: bool = True) -> str:
         """Save the scaler to disk.
 
         Args:
             filename (str): The path to the filename for storage.
+            make_dir (bool): If :obj:`True`, then create non-existing
+                directories in :attr:`filename`.
+                (default: :obj:`True`)
 
         Returns:
             str: The absolute path to the saved file.
         """
         params = self.params()
         is_torch = any([isinstance(param, Tensor) for param in params.values()])
+        filename = os.path.abspath(filename)
+        if make_dir:
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
         if is_torch:
             if not filename.endswith('.pt'):
                 filename = filename + '.pt'

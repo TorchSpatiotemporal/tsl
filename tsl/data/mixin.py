@@ -21,6 +21,7 @@ class DataParsingMixin:
 
     def _parse_covariate(self, obj: DataArray, pattern: Optional[str] = None,
                          allow_broadcasting: bool = False,
+                         convert_precision: bool = True,
                          name: str = 'covariate') -> Tuple[Tensor, str]:
         # convert to tensor
         obj = casting.copy_to_tensor(obj)
@@ -36,7 +37,8 @@ class DataParsingMixin:
         self._check_pattern(obj, pattern, name,
                             allow_broadcasting=allow_broadcasting)
 
-        obj = casting.convert_precision_tensor(obj, precision=self.precision)
+        if convert_precision:
+            obj = casting.convert_precision_tensor(obj, self.precision)
 
         return obj, pattern
 
@@ -94,7 +96,7 @@ class DataParsingMixin:
 
     def _value_to_kwargs(self, value: Union[DataArray, List, Tuple, Mapping]):
         keys = ['value', 'pattern', 'add_to_input_map', 'synch_mode',
-                'preprocess']
+                'preprocess', 'convert_precision']
         if isinstance(value, (pd.DataFrame, np.ndarray, Tensor)):
             return dict(value=value)
         if isinstance(value, (list, tuple)):

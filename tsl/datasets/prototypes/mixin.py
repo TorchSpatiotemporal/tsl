@@ -137,7 +137,7 @@ class TemporalFeaturesMixin:
         datetime = dict()
         for unit in units:
             # check that unit is a valid datetime unit
-            nano_unit = casting.time_unit_to_nanoseconds(unit)
+            casting.check_time_unit(unit, include_onehot=True)
             datetime[unit] = getattr(self.index, unit)
         dummies = pd.get_dummies(pd.DataFrame(datetime, index=self.index),
                                  columns=units)

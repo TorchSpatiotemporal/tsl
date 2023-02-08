@@ -132,8 +132,8 @@ class GRIL(nn.Module):
         for i in range(self.n_layers):
             in_channels = rnn_input_size if i == 0 else self.hidden_size
             cell = DCRNNCell(input_size=in_channels,
-                             output_size=self.hidden_size,
-                             k=kernel_size, root_weight=True)
+                             hidden_size=self.hidden_size, k=kernel_size,
+                             root_weight=True)
             self.cells.append(cell)
             norm = LayerNorm(self.hidden_size) if layer_norm else nn.Identity()
             self.norms.append(norm)

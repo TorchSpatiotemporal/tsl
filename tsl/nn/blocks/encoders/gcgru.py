@@ -1,28 +1,52 @@
 from tsl.nn.base import GraphConv
-from tsl.nn.blocks.encoders.gcrnn import _GraphGRUCell, _GraphRNN
-
-from torch import nn
+from tsl.nn.base.recurrent import GraphGRUCell, RNNBase
 
 
-class GraphConvGRUCell(_GraphGRUCell):
+class GraphConvGRUCell(GraphGRUCell):
     r"""
     Gate Recurrent Unit with `GraphConv` gates.
     Loosely based on Seo et al., ”Structured Sequence Modeling with Graph Convolutional Recurrent Networks”, ICONIP 2017
 
     Args:
         input_size: Size of the input.
-        out_size: Number of units in the hidden state.
+        hidden_size: Number of units in the hidden state.
         root_weight: Whether to learn a separate transformation for the central node.
     """
-    def __init__(self, in_size, out_size, root_weight=True):
-        super(GraphConvGRUCell, self).__init__()
+
+    def __init__(self, input_size: int, hidden_size: int,
+                 bias: bool = True,
+                 asymmetric_norm: bool = True,
+                 root_weight: bool = True,
+                 activation='linear',
+                 cached: bool = False,
+                 **kwargs):
+        self.input_size = input_size
         # instantiate gates
-        self.forget_gate = GraphConv(in_size + out_size, out_size, root_weight=root_weight)
-        self.update_gate = GraphConv(in_size + out_size, out_size, root_weight=root_weight)
-        self.candidate_gate = GraphConv(in_size + out_size, out_size, root_weight=root_weight)
+        forget_gate = GraphConv(input_size + hidden_size, hidden_size,
+                                asymmetric_norm=asymmetric_norm,
+                                root_weight=root_weight,
+                                activation=activation,
+                                bias=bias, cached=cached,
+                                **kwargs)
+        update_gate = GraphConv(input_size + hidden_size, hidden_size,
+                                asymmetric_norm=asymmetric_norm,
+                                root_weight=root_weight,
+                                activation=activation,
+                                bias=bias, cached=cached,
+                                **kwargs)
+        candidate_gate = GraphConv(input_size + hidden_size, hidden_size,
+                                   asymmetric_norm=asymmetric_norm,
+                                   root_weight=root_weight,
+                                   activation=activation,
+                                   bias=bias, cached=cached,
+                                   **kwargs)
+        super(GraphConvGRUCell, self).__init__(hidden_size=hidden_size,
+                                               forget_gate=forget_gate,
+                                               update_gate=update_gate,
+                                               candidate_gate=candidate_gate)
 
 
-class GraphConvGRU(_GraphRNN):
+class GraphConvGRU(RNNBase):
     r"""
     GraphConv GRU network.
 
@@ -34,19 +58,25 @@ class GraphConvGRU(_GraphRNN):
         n_layers (int, optional): Number of hidden layers.
         root_weight (bool, optional): Whether to learn a separate transformation for the central node.
     """
-    _n_states = 1
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 n_layers=1,
-                 root_weight=True):
-        super(GraphConvGRU, self).__init__()
+    def __init__(self, input_size: int, hidden_size: int,
+                 n_layers: int = 1, cat_states_layers: bool = False,
+                 return_only_last_state: bool = False,
+                 bias: bool = True,
+                 asymmetric_norm: bool = True,
+                 root_weight: bool = True,
+                 activation='linear',
+                 cached: bool = False,
+                 **kwargs):
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.n_layers = n_layers
-        self.rnn_cells = nn.ModuleList()
-        for i in range(self.n_layers):
-            self.rnn_cells.append(GraphConvGRUCell(in_size=self.input_size if i == 0 else self.hidden_size,
-                                                   out_size=self.hidden_size,
-                                                   root_weight=root_weight))
+        rnn_cells = [
+            GraphConvGRUCell(input_size if i == 0 else hidden_size, hidden_size,
+                             asymmetric_norm=asymmetric_norm,
+                             root_weight=root_weight, activation=activation,
+                             bias=bias, cached=cached,
+                             **kwargs)
+            for i in range(n_layers)
+        ]
+        super(GraphConvGRU, self).__init__(rnn_cells, cat_states_layers,
+                                           return_only_last_state)

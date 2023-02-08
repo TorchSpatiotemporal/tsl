@@ -1,11 +1,8 @@
-import torch
-
 from tsl.nn.base import GraphConv
-from tsl.nn.blocks.encoders.gcrnn import _GraphLSTMCell, _GraphRNN
+from tsl.nn.base.recurrent import GraphLSTMCell, RNNBase
 
-from torch import nn
 
-class GraphConvLSTMCell(_GraphLSTMCell):
+class GraphConvLSTMCell(GraphLSTMCell):
     r"""
     LSTM with `GraphConv` gates.
     Loosely based on Seo et al., ”Structured Sequence Modeling with Graph Convolutional Recurrent Networks”, ICONIP 2017
@@ -15,16 +12,48 @@ class GraphConvLSTMCell(_GraphLSTMCell):
         out_size: Number of units in the hidden state.
         root_weight: Whether to learn a separate transformation for the central node.
     """
-    def __init__(self, in_size, out_size, root_weight=True):
-        super(GraphConvLSTMCell, self).__init__()
+
+    def __init__(self, input_size: int, hidden_size: int,
+                 bias: bool = True,
+                 asymmetric_norm: bool = True,
+                 root_weight: bool = True,
+                 activation='linear',
+                 cached: bool = False,
+                 **kwargs):
+        self.input_size = input_size
         # instantiate gates
-        self.input_gate = GraphConv(in_size + out_size, out_size, root_weight=root_weight)
-        self.forget_gate = GraphConv(in_size + out_size, out_size, root_weight=root_weight)
-        self.cell_gate = GraphConv(in_size + out_size, out_size, root_weight=root_weight)
-        self.output_gate = GraphConv(in_size + out_size, out_size, root_weight=root_weight)
+        input_gate = GraphConv(input_size + hidden_size, hidden_size,
+                               asymmetric_norm=asymmetric_norm,
+                               root_weight=root_weight,
+                               activation=activation,
+                               bias=bias, cached=cached,
+                               **kwargs)
+        forget_gate = GraphConv(input_size + hidden_size, hidden_size,
+                                asymmetric_norm=asymmetric_norm,
+                                root_weight=root_weight,
+                                activation=activation,
+                                bias=bias, cached=cached,
+                                **kwargs)
+        cell_gate = GraphConv(input_size + hidden_size, hidden_size,
+                              asymmetric_norm=asymmetric_norm,
+                              root_weight=root_weight,
+                              activation=activation,
+                              bias=bias, cached=cached,
+                              **kwargs)
+        output_gate = GraphConv(input_size + hidden_size, hidden_size,
+                                asymmetric_norm=asymmetric_norm,
+                                root_weight=root_weight,
+                                activation=activation,
+                                bias=bias, cached=cached,
+                                **kwargs)
+        super(GraphConvLSTMCell, self).__init__(hidden_size=hidden_size,
+                                                input_gate=input_gate,
+                                                forget_gate=forget_gate,
+                                                cell_gate=cell_gate,
+                                                output_gate=output_gate)
 
 
-class GraphConvLSTM(_GraphRNN):
+class GraphConvLSTM(RNNBase):
     r"""
         GraphConv LSTM network.
 
@@ -36,19 +65,25 @@ class GraphConvLSTM(_GraphRNN):
             n_layers (int, optional): Number of hidden layers.
             root_weight (bool, optional): Whether to learn a separate transformation for the central node.
     """
-    _n_states = 2
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 n_layers=1,
-                 root_weight=True):
-        super(GraphConvLSTM, self).__init__()
+    def __init__(self, input_size: int, hidden_size: int,
+                 n_layers: int = 1, cat_states_layers: bool = False,
+                 return_only_last_state: bool = False,
+                 bias: bool = True,
+                 asymmetric_norm: bool = True,
+                 root_weight: bool = True,
+                 activation='linear',
+                 cached: bool = False,
+                 **kwargs):
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.n_layers = n_layers
-        self.rnn_cells = nn.ModuleList()
-        for i in range(self.n_layers):
-            self.rnn_cells.append(GraphConvLSTMCell(in_size=self.input_size if i == 0 else self.hidden_size,
-                                                    out_size=self.hidden_size,
-                                                    root_weight=root_weight))
+        rnn_cells = [
+            GraphConvLSTMCell(input_size if i == 0 else hidden_size,
+                              hidden_size, asymmetric_norm=asymmetric_norm,
+                              root_weight=root_weight, activation=activation,
+                              bias=bias, cached=cached,
+                              **kwargs)
+            for i in range(n_layers)
+        ]
+        super(GraphConvLSTM, self).__init__(rnn_cells, cat_states_layers,
+                                            return_only_last_state)

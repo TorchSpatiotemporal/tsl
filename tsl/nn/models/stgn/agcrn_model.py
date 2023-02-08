@@ -3,8 +3,8 @@ from torch_geometric.typing import OptTensor
 
 from tsl.nn.blocks.encoders.agcrn import AGCRN
 from ..base_model import BaseModel
-from ...blocks.decoders import LinearReadout
 from ... import utils
+from ...blocks.decoders import LinearReadout
 
 
 class AGCRNModel(BaseModel):
@@ -28,10 +28,10 @@ class AGCRNModel(BaseModel):
                  input_size: int,
                  output_size: int,
                  horizon: int,
-                 exog_size: int,
                  n_nodes: int,
-                 emb_size: int,
-                 hidden_size: int,
+                 hidden_size: int = 64,
+                 emb_size: int = 10,
+                 exog_size: int = 0,
                  n_layers: int = 1):
         super(AGCRNModel, self).__init__(return_type=Tensor)
 
@@ -41,7 +41,8 @@ class AGCRNModel(BaseModel):
                           emb_size=emb_size,
                           num_nodes=n_nodes,
                           hidden_size=hidden_size,
-                          n_layers=n_layers)
+                          n_layers=n_layers,
+                          return_only_last_state=True)
 
         self.readout = LinearReadout(input_size=hidden_size,
                                      output_size=output_size,
@@ -51,5 +52,5 @@ class AGCRNModel(BaseModel):
         """"""
         x = utils.maybe_cat_exog(x, u)
         x = self.input_encoder(x)
-        h, _ = self.agrn(x)
-        return self.readout(h)
+        out = self.agrn(x)
+        return self.readout(out)

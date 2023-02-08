@@ -40,7 +40,7 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
     Args:
         num_communities (int): Number of communities (traingles) in the graph
         num_steps (int): Lenght of the generated sequence.
-        filter_params (iterable): Parameters of Graph Polinomial filter used to generate the dataset.
+        filter_params (iterable): Parameters of Graph Polynomial filter used to generate the dataset.
         sigma_noise (float): Standard deviation of the noise.
         name (optional, str): Name of the dataset.
     """
