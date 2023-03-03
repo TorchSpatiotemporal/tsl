@@ -106,13 +106,10 @@ class Experiment:
     def __init__(self, run_fn: Callable,
                  config_path: Optional[str] = None,
                  config_name: Optional[str] = None,
-                 pre_run_hooks: Union[Callable, List[Callable]] = None,
-                 save_cfg_as_yaml=True):
+                 pre_run_hooks: Union[Callable, List[Callable]] = None):
         if not _HYDRA_AVAILABLE:
             raise RuntimeError("Install optional dependency 'hydra-core'"
                                f" to use {self.__class__.__name__}.")
-        # wheter or not to store immediately the cfg in run.dir
-        self.save_cfg_as_yaml = save_cfg_as_yaml
 
         # store the run configuration
         self.cfg: Optional[DictConfig] = None
@@ -163,8 +160,7 @@ class Experiment:
                     hook(cfg)
                 # store final config
                 self.cfg = cfg
-                if self.save_cfg_as_yaml:
-                    self.log_config()
+                self.log_config()
 
                 self.run_output = func(cfg)
                 return self.run_output
