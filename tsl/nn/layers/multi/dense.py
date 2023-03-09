@@ -58,4 +58,4 @@ class MultiDense(MultiLinear):
         r"""Compute :math:`\mathbf{X}^{\prime} = \left[\sigma\left(\boldsymbol{
         \Theta}_i\mathbf{x}_i + \mathbf{b}_i \right)\right]_{i=0,\ldots,N}`."""
         out = self.activation(super().forward(input))
-        return self.out(out)
+        return self.dropout(out)
