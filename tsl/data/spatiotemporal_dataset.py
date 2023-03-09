@@ -37,7 +37,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     r"""Base class for structures that are bridges between Datasets and Models.
 
     A :class:`SpatioTemporalDataset` takes as input a
-    :class:`~tsl.datasets.Dataset` and
+    :class:`~tsl.datasets.prototypes.Dataset` and
     build a proper structure to feed deep models.
 
     Args:
@@ -1220,7 +1220,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         return cls(target=dataset.target,
                    index=dataset.index,
                    mask=dataset.mask,
-                   covariates=dataset.covariates,
+                   covariates=dataset._covariates,
                    name=dataset.name,
                    precision=dataset.precision,
                    connectivity=connectivity,
@@ -1235,13 +1235,3 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                    stride=stride,
                    window_lag=window_lag,
                    horizon_lag=horizon_lag)
-
-    @staticmethod
-    def add_argparse_args(parser, **kwargs):
-        parser.add_argument('--window', type=int, default=24)
-        parser.add_argument('--horizon', type=int, default=24)
-        parser.add_argument('--delay', type=int, default=0)
-        parser.add_argument('--stride', type=int, default=1)
-        parser.add_argument('--window-lag', type=int, default=1)
-        parser.add_argument('--horizon-lag', type=int, default=1)
-        return parser

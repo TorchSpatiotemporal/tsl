@@ -7,7 +7,10 @@ Torch Spatiotemporal
 
     <div id="particles-js">
         <div class="hero-shade"></div>
-        <img src="_static/img/tsl_logo_text.svg" class="hero-logo"/>
+        <div class="hero-content">
+            <img class="hero-logo" src="_static/img/tsl_logo_text.svg"/>
+            <p class="hero-lead">Neural spatiotemporal forecasting with PyTorch</p>
+        </div>
     </div>
     <script src="_static/js/particles.js"></script>
     <script src="_static/js/particles_config.js"></script>

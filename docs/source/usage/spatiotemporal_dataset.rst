@@ -194,3 +194,30 @@ data refers to by means of **patterns**.
         :shadow: sm
 
         Check the introductory notebook.
+
+
+Understanding patterns
+++++++++++++++++++++++
+
+
+Spatial relationships
+---------------------
+
+
+Mapping tensors to graph attributes
+-----------------------------------
+
+
+Understanding patterns
+----------------------
+
+The `t > n > f` Convention
+++++++++++++++++++++++++++
+In TSL, tabular data of this form are represented by following the [Time, Node, Features]
+(T N F) convention. Considering the previous example, we represent measurements
+acquired by 400 air quality monitoring stations in a day (with a sampling interval
+of one hour) as a tensor :math:`\mathbf{X}` with dimensions :math:`\left(24, 400, 3 \right)`.
+
+.. Note::
+    Unless otherwise stated, all layers and models in :mod:`tsl.nn` expect
+    as input a 4-dim tensor shaped as :obj:`[batch_size, steps, nodes, channels]`.
