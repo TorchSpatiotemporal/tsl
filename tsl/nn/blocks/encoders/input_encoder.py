@@ -1,8 +1,8 @@
 from torch import nn
 
-from .mlp import MLP
-from .rnn import RNN
+from tsl.nn.layers.recurrent import RNN
 from .conditional import ConditionalBlock
+from .mlp import MLP
 from .tcn import TemporalConvNet
 
 
@@ -52,7 +52,9 @@ class InputEncoder(nn.Module):
                 **kwargs
             )
         else:
-            raise NotImplementedError(f"Encoder type {enc_type} not implemented.")
+            raise NotImplementedError(
+                f"Encoder type {enc_type} not implemented.")
 
     def forward(self, x, u=None):
+        """"""
         return self.input_encoder(x, u)

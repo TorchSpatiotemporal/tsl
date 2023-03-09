@@ -5,7 +5,7 @@ from torch import nn, Tensor
 
 from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
 from tsl.nn.blocks.encoders import ConditionalBlock
-from tsl.nn.blocks.encoders.rnn import RNN
+from tsl.nn.layers import RNN
 from tsl.nn.models.base_model import BaseModel
 
 

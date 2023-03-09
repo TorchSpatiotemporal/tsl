@@ -1,29 +1,30 @@
 import math
 
 import torch
+import torch.nn.functional as F
 from einops import rearrange
+from torch import nn
 from torch_geometric.nn import MessagePassing
 
 from .mixin import NormalizedAdjacencyMixin
-from tsl.nn.utils import get_functional_activation
-
-from torch import nn
-import torch.nn.functional as F
 
 
 class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
-    """
-    Polynomial spatiotemporal graph filter.
-    For x in (nodes, time_steps), the filter is given by
-    for t in range(T):
-        x[:, t] = eps[:, t] + sum_{p=1}^P  sum_{l=0}^L  psi[l, p] * S**l . x[:, t-p]
-    where
-     - eps is some noise component
-     - S is a graph shift operator (GSO), and
-     - psi are the filter coefficients with L-hop neighbors, and P steps in the past
+    r"""Polynomial spatiotemporal graph filter from the paper `"Forecasting time
+    series with VARMA recursions on graphs."
+    <https://arxiv.org/abs/1810.08581>`_ (Isufi et al., IEEE Transactions on
+    Signal Processing 2019).
 
-    See Eq. 13, Isufi et al. "Forecasting time series with VARMA recursions
-    on graphs." IEEE Transactions on Signal Processing 2019.
+    .. math::
+
+        \mathbf{X}_t = \sum_{p=1}^{P} \sum_{l=1}^{L} \Theta_{p,l} \cdot
+        \mathbf{\tilde{A}}^{l-1} \mathbf{X}_{t-p}
+
+    where
+     - :math:`\mathbf{\tilde{A}}` is a graph shift operator (GSO);
+     - :math:`\Theta \in \mathbb{R}^{P \times L}` are the filter coefficients
+       accounting for up to :math:`L`-hop neighbors and :math:`P` time steps
+       in the past.
     """
     asymmetric_norm = False
     cached = False
@@ -36,7 +37,8 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
 
         self.temporal_order = temporal_order
         self.spatial_order = spatial_order
-        self.weight = nn.Parameter(torch.Tensor(spatial_order + 1, temporal_order))
+        self.weight = nn.Parameter(
+            torch.Tensor(spatial_order + 1, temporal_order))
         self.gcn_norm = gcn_norm
 
     def reset_parameters(self):
@@ -53,6 +55,7 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
         return model
 
     def forward(self, x, edge_index, edge_weight=None):
+        """"""
         assert x.shape[-3] >= self.temporal_order  # time steps
         assert x.shape[-1] == 1  # node features
 
@@ -68,7 +71,8 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
         # [b n p] -> [b n l]
         h = F.linear(out, self.weight)
         for l in range(1, self.spatial_order + 1):
-            h[..., l:] = self.propagate(edge_index=edge_index, x=h[..., l:], norm=edge_weight)
+            h[..., l:] = self.propagate(edge_index=edge_index, x=h[..., l:],
+                                        norm=edge_weight)
 
         # [... n l] -> [... t=1 n f=1]
         out = h.sum(axis=-1).unsqueeze(-2).unsqueeze(-1)

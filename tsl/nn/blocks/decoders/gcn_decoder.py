@@ -1,35 +1,41 @@
 from torch import nn
 
-from tsl.nn.base.graph_conv import GraphConv
-from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
-from tsl.nn import utils
+from tsl.nn.layers.graph_convs import GraphConv
+from tsl.nn.utils import get_functional_activation
+from .mlp_decoder import MLPDecoder
 
 
 class GCNDecoder(nn.Module):
-    r"""
-    GCN decoder for multistep forecasting.
-    Applies multiple graph convolutional layers followed by a feed-forward layer amd a linear readout.
+    r"""GCN decoder for multistep forecasting.
 
-    If the input representation has a temporal dimension, this model will simply take as input the representation
-    corresponding to the last step.
+    Applies multiple graph convolutional layers followed by a feed-forward layer
+    and a linear readout. If the input representation has a temporal dimension,
+    this model will simply take as input the representation corresponding to the
+    last step.
 
     Args:
         input_size (int): Input size.
         hidden_size (int): Hidden size.
         output_size (int): Output size.
-        horizon (int): Output steps.
-        n_layers (int, optional): Number of layers in the decoder. (default: 1)
-        activation (str, optional): Activation function to use.
-        dropout (float, optional): Dropout probability applied in the hidden layers.
+        horizon (int): Number of time steps in the prediction horizon.
+            (default: ``1``)
+        n_layers (int): Number of layers in the decoder.
+            (default: ``1``)
+        activation (str, optional): Activation function to be used.
+            (default: ``'relu'``)
+        dropout (float, optional): Dropout probability applied in the hidden
+            layers.
+            (default: ``0``)
     """
+
     def __init__(self,
-                 input_size,
-                 hidden_size,
-                 output_size,
-                 horizon=1,
-                 n_layers=1,
-                 activation='relu',
-                 dropout=0.):
+                 input_size: int,
+                 hidden_size: int,
+                 output_size: int,
+                 horizon: int = 1,
+                 n_layers: int = 1,
+                 activation: str = 'relu',
+                 dropout: float = 0.):
         super(GCNDecoder, self).__init__()
         graph_convs = []
         for l in range(n_layers):
@@ -38,7 +44,7 @@ class GCNDecoder(nn.Module):
                           output_size=hidden_size)
             )
         self.convs = nn.ModuleList(graph_convs)
-        self.activation = utils.get_functional_activation(activation)
+        self.activation = get_functional_activation(activation)
         self.dropout = nn.Dropout(dropout)
         self.readout = MLPDecoder(input_size=hidden_size,
                                   hidden_size=hidden_size,

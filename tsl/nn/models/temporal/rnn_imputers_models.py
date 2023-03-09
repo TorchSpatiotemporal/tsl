@@ -5,6 +5,7 @@ from einops import rearrange
 from einops.layers.torch import Rearrange
 from torch import nn, Tensor
 
+from tsl import logger
 from tsl.nn.functional import reverse_tensor
 from tsl.nn.models.base_model import BaseModel
 
@@ -19,8 +20,7 @@ class RNNImputerModel(BaseModel):
         input_size (int): Number of features of the input sample.
         hidden_size (int): Number of hidden units.
             (default: 64)
-        exog_size (int): Number of features of the input covariate,
-            if any.
+        exog_size (int): Number of features of the input covariate, if any.
             (default: :obj:`0`)
         cell (str): Type of recurrent cell to be used, one of [:obj:`gru`,
             :obj:`lstm`].
@@ -28,8 +28,8 @@ class RNNImputerModel(BaseModel):
         concat_mask (bool): If :obj:`True`, then the input tensor is
             concatenated to the mask when fed to the RNN cell.
             (default: :obj:`True`)
-        fully_connected (bool): If :obj:`True`, then the node and feature
-            dimensions are flattened together.
+        fully_connected (bool): If :obj:`True`, then node and feature dimensions
+            are flattened together.
             (default: :obj:`False`)
         n_nodes (int, optional): The number of nodes in the input sample, to be
             provided in case :obj:`fully_connected` is :obj:`True`.
@@ -55,15 +55,20 @@ class RNNImputerModel(BaseModel):
         super(RNNImputerModel, self).__init__()
 
         if fully_connected:
-            self._to_pattern = '(b n) t f'
-        else:
             assert n_nodes is not None
             input_size = input_size * n_nodes
             self._to_pattern = 'b t (n f)'
+        else:
+            self._to_pattern = '(b n) t f'
 
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.exog_size = exog_size
+
+        if concat_mask and fully_connected:
+            logger.warning("Parameter 'concat_mask' can be True only when "
+                           "'fully_connected' is False.")
+            concat_mask = False
 
         self.concat_mask = concat_mask
         self.fully_connected = fully_connected
@@ -118,16 +123,17 @@ class RNNImputerModel(BaseModel):
             u = rearrange(u, f'b t n f -> {self._to_pattern}')
 
         h = self.init_hidden_state(x)
-        x_hat = self.readout(h)
-        hs = [h]
-        preds = [x_hat]
-        for s in range(steps - 1):
-            u_t = None if u is None else u[:, s]
-            x_t = self._preprocess_input(x[:, s], x_hat, input_mask[:, s], u_t)
-            h = self.rnn_cell(x_t, h)
+
+        hs, preds = [], []
+        for s in range(steps):
+            # readout phase
             x_hat = self.readout(h)
             hs.append(h)
             preds.append(x_hat)
+            # state update phase
+            u_t = None if u is None else u[:, s]
+            x_t = self._preprocess_input(x[:, s], x_hat, input_mask[:, s], u_t)
+            h = self.rnn_cell(x_t, h)
 
         x_hat = torch.stack(preds, 1)  # [b t (n f)] or [(b n) t f]
         h = torch.stack(hs, 1)  # [b t h] or [(b n) t h]
@@ -137,7 +143,7 @@ class RNNImputerModel(BaseModel):
         if not return_hidden:
             return x_hat
 
-        if self.fully_connected:
+        if not self.fully_connected:
             h = rearrange(h, f'{self._to_pattern} -> b t n f', n=nodes)
         return [x_hat, h]
 

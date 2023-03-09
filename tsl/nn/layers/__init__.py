@@ -1,13 +1,16 @@
-from .link_predictor import LinkPredictor
-from .positional_encoding import PositionalEncoding
-from . import norm, graph_convs
-from .ops import *
+from . import base, graph_convs, multi, norm, ops, recurrent
+from .base import *  # noqa
+from .graph_convs import *  # noqa
+from .multi import *  # noqa
+from .norm import *  # noqa
+from .ops import *  # noqa
+from .recurrent import *  # noqa
 
 __all__ = [
     'graph_convs',
+    'recurrent',
     'norm',
-    'LinkPredictor',
-    'PositionalEncoding'
-] + ops.__all__
-
-classes = __all__[2:]
+    'multi',
+    'base',
+    'ops'
+]

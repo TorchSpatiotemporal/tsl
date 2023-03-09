@@ -6,9 +6,9 @@ from torch import Tensor
 from torch_geometric.typing import OptTensor, Adj
 
 from tsl.nn.functional import reverse_tensor
-from tsl.nn.layers.graph_convs.grin_cell import GRIL
+from tsl.nn.layers.base import NodeEmbedding
+from tsl.nn.layers.recurrent import GRINCell
 from tsl.nn.models.base_model import BaseModel
-from tsl.nn.base.embedding import StaticGraphEmbedding
 
 
 class GRINModel(BaseModel):
@@ -62,28 +62,28 @@ class GRINModel(BaseModel):
                  ff_dropout: float = 0.,
                  merge_mode: str = 'mlp'):
         super(GRINModel, self).__init__(return_type=list)
-        self.fwd_gril = GRIL(input_size=input_size,
-                             hidden_size=hidden_size,
-                             exog_size=exog_size,
-                             n_layers=n_layers,
-                             dropout=dropout,
-                             kernel_size=kernel_size,
-                             decoder_order=decoder_order,
-                             n_nodes=n_nodes,
-                             layer_norm=layer_norm)
-        self.bwd_gril = GRIL(input_size=input_size,
-                             hidden_size=hidden_size,
-                             exog_size=exog_size,
-                             n_layers=n_layers,
-                             dropout=dropout,
-                             kernel_size=kernel_size,
-                             decoder_order=decoder_order,
-                             n_nodes=n_nodes,
-                             layer_norm=layer_norm)
+        self.fwd_gril = GRINCell(input_size=input_size,
+                                 hidden_size=hidden_size,
+                                 exog_size=exog_size,
+                                 n_layers=n_layers,
+                                 dropout=dropout,
+                                 kernel_size=kernel_size,
+                                 decoder_order=decoder_order,
+                                 n_nodes=n_nodes,
+                                 layer_norm=layer_norm)
+        self.bwd_gril = GRINCell(input_size=input_size,
+                                 hidden_size=hidden_size,
+                                 exog_size=exog_size,
+                                 n_layers=n_layers,
+                                 dropout=dropout,
+                                 kernel_size=kernel_size,
+                                 decoder_order=decoder_order,
+                                 n_nodes=n_nodes,
+                                 layer_norm=layer_norm)
 
         if embedding_size is not None:
             assert n_nodes is not None
-            self.emb = StaticGraphEmbedding(n_nodes, embedding_size)
+            self.emb = NodeEmbedding(n_nodes, embedding_size)
         else:
             self.register_parameter('emb', None)
 
@@ -109,7 +109,8 @@ class GRINModel(BaseModel):
                                                        mask=input_mask, u=u)
         # Backward
         rev_x = reverse_tensor(x, dim=1)
-        rev_mask = reverse_tensor(input_mask, dim=1) if input_mask is not None else None
+        rev_mask = reverse_tensor(input_mask,
+                                  dim=1) if input_mask is not None else None
         rev_u = reverse_tensor(u, dim=1) if u is not None else None
         *bwd, _ = self.bwd_gril(rev_x, edge_index, edge_weight,
                                 mask=rev_mask, u=rev_u)

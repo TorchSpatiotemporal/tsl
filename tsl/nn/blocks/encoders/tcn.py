@@ -1,5 +1,5 @@
 import torch.nn as nn
-from tsl.nn.base import TemporalConv2d, GatedTemporalConv2d
+from tsl.nn.layers.base import TemporalConv2d, GatedTemporalConv2d
 from tsl.nn.utils import maybe_cat_exog, get_functional_activation
 
 from einops import rearrange

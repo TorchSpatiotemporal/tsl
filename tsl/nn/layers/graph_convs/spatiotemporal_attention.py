@@ -4,7 +4,7 @@ from torch.nn import MultiheadAttention
 from einops import rearrange, reduce
 
 
-class SpatioTemporalAtt(nn.Module):
+class SpatioTemporalAttention(nn.Module):
     def __init__(self,
                  d_in,
                  d_model,
@@ -13,7 +13,7 @@ class SpatioTemporalAtt(nn.Module):
                  dropout,
                  pool_size=1,
                  pooling_op='mean'):
-        super(SpatioTemporalAtt, self).__init__()
+        super(SpatioTemporalAttention, self).__init__()
         self.d_in = d_in
         self.d_model = d_model
         self.d_ff = d_ff

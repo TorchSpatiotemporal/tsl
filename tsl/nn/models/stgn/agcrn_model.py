@@ -1,10 +1,10 @@
 from torch import nn, Tensor
 from torch_geometric.typing import OptTensor
 
-from tsl.nn.blocks.encoders.agcrn import AGCRN
+from tsl.nn.blocks.decoders import LinearReadout
+from tsl.nn.layers.recurrent import AGCRN
+from tsl.nn.utils import maybe_cat_exog
 from ..base_model import BaseModel
-from ... import utils
-from ...blocks.decoders import LinearReadout
 
 
 class AGCRNModel(BaseModel):
@@ -50,7 +50,7 @@ class AGCRNModel(BaseModel):
 
     def forward(self, x: Tensor, u: OptTensor = None) -> Tensor:
         """"""
-        x = utils.maybe_cat_exog(x, u)
+        x = maybe_cat_exog(x, u)
         x = self.input_encoder(x)
         out = self.agrn(x)
         return self.readout(out)

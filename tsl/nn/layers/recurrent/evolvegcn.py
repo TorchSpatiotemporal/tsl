@@ -40,7 +40,8 @@ class _EvolveGCNCell(MessagePassing, NormalizedAdjacencyMixin):
     r"""
     """
 
-    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu', root_weight=False, bias=True, cached=False):
+    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu',
+                 root_weight=False, bias=True, cached=False):
         super(_EvolveGCNCell, self).__init__(aggr='add')
         self.in_size = in_size
         self.out_size = out_size
@@ -71,10 +72,12 @@ class _EvolveGCNCell(MessagePassing, NormalizedAdjacencyMixin):
 
 
 class EvolveGCNHCell(_EvolveGCNCell):
-    r"""
+    r"""EvolveGCNH cell from the paper `"EvolveGCN: Evolving Graph Convolutional
+    Networks for Dynamic Graphs" <https://arxiv.org/abs/1902.10191>`_ (Pereja et
+    al., AAAI 2020).
 
-    EvolveGCNH model from Pereja et al., "EvolveGCN: Evolving Graph Convolutional Networks for Dynamic Graphs", AAAI 2020.
-    This variant of the model adapts the weights of the graph convolution by looking at node features.
+    This variant of the model adapts the weights of the graph convolution by
+    looking at node features.
 
     Args:
         in_size (int): Size of the input.
@@ -88,7 +91,8 @@ class EvolveGCNHCell(_EvolveGCNCell):
     _cached_edge_index: Optional[Tuple[Tensor, Tensor]]
     _cached_adj_t: Optional[SparseTensor]
 
-    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu', root_weight=False, bias=True, cached=False):
+    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu',
+                 root_weight=False, bias=True, cached=False):
         super(EvolveGCNHCell, self).__init__(in_size,
                                              out_size,
                                              asymmetric_norm=asymmetric_norm,
@@ -142,10 +146,14 @@ class EvolveGCNHCell(_EvolveGCNCell):
         # x: [(batch,) nodes, channels]
         return matmul(adj_t, x, reduce=self.aggr)
 
+
 class EvolveGCNOCell(_EvolveGCNCell):
-    r"""
-    EvolveGCNH model from Pereja et al., "EvolveGCN: Evolving Graph Convolutional Networks for Dynamic Graphs", AAAI 2020.
-    This variant of the model simply updates the weights of the graph convolution.
+    r"""EvolveGCNO cell from the paper `"EvolveGCN: Evolving Graph Convolutional
+    Networks for Dynamic Graphs" <https://arxiv.org/abs/1902.10191>`_ (Pereja et
+    al., AAAI 2020).
+
+    This variant of the model simply updates the weights of the graph
+    convolution.
 
     Args:
         in_size (int): Size of the input.
@@ -159,7 +167,8 @@ class EvolveGCNOCell(_EvolveGCNCell):
     _cached_edge_index: Optional[Tuple[Tensor, Tensor]]
     _cached_adj_t: Optional[SparseTensor]
 
-    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu', root_weight=False, bias=True, cached=False):
+    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu',
+                 root_weight=False, bias=True, cached=False):
         super(EvolveGCNOCell, self).__init__(in_size,
                                              out_size,
                                              asymmetric_norm=asymmetric_norm,
@@ -176,7 +185,9 @@ class EvolveGCNOCell(_EvolveGCNCell):
 
     def forward(self, x, hs, edge_index, edge_weight=None):
         """"""
-        edge_index, edge_weight = self.normalize_edge_index(x, edge_index, edge_weight, use_cached=self.cached)
+        edge_index, edge_weight = self.normalize_edge_index(x, edge_index,
+                                                            edge_weight,
+                                                            use_cached=self.cached)
 
         if hs is None:
             W = repeat(self.W0, 'din dout -> b din dout', b=x.size(0))
@@ -201,8 +212,9 @@ class EvolveGCNOCell(_EvolveGCNCell):
 
 
 class EvolveGCN(nn.Module):
-    r"""
-    EvolveGCN encoder form Pereja et al., "EvolveGCN: Evolving Graph Convolutional Networks for Dynamic Graphs", AAAI 2020.
+    r"""EvolveGCN encoder from the paper `"EvolveGCN: Evolving Graph
+    Convolutional Networks for Dynamic Graphs"
+    <https://arxiv.org/abs/1902.10191>`_ (Pereja et al., AAAI 2020).
 
     Args:
         input_size (int): Size of the input.
@@ -237,12 +249,13 @@ class EvolveGCN(nn.Module):
             raise NotImplementedError
 
         for i in range(self.n_layers):
-            self.rnn_cells.append(cell(in_size=self.input_size if i == 0 else self.hidden_size,
-                                       out_size=self.hidden_size,
-                                       asymmetric_norm=asymmetric_norm,
-                                       activation=activation,
-                                       root_weight=root_weight,
-                                       cached=cached))
+            self.rnn_cells.append(
+                cell(in_size=self.input_size if i == 0 else self.hidden_size,
+                     out_size=self.hidden_size,
+                     asymmetric_norm=asymmetric_norm,
+                     activation=activation,
+                     root_weight=root_weight,
+                     cached=cached))
 
     def forward(self, x, edge_index, edge_weight=None):
         # x : b t n f

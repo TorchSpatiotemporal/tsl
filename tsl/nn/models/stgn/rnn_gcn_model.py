@@ -2,7 +2,7 @@ from torch import nn
 
 from tsl.nn.blocks.encoders import ConditionalBlock
 from tsl.nn.blocks.decoders.gcn_decoder import GCNDecoder
-from tsl.nn.blocks.encoders.rnn import RNN
+from tsl.nn.layers import RNN
 
 from einops import rearrange
 

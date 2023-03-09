@@ -3,29 +3,40 @@ from torch import Tensor
 from torch import nn
 from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.typing import Adj, OptTensor
 from torch_sparse import SparseTensor, matmul
 
 from tsl.nn.layers.graph_convs.mixin import NormalizedAdjacencyMixin
 from tsl.nn.utils import get_functional_activation
-from tsl.ops.connectivity import normalize_connectivity
 
 
 class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
-    r"""A simple graph convolutional operator where the message function is a simple linear projection and aggregation
-    a simple average. In other terms:
+    r"""A simple graph convolutional operator where the message function is a
+    simple linear projection and aggregation a simple average. In other terms:
 
     .. math::
-        \mathbf{X}^{\prime} = \mathbf{\hat{D}}^{-1} \mathbf{A} \mathbf{X} \boldsymbol{\Theta}
+        \mathbf{X}^{\prime} = \mathbf{\hat{D}}^{-1} \mathbf{\tilde{A}}
+        \mathbf{X} \boldsymbol{\Theta} + \mathbf{b} .
 
     Args:
         input_size (int): Size of the input features.
-        output_size (int): Size of each output features.
-        add_self_loops (bool, optional): If set to :obj:`True`, will add
-            self-loops to the input graph. (default: :obj:`False`)
-        bias (bool, optional): If set to :obj:`False`, the layer will not learn
-            an additive bias. (default: :obj:`True`)
+        output_size (int): Size of the output features.
+        bias (bool): If :obj:`False`, then the layer will not learn an additive
+            bias vector.
+            (default: :obj:`True`)
+        asymmetric_norm (bool): If :obj:`True`, then normalize the edge weights
+            as :math:`a_{j \rightarrow i} =  \frac{a_{j \rightarrow i}}
+            {deg_{i}}`, otherwise apply the GCN normalization.
+            (default: :obj:`True`)
+        root_weight (bool): If :obj:`True`, then add a filter (with different
+            weights) for the root node itself.
+            (default :obj:`True`)
+        activation (str, optional): Activation function to be used, :obj:`None`
+            for identity function (i.e., no activation).
+            (default: :obj:`None`)
+        cached (bool): If :obj:`True`, then cached the normalized edge weights
+            computed in the first call.
+            (default :obj:`False`)
         **kwargs (optional): Additional arguments of
             :class:`torch_geometric.nn.conv.MessagePassing`.
     """
@@ -35,7 +46,7 @@ class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
                  bias: bool = True,
                  asymmetric_norm: bool = True,
                  root_weight: bool = True,
-                 activation='linear',
+                 activation: str = None,
                  cached: bool = False,
                  **kwargs):
         super(GraphConv, self).__init__(aggr="add", node_dim=-2)

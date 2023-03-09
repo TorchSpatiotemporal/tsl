@@ -1,18 +1,18 @@
-from .rnn_model import RNNModel, FCRNNModel
+from .linear_models import ARModel, VARModel
 from .rnn_imputers_models import RNNImputerModel, BiRNNImputerModel
+from .rnn_model import RNNModel, FCRNNModel
 from .tcn_model import TCNModel
 from .transformer_model import TransformerModel
-from .linear_models import ARModel, VARModel
 
 __all__ = [
+    'ARModel',
+    'VARModel',
     'RNNModel',
     'FCRNNModel',
     'TCNModel',
     'TransformerModel',
     'RNNImputerModel',
     'BiRNNImputerModel',
-    'ARModel',
-    'VARModel'
 ]
 
 classes = __all__

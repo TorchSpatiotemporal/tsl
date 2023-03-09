@@ -1,14 +1,14 @@
 import math
 
 import torch
-from einops import rearrange
 from torch import nn
 from torch.nn import functional as F
 
+
 class AdaptiveGraphConv(nn.Module):
-    """
-    Dense Adaptive Graph Conv operator from
-    Bai et al. "Adaptive Graph Convolutional Recurrent Network for Trafﬁc Forecasting", NeurIPS 2020
+    """The Dense Adaptive Graph Convolution operator from the paper
+    `"Adaptive Graph Convolutional Recurrent Network for Traffic Forecasting"
+    <https://arxiv.org/abs/2007.02842>`_ (Bai et al., NeurIPS 2020).
 
     Args:
         input_size: Size of the input.
@@ -17,9 +17,11 @@ class AdaptiveGraphConv(nn.Module):
         num_nodes: Number of nodes in the input graph.
         bias: Whether to add a learnable bias.
     """
+
     def __init__(self, input_size, emb_size, output_size, num_nodes, bias=True):
         super(AdaptiveGraphConv, self).__init__()
-        self.weight = nn.Parameter(torch.Tensor(emb_size, 2, input_size, output_size))
+        self.weight = nn.Parameter(
+            torch.Tensor(emb_size, 2, input_size, output_size))
         self.num_nodes = num_nodes
         if bias:
             self.b = nn.Parameter(torch.Tensor(emb_size, output_size))

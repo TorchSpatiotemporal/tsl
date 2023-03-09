@@ -3,13 +3,11 @@ from einops import rearrange
 from torch import nn
 
 import tsl
-from tsl.nn.base import TemporalConv2d
 
 
 class DenseGraphConvOrderK(nn.Module):
-    """
-    Dense implementation the spatial diffusion of order K.
-    Adapted from: https://github.com/nnzhan/Graph-WaveNet
+    """Dense implementation of the spatial diffusion convolution of order
+    :math:`K`.
 
     Args:
         input_size (int): Size of the input.
@@ -17,7 +15,8 @@ class DenseGraphConvOrderK(nn.Module):
         support_len (int): Number of reference operators.
         order (int): Order of the diffusion process.
         include_self (bool): Whether to include the central node or not.
-        channel_last(bool, optional): Whether to use the layout "B S N C" as opposed to "B C N S"
+        channel_last(bool, optional): Whether to use the pattern "b t n f" as
+            opposed to "b f n t".
     """
 
     def __init__(self, input_size, output_size, support_len=3, order=2, include_self=True, channel_last=False):
@@ -56,6 +55,7 @@ class DenseGraphConvOrderK(nn.Module):
                 ak.fill_diagonal_(0.)
         return support + supp_k
 
+    # Adapted from: https://github.com/nnzhan/Graph-WaveNet
     def forward(self, x, support):
         """"""
         squeeze = False
@@ -91,8 +91,8 @@ class DenseGraphConvOrderK(nn.Module):
 
 
 class DenseGraphConv(nn.Module):
-    """
-    Simple Dense Graph Convolution performing X' = AXW + b.
+    r"""A dense graph convolution performing :math:`\mathbf{X}^{\prime} =
+    \mathbf{\tilde{A}} \mathbf{X} \boldsymbol{\Theta} + \mathbf{b}`.
 
     Args:
         input_size: Size of the input.

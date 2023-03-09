@@ -93,16 +93,51 @@ class AttentionScores(MessagePassing):
 
 
 class MultiHeadGraphAttention(MessagePassing):
+    """The multi-head attention from the paper `Attention Is All You Need
+    <https://arxiv.org/abs/1706.03762>`_ (Vaswani et al., NeurIPS 2017) for
+    graph-structured data.
 
-    def __init__(self, embed_dim, heads: int = 1,
+    Args:
+        embed_dim (int): Size of the embedding dimension.
+        num_heads (int): Number of attention heads.
+            (default: :obj:`1`)
+        qdim (int, optional): Number of features of the query. If :obj:`None`,
+            then defaults to :attr:`embed_dim`.
+            (default: :obj:`None`)
+        kdim (int, optional): Number of features of the key. If :obj:`None`,
+            then defaults to :attr:`embed_dim`.
+            (default: :obj:`None`)
+        vdim (int, optional): Number of features of the value. If :obj:`None`,
+            then defaults to :attr:`embed_dim`.
+            (default: :obj:`None`)
+        edge_dim (int, optional): Number of edge features (:obj:`None` if there
+            are no edge features).
+            (default: :obj:`None`)
+        concat (bool): If :obj:`True`, then the heads' outputs are concatenated
+            along the feature dimension, and the dimension of each head's output
+            is :obj:`embed_dim / num_heads`. Note that the total number of
+            features in output is :attr:`embed_dim` in both cases.
+            (default: :obj:`True`)
+        dropout (float, optional): The dropout rate.
+            (default: :obj:`0`)
+        root_weight (bool): If :obj:`True`, then add a skip connection from the
+            input with a linear transformation.
+            (default :obj:`True`)
+        bias (bool, optional): If :obj:`True`, then add a bias vector in output.
+            (default: :obj:`True`)
+        **kwargs: keyword arguments for the ``super(MessagePassing)`` call.
+    """
+
+    def __init__(self, embed_dim: int,
+                 num_heads: int = 1,
                  qdim: Optional[int] = None,
                  kdim: Optional[int] = None,
                  vdim: Optional[int] = None,
                  edge_dim: Optional[int] = None,
                  concat: bool = True,
                  dropout: float = 0.,
-                 bias: bool = True,
                  root_weight: bool = True,
+                 bias: bool = True,
                  **kwargs):
         kwargs.setdefault('aggr', 'add')
         super(MultiHeadGraphAttention, self).__init__(node_dim=-3, **kwargs)
@@ -113,28 +148,28 @@ class MultiHeadGraphAttention(MessagePassing):
         self.vdim = int(vdim) if vdim is not None else self.embed_dim
         self.edge_dim = edge_dim
 
-        self.heads = heads
+        self.num_heads = num_heads
         self.concat = concat
         self.dropout = dropout
         self.root_weight = root_weight
         self._alpha = None
 
         if self.concat:
-            self.head_dim = self.embed_dim // self.heads
-            assert self.head_dim * self.heads == self.embed_dim, \
+            self.head_dim = self.embed_dim // self.num_heads
+            assert self.head_dim * self.num_heads == self.embed_dim, \
                 "embed_dim must be divisible by heads"
         else:
             self.head_dim = self.embed_dim
 
         # key bias is discarded in softmax
-        self.lin_key = Linear(self.kdim, heads * self.head_dim, bias=False)
-        self.lin_query = Linear(self.qdim, heads * self.head_dim,
+        self.lin_key = Linear(self.kdim, num_heads * self.head_dim, bias=False)
+        self.lin_query = Linear(self.qdim, num_heads * self.head_dim,
                                 bias_initializer='zeros')
-        self.lin_value = Linear(self.vdim, heads * self.head_dim,
+        self.lin_value = Linear(self.vdim, num_heads * self.head_dim,
                                 bias_initializer='zeros')
 
         if edge_dim is not None:
-            self.lin_edge = Linear(edge_dim, heads * self.head_dim, bias=False)
+            self.lin_edge = Linear(edge_dim, num_heads * self.head_dim, bias=False)
         else:
             self.lin_edge = self.register_parameter('lin_edge', None)
 
@@ -162,7 +197,7 @@ class MultiHeadGraphAttention(MessagePassing):
         n = value.size(-2)
         x = value  # save original input for skip connection
         # project and split heads
-        h_and_c = self.heads, self.head_dim
+        h_and_c = self.num_heads, self.head_dim
         query = self.lin_query(query).view(query.shape[:-1] + h_and_c)
         key = self.lin_key(key).view(key.shape[:-1] + h_and_c)
         value = self.lin_value(value).view(value.shape[:-1] + h_and_c)
@@ -231,7 +266,8 @@ class GATLayer(nn.Module):
         b, s, n, _ = x.size()
         x = rearrange(x, 'b s n f -> (b s n) f')
         rep = b * s
-        batch_edge_index = Batch.from_data_list([Data(edge_index=edge_index, num_nodes=n), ] * rep)
+        batch_edge_index = Batch.from_data_list([Data(edge_index=edge_index,
+                                                      num_nodes=n), ] * rep)
         x = self.gat_conv(x, batch_edge_index.edge_index)
         x = rearrange(x, '(b s n) f -> b s n f', b=b, s=s)
         return x

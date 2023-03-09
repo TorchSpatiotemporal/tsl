@@ -1,14 +1,15 @@
 from torch import nn
 
 from tsl.nn.models import BaseModel
-from tsl.nn import utils
-from tsl.nn.blocks.encoders import EvolveGCN
+from tsl.nn.utils import maybe_cat_exog
+from tsl.nn.layers.recurrent import EvolveGCN
 from tsl.nn.blocks.decoders import LinearReadout
 
 
 class EvolveGCNModel(BaseModel):
-    r"""
-    EvolveGCN model form Pereja et al., "EvolveGCN: Evolving Graph Convolutional Networks for Dynamic Graphs", AAAI 2020.
+    r"""The EvolveGCN model from the paper `"EvolveGCN: Evolving Graph
+    Convolutional Networks for Dynamic Graphs"
+    <https://arxiv.org/abs/1902.10191>`_ (Pereja et al., AAAI 2020).
 
     Args:
         input_size (int): Size of the input.
@@ -58,7 +59,7 @@ class EvolveGCNModel(BaseModel):
     def forward(self, x, edge_index, edge_weight=None, u=None):
         """"""
         # x: [batches steps nodes features]
-        x = utils.maybe_cat_exog(x, u)
+        x = maybe_cat_exog(x, u)
         x = self.input_encoder(x)
         x = self.encoder(x, edge_index, edge_weight)
 

@@ -31,8 +31,7 @@ experiment_requires = [
 
 full_install_requires = plot_requires + experiment_requires + [
     'holidays',
-    'neptune-client>=0.14,<0.17',
-    'pytorch_fast_transformers'
+    'neptune-client>=0.14,<0.17'
 ]
 
 doc_requires = full_install_requires + [

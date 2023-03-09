@@ -4,15 +4,16 @@ import torch
 import torch.nn as nn
 from torch import Tensor, LongTensor
 from torch_geometric.typing import OptTensor
-from torch_geometric.utils import remove_self_loops, to_scipy_sparse_matrix, \
-    from_scipy_sparse_matrix
+from torch_geometric.utils import (remove_self_loops,
+                                   to_scipy_sparse_matrix,
+                                   from_scipy_sparse_matrix)
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 
-from .diff_conv import DiffConv
-from ..norm import LayerNorm
-from ...base.embedding import StaticGraphEmbedding
-from tsl.nn.blocks.encoders.dcrnn import DCRNNCell
+from tsl.nn.layers.base import NodeEmbedding
+from tsl.nn.layers.graph_convs import DiffConv
+from tsl.nn.layers.norm import LayerNorm
 from tsl.ops.connectivity import power_series, asymmetric_norm, transpose
+from .dcrnn import DCRNNCell
 
 
 def compute_support(edge_index: LongTensor, edge_weight: OptTensor = None,
@@ -21,11 +22,12 @@ def compute_support(edge_index: LongTensor, edge_weight: OptTensor = None,
                     add_backward: bool = True):
     num_nodes = maybe_num_nodes(edge_index, num_nodes)
     edge_index, edge_weight = remove_self_loops(edge_index, edge_weight)
-    ei, ew = asymmetric_norm(edge_index, edge_weight, dim=1, num_nodes=num_nodes)
+    ei, ew = asymmetric_norm(edge_index, edge_weight, dim=1,
+                             num_nodes=num_nodes)
     a = to_scipy_sparse_matrix(ei, ew, num_nodes)
     support = []
     ak = a
-    for i in range(order-1):
+    for i in range(order - 1):
         ak = ak * a
         ak.setdiag(0.)
         ak.eliminate_zeros()
@@ -71,7 +73,8 @@ class SpatialDecoder(nn.Module):
                         edge_weight: OptTensor = None,
                         num_nodes: Optional[int] = None,
                         add_backward: bool = True):
-        ei, ew = asymmetric_norm(edge_index, edge_weight, dim=1, num_nodes=num_nodes)
+        ei, ew = asymmetric_norm(edge_index, edge_weight, dim=1,
+                                 num_nodes=num_nodes)
         ei, ew = power_series(ei, ew, self.order)
         ei, ew = remove_self_loops(ei, ew)
         if add_backward:
@@ -104,7 +107,34 @@ class SpatialDecoder(nn.Module):
         return self.read_out(out), out
 
 
-class GRIL(nn.Module):
+class GRINCell(nn.Module):
+    r"""The Graph Recurrent Imputation cell with `Diffusion Convolution
+    <https://arxiv.org/abs/1707.01926>`_ from the paper
+    `"Filling the G_ap_s: Multivariate Time Series Imputation by Graph Neural
+    Networks" <https://arxiv.org/abs/2108.00298>`_ (Cini et al., ICLR 2022).
+
+    Args:
+        input_size (int): Size of the input.
+        hidden_size (int): Number of units in the DCRNN hidden layer.
+            (default: :obj:`64`)
+        exog_size (int): Number of channels in the exogenous variables, if any.
+            (default: :obj:`0`)
+        n_layers (int): Number of stacked DCRNN cells.
+            (default: :obj:`1`)
+        n_nodes (int, optional): Number of nodes in the input graph.
+            (default: :obj:`None`)
+        kernel_size (int): Order of the spatial diffusion process in the DCRNN
+            cells. (default: :obj:`2`)
+        decoder_order (int): Order of the spatial diffusion process in the
+            spatial decoder.
+            (default: :obj:`1`)
+        layer_norm (bool, optional): If :obj:`True`, then use layer
+            normalization.
+            (default: :obj:`False`)
+        dropout (float, optional): Dropout probability in the DCRNN cells.
+            (default: :obj:`0`)
+    """
+
     def __init__(self,
                  input_size: int,
                  hidden_size: int,
@@ -115,7 +145,7 @@ class GRIL(nn.Module):
                  decoder_order: int = 1,
                  layer_norm: bool = False,
                  dropout: float = 0.):
-        super(GRIL, self).__init__()
+        super(GRINCell, self).__init__()
 
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -153,7 +183,7 @@ class GRIL(nn.Module):
         if n_nodes is not None:
             self.h0 = nn.ModuleList()
             for _ in range(self.n_layers):
-                self.h0.append(StaticGraphEmbedding(n_nodes, self.hidden_size))
+                self.h0.append(NodeEmbedding(n_nodes, self.hidden_size))
         else:
             self.register_parameter('h0', None)
 

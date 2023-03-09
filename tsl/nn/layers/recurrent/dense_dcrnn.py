@@ -2,14 +2,15 @@ from typing import Optional
 
 from torch import Tensor
 
-from tsl.nn.base.recurrent import GraphGRUCell, RNNBase
+from tsl.nn.layers.recurrent.base import GraphGRUCell, RNNBase
 from tsl.nn.layers.graph_convs.dense_graph_conv import DenseGraphConvOrderK
 
 
 class DenseDCRNNCell(GraphGRUCell):
-    r"""The Diffusion Convolutional Recurrent cell from the paper
-    `"Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic
-    Forecasting" <https://arxiv.org/abs/1707.01926>`_ (Li et al., ICLR 2018).
+    r"""Dense implementation of the Diffusion Convolutional Recurrent cell from
+    the paper `"Diffusion Convolutional Recurrent Neural Network: Data-Driven
+    Traffic Forecasting" <https://arxiv.org/abs/1707.01926>`_ (Li et al., ICLR
+    2018).
 
     In this implementation, the adjacency matrix is dense and the convolution is
     performed with matrix multiplication.
@@ -51,9 +52,10 @@ class DenseDCRNNCell(GraphGRUCell):
 
 
 class DenseDCRNN(RNNBase):
-    """The Diffusion Convolutional Recurrent Neural Network from the paper
-    `"Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic
-    Forecasting" <https://arxiv.org/abs/1707.01926>`_ (Li et al., ICLR 2018).
+    """Dense implementation of the Diffusion Convolutional Recurrent Neural
+    Network from the paper `"Diffusion Convolutional Recurrent Neural Network:
+    Data-Driven Traffic Forecasting" <https://arxiv.org/abs/1707.01926>`_
+    (Li et al., ICLR 2018).
 
     In this implementation, the adjacency matrix is dense and the convolution is
     performed with matrix multiplication.

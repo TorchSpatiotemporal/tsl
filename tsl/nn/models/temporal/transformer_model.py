@@ -8,7 +8,7 @@ from tsl.nn.blocks.encoders import ConditionalBlock
 from tsl.nn.blocks.encoders.mlp import MLP
 from tsl.nn.blocks.encoders.transformer import Transformer
 from tsl.nn.layers.ops import Select
-from tsl.nn.layers.positional_encoding import PositionalEncoding
+from tsl.nn.layers import PositionalEncoding
 from tsl.nn.models.base_model import BaseModel
 
 

@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch import nn, Tensor
 
 from tsl.nn import utils
-from tsl.nn.base.attention import MultiHeadAttention
+from tsl.nn.layers.base import MultiHeadAttention
 from tsl.nn.layers.norm import LayerNorm
 
 
@@ -80,7 +80,7 @@ class TransformerLayer(nn.Module):
 class SpatioTemporalTransformerLayer(nn.Module):
     r"""A :class:`~tsl.nn.blocks.encoders.TransformerLayer` which attend both
     the spatial and temporal dimensions by stacking two
-    :class:`~tsl.nn.base.MultiHeadAttention` layers.
+    :class:`~tsl.nn.layers.base.MultiHeadAttention` layers.
 
     Args:
         input_size (int): Input size.

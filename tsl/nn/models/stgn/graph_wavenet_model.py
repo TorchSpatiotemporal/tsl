@@ -6,12 +6,11 @@ from torch import nn, Tensor
 from torch.nn import functional as F
 from torch_geometric.typing import Adj, OptTensor
 
-from tsl.nn.base.embedding import StaticGraphEmbedding
-from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
-from tsl.nn.blocks.encoders.tcn import TemporalConvNet
-from tsl.nn.layers.graph_convs.dense_graph_conv import DenseGraphConvOrderK
-from tsl.nn.layers.graph_convs.diff_conv import DiffConv
-from tsl.nn.layers.norm.norm import Norm
+from tsl.nn.blocks.decoders import MLPDecoder
+from tsl.nn.blocks.encoders import TemporalConvNet
+from tsl.nn.layers.base import NodeEmbedding
+from tsl.nn.layers.graph_convs import DenseGraphConvOrderK, DiffConv
+from tsl.nn.layers.norm import Norm
 from ..base_model import BaseModel
 
 
@@ -73,8 +72,8 @@ class GraphWaveNetModel(BaseModel):
 
         if learned_adjacency:
             assert n_nodes is not None
-            self.source_embeddings = StaticGraphEmbedding(n_nodes, emb_size)
-            self.target_embeddings = StaticGraphEmbedding(n_nodes, emb_size)
+            self.source_embeddings = NodeEmbedding(n_nodes, emb_size)
+            self.target_embeddings = NodeEmbedding(n_nodes, emb_size)
         else:
             self.register_parameter('source_embedding', None)
             self.register_parameter('target_embedding', None)

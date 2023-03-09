@@ -6,9 +6,9 @@ from tsl.nn.models import BaseModel
 from einops import rearrange
 from einops.layers.torch import Rearrange
 
-from tsl.nn.base import StaticGraphEmbedding
+from tsl.nn.layers.base import NodeEmbedding
 from tsl.nn.layers.graph_convs import GatedGraphNetwork
-from tsl.nn import utils
+from tsl.nn.utils import maybe_cat_exog, get_layer_activation
 
 
 class GatedGraphNetworkModel(BaseModel):
@@ -62,14 +62,13 @@ class GatedGraphNetworkModel(BaseModel):
             [
                 nn.Sequential(
                     nn.Linear(hidden_size, hidden_size),
-                    utils.get_layer_activation(activation)(),
+                    get_layer_activation(activation)(),
                     nn.Linear(hidden_size, hidden_size)
                 ) for _ in range(enc_layers)
             ]
         )
 
-        self.emb = StaticGraphEmbedding(n_tokens=n_nodes,
-                                        emb_size=hidden_size)
+        self.emb = NodeEmbedding(n_nodes=n_nodes, emb_size=hidden_size)
 
         self.gcn_layers = nn.ModuleList(
             [
@@ -79,7 +78,7 @@ class GatedGraphNetworkModel(BaseModel):
 
         self.decoder = nn.Sequential(
             nn.Linear(hidden_size, hidden_size),
-            utils.get_layer_activation(activation)()
+            get_layer_activation(activation)()
         )
 
         self.readout = nn.Sequential(
@@ -90,7 +89,7 @@ class GatedGraphNetworkModel(BaseModel):
     def forward(self, x, edge_index=None, u=None):
         """"""
         # x: [batches steps nodes features]
-        x = utils.maybe_cat_exog(x, u)
+        x = maybe_cat_exog(x, u)
 
         if self.full_graph or edge_index is None:
             num_nodes = x.size(-2)

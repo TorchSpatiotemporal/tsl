@@ -1,13 +1,12 @@
 from torch import nn
 
-from tsl.nn.base import GraphConv
+from tsl.nn.layers.graph_convs import GraphConv
 from tsl.nn.blocks.decoders import MLPDecoder
-from tsl.nn.layers import Select
 from tsl.nn.models import BaseModel
 
 from einops.layers.torch import Rearrange
 
-from tsl.nn.blocks.encoders import RNN
+from tsl.nn.layers.recurrent import RNN
 from tsl.nn import utils
 
 

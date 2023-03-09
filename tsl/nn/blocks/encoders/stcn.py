@@ -1,10 +1,9 @@
 from torch import nn
 
-from tsl.nn.layers.graph_convs.diff_conv import DiffConv
-from tsl.nn.blocks.encoders.tcn import TemporalConvNet
-from tsl.nn.layers.norm.norm import Norm
-
-from tsl.nn import utils
+from tsl.nn.layers.graph_convs import DiffConv
+from tsl.nn.layers.norm import Norm
+from tsl.nn.utils import get_layer_activation
+from .tcn import TemporalConvNet
 
 
 class SpatioTemporalConvNet(nn.Module):
@@ -27,6 +26,7 @@ class SpatioTemporalConvNet(nn.Module):
             pad (bool, optional): Whether to pad the input sequence to preserve the sequence length.
             activation (str, optional): Activation function. (default: `relu`)
         """
+
     def __init__(self,
                  input_size,
                  output_size,
@@ -60,13 +60,18 @@ class SpatioTemporalConvNet(nn.Module):
 
         self.skip_conn = nn.Linear(input_size, output_size)
 
-        self.spatial_convs = nn.ModuleList(DiffConv(in_channels=output_size,
-                                                    out_channels=output_size,
-                                                    k=spatial_kernel_size) for _ in range(spatial_convs))
-        self.spatial_norms = nn.ModuleList(Norm(norm_type=norm, in_channels=output_size)
-                                           for _ in range(spatial_convs))
+        self.spatial_convs = nn.ModuleList(
+            DiffConv(in_channels=output_size,
+                     out_channels=output_size,
+                     k=spatial_kernel_size)
+            for _ in range(spatial_convs)
+        )
+        self.spatial_norms = nn.ModuleList(
+            Norm(norm_type=norm, in_channels=output_size)
+            for _ in range(spatial_convs)
+        )
         self.dropout = nn.Dropout(dropout)
-        self.activation = utils.get_functional_activation(activation)
+        self.activation = get_layer_activation(activation)()
 
     def forward(self, x, edge_index, edge_weight=None):
         """"""
@@ -74,5 +79,6 @@ class SpatioTemporalConvNet(nn.Module):
         x = self.skip_conn(x) + self.tcn(x)
         # spatial conv
         for filter, norm in zip(self.spatial_convs, self.spatial_norms):
-            x = x + self.dropout(self.activation(filter(norm(x), edge_index, edge_weight)))
+            x_neigh = filter(norm(x), edge_index, edge_weight)
+            x = x + self.dropout(self.activation(x_neigh))
         return x

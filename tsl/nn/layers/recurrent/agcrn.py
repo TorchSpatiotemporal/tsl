@@ -2,9 +2,9 @@ from typing import Optional
 
 from torch import Tensor
 
-from tsl.nn.base import StaticGraphEmbedding
-from tsl.nn.base.recurrent import GraphGRUCell, RNNBase
-from tsl.nn.layers.graph_convs.adap_graph_conv import AdaptiveGraphConv
+from tsl.nn.layers.base import NodeEmbedding
+from tsl.nn.layers.recurrent.base import GraphGRUCell, RNNBase
+from tsl.nn.layers.graph_convs.adaptive_graph_conv import AdaptiveGraphConv
 
 
 class AGCRNCell(GraphGRUCell):
@@ -74,7 +74,7 @@ class AGCRN(RNNBase):
         ]
         super(AGCRN, self).__init__(rnn_cells, cat_states_layers,
                                     return_only_last_state)
-        self.node_emb = StaticGraphEmbedding(num_nodes, emb_size)
+        self.node_emb = NodeEmbedding(num_nodes, emb_size)
 
     def forward(self, x: Tensor, h: Optional[Tensor] = None):
         emb = self.node_emb()

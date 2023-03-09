@@ -9,6 +9,8 @@ StateType = Union[Tensor, Tuple[Tensor]]
 
 
 class RNNCell(nn.Module):
+    """Base class for implementing recurrent neural networks (RNN) cells."""
+
     def initialize_state(self, *args, **kwargs) -> StateType:
         raise NotImplementedError
 
@@ -25,6 +27,9 @@ class GRUCell(RNNCell):
         self.forget_gate = forget_gate
         self.update_gate = update_gate
         self.candidate_gate = candidate_gate
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}(hidden_size={self.hidden_size})'
 
     def reset_parameters(self):
         self.forget_gate.reset_parameters()
@@ -50,6 +55,8 @@ class GRUCell(RNNCell):
 
 
 class GraphGRUCell(GRUCell):
+    """Base class for implementing graph-based gated recurrent unit (GRU)
+    cells."""
 
     def initialize_state(self, x) -> Tensor:
         return torch.zeros(x.size(0), x.size(-2), self.hidden_size,
@@ -70,6 +77,9 @@ class LSTMCell(RNNCell):
         self.forget_gate = forget_gate
         self.cell_gate = cell_gate
         self.output_gate = output_gate
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}(hidden_size={self.hidden_size})'
 
     def reset_parameters(self):
         self.input_gate.reset_parameters()
@@ -100,6 +110,8 @@ class LSTMCell(RNNCell):
 
 
 class GraphLSTMCell(LSTMCell):
+    """Base class for implementing graph-based long short-term memory (LSTM)
+     cells."""
 
     def initialize_state(self, x) -> Tuple[Tensor, Tensor]:
         return (torch.zeros(x.size(0), x.size(-2), self.hidden_size,
@@ -121,6 +133,11 @@ class RNNBase(nn.Module):
             cells = nn.ModuleList(ensure_list(cells))
         self.cells = cells
         self.n_layers = len(self.cells)
+
+    def __repr__(self) -> str:
+        args = [f'cell={self.cells[0].__class__.__name__}',
+                f'return_only_last_state={self.return_only_last_state}']
+        return f"{self.__class__.__name__}({', '.join(args)})"
 
     def reset_parameters(self):
         for cell in self.cells:

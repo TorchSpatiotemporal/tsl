@@ -1,14 +1,11 @@
-import torch
-
 import torch.nn as nn
-from tsl.nn.functional import gated_tanh
-
 from einops import rearrange
+
+from tsl.nn.functional import gated_tanh
 
 
 class TemporalConv2d(nn.Module):
-    r"""
-    Learns a standard temporal convolutional filter.
+    """Learns a standard temporal convolutional filter.
 
     Args:
         input_channels (int): Input size.
@@ -21,6 +18,7 @@ class TemporalConv2d(nn.Module):
         causal_pad (bool, optional): Whether to pad the input as to preserve causality.
         weight_norm (bool, optional): Wheter to apply weight normalization to the parameters of the filter.
     """
+
     def __init__(self,
                  input_channels,
                  output_channels,
@@ -40,7 +38,8 @@ class TemporalConv2d(nn.Module):
         self.pad_layer = nn.ZeroPad2d(self.padding)
         # we use conv2d here to accommodate multiple input sequences
         self.conv = nn.Conv2d(input_channels, output_channels, (1, kernel_size),
-                              stride=stride, padding=(0, 0), dilation=(1, dilation), bias=bias)
+                              stride=stride, padding=(0, 0),
+                              dilation=(1, dilation), bias=bias)
         if weight_norm:
             self.conv = nn.utils.weight_norm(self.conv)
         self.channel_last = channel_last
@@ -58,6 +57,7 @@ class TemporalConv2d(nn.Module):
 
 
 class GatedTemporalConv2d(TemporalConv2d):
+    """Temporal convolutional filter with gated tanh connection."""
     def __init__(self,
                  input_channels,
                  output_channels,
@@ -69,16 +69,18 @@ class GatedTemporalConv2d(TemporalConv2d):
                  causal_pad=True,
                  weight_norm=False,
                  channel_last=False):
-        super(GatedTemporalConv2d, self).__init__(input_channels=input_channels,
-                                                  output_channels=2 * output_channels,
-                                                  kernel_size=kernel_size,
-                                                  dilation=dilation,
-                                                  stride=stride,
-                                                  bias=bias,
-                                                  padding=padding,
-                                                  causal_pad=causal_pad,
-                                                  weight_norm=weight_norm,
-                                                  channel_last=channel_last)
+        super(GatedTemporalConv2d, self).__init__(
+            input_channels=input_channels,
+            output_channels=2 * output_channels,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            stride=stride,
+            bias=bias,
+            padding=padding,
+            causal_pad=causal_pad,
+            weight_norm=weight_norm,
+            channel_last=channel_last
+        )
 
     def forward(self, x):
         """"""

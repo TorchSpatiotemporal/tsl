@@ -1,4 +1,4 @@
-from tsl.nn.base.recurrent import GraphGRUCell, RNNBase
+from tsl.nn.layers.recurrent.base import GraphGRUCell, RNNBase
 from tsl.nn.layers.graph_convs.diff_conv import DiffConv
 
 

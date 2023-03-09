@@ -1,12 +1,10 @@
-from typing import Optional
-
 from einops import rearrange
 from torch import nn, Tensor
 from torch_geometric.typing import Adj, OptTensor
 
-from tsl.nn.blocks.decoders.mlp_decoder import MLPDecoder
+from tsl.nn.blocks.decoders import MLPDecoder
 from tsl.nn.blocks.encoders import ConditionalBlock
-from tsl.nn.blocks.encoders.dcrnn import DCRNN
+from tsl.nn.layers.recurrent import DCRNN
 from ..base_model import BaseModel
 
 
