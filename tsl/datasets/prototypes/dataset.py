@@ -160,10 +160,9 @@ class Dataset(object):
         if isinstance(self.root, str):
             root = os.path.expanduser(os.path.normpath(self.root))
         elif self.root is None:
-            root = config.data_dir
+            root = os.path.join(config.data_dir, self.__class__.__name__)
         else:
             raise ValueError
-        root = os.path.join(root, self.__class__.__name__)
         return root
 
     @property
