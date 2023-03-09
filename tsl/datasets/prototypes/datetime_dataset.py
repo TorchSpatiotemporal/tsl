@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Optional, Mapping, Union, Literal
+from typing import Optional, Mapping, Union, Literal, Tuple
 
 from tsl.typing import FrameArray, OptFrameArray
 from .casting import to_pandas_freq
@@ -73,7 +73,8 @@ class DatetimeDataset(TabularDataset, TemporalFeaturesMixin):
 
     def __init__(self, target: FrameArray,
                  mask: OptFrameArray = None,
-                 covariates: Optional[Mapping[str, FrameArray]] = None,
+                 covariates: Optional[
+                     Mapping[str, Union[FrameArray, Mapping, Tuple]]] = None,
                  freq: Optional[str] = None,
                  similarity_score: Optional[str] = None,
                  temporal_aggregation: str = 'sum',

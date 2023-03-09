@@ -1,5 +1,4 @@
 from argparse import Namespace, ArgumentParser
-from test_tube import HyperOptArgumentParser as ArgParser
 from typing import Union, Type
 import inspect
 

@@ -11,28 +11,32 @@ from tsl.metrics.torch import MaskedMetric
 from tsl.nn.models import BaseModel
 from tsl.utils import foo_signature
 
+
 class Predictor(pl.LightningModule):
     """:class:`~pytorch_lightning.core.LightningModule` to implement predictors.
 
     Input data should follow the format [batch, steps, nodes, features].
 
     Args:
-        model (torch.nn.Module, optional): Model implementing the predictor. Ignored if argument `model_class` is not
-            null. This argument should mainly be used for inference.
+        model (torch.nn.Module, optional): Model implementing the predictor.
+            Ignored if argument `model_class` is not :obj:`None`. This argument
+            should mainly be used for inference.
             (default: :obj:`None`)
-        model_class (type, optional): Class of :obj:`~torch.nn.Module` implementing the
-            predictor. If not `None`, argument `model` will be ignored.
+        model_class (type, optional): Class of :obj:`~torch.nn.Module`
+            implementing the predictor. If not :obj:`None`, argument ``model``
+            will be ignored.
             (default: :obj:`None`)
-        model_kwargs (mapping, optional): Dictionary of arguments to be forwarded to
-            :obj:`model_class` at instantiation.
+        model_kwargs (mapping, optional): Dictionary of arguments to be
+            forwarded to :obj:`model_class` at instantiation.
             (default: :obj:`None`)
-        optim_class (type, optional): Class of :obj:`~torch.optim.Optimizer` implementing
-            the optimizer to be used for training the model.
+        optim_class (type, optional): Class of :obj:`~torch.optim.Optimizer`
+            implementing the optimizer to be used for training the model.
             (default: :obj:`None`)
-        optim_kwargs (mapping, optional): Dictionary of arguments to be forwarded to
-            :obj:`optim_class` at instantiation.
+        optim_kwargs (mapping, optional): Dictionary of arguments to be
+            forwarded to :obj:`optim_class` at instantiation.
             (default: :obj:`None`)
-        loss_fn (callable, optional): Loss function to be used for training the model.
+        loss_fn (callable, optional): Loss function to be used for training the
+            model.
             (default: :obj:`None`)
         scale_target (bool): Whether to scale target before evaluating the loss.
             The metrics instead will always be evaluated in the original range.
@@ -43,11 +47,12 @@ class Predictor(pl.LightningModule):
             :obj:`mae` will be logged as :obj:`train_mae` when evaluated during
             training).
             (default: :obj:`None`)
-        scheduler_class (type, optional): Class of :obj:`~torch.optim.lr_scheduler._LRScheduler`
-            implementing the learning rate scheduler to be used during training.
+        scheduler_class (type, optional): Class of
+            :obj:`~torch.optim.lr_scheduler._LRScheduler` implementing the
+            learning rate scheduler to be used during training.
             (default: :obj:`None`)
-        scheduler_kwargs (mapping, optional): Dictionary of arguments to be forwarded to
-            :obj:`scheduler_class` at instantiation.
+        scheduler_kwargs (mapping, optional): Dictionary of arguments to be
+            forwarded to :obj:`scheduler_class` at instantiation.
             (default: :obj:`None`)
     """
 
@@ -145,7 +150,7 @@ class Predictor(pl.LightningModule):
     def filter_forward_kwargs(self) -> bool:
         """"""
         return self._model_fwd_signature is not None and \
-               not self._model_fwd_signature['has_kwargs']
+            not self._model_fwd_signature['has_kwargs']
 
     def _filter_forward_kwargs(self, kwargs: dict) -> dict:
         """"""
@@ -388,8 +393,3 @@ class Predictor(pl.LightningModule):
             if metric is not None:
                 cfg['monitor'] = metric
         return cfg
-
-    @staticmethod
-    def add_argparse_args(parser, **kwargs):
-        parser.add_argument('--scale-target', type=bool, default=False)
-        return parser

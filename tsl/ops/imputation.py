@@ -9,8 +9,9 @@ from tsl.datasets.prototypes.mixin import MissingValuesMixin
 from tsl.utils.python_utils import ensure_list
 
 
-def sample_mask(shape, p=0.002, p_noise=0., max_seq=1, min_seq=1, rng=None,
-                verbose=True):
+def sample_mask(shape, p: float = 0.002, p_noise: float = 0.,
+                max_seq: int = 1, min_seq: int = 1,
+                rng: np.random.Generator = None, verbose: bool = True):
     if rng is None:
         rand = np.random.random
         randint = np.random.randint
@@ -50,7 +51,7 @@ def missing_val_lens(mask):
 
 def to_missing_values_dataset(dataset: DatetimeDataset,
                               eval_mask: np.ndarray,
-                              inplace=True):
+                              inplace: bool = True):
     assert isinstance(dataset, DatetimeDataset)
     if not inplace:
         dataset = deepcopy(dataset)

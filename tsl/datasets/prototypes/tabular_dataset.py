@@ -78,7 +78,8 @@ class TabularDataset(Dataset, TabularParsingMixin):
 
     def __init__(self, target: FrameArray,
                  mask: OptFrameArray = None,
-                 covariates: Optional[Mapping[str, FrameArray]] = None,
+                 covariates: Optional[
+                     Mapping[str, Union[FrameArray, Mapping, Tuple]]] = None,
                  similarity_score: Optional[str] = None,
                  temporal_aggregation: str = 'sum',
                  spatial_aggregation: str = 'sum',

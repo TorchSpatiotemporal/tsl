@@ -221,12 +221,3 @@ class Imputer(Predictor):
         self.log_metrics(self.test_metrics, batch_size=batch.batch_size)
         self.log_loss('test', test_loss, batch_size=batch.batch_size)
         return test_loss
-
-    @staticmethod
-    def add_argparse_args(parser, **kwargs):
-        parser = Predictor.add_argparse_args(parser)
-        parser.add_argument('--whiten-prob', type=float, default=0.05)
-        parser.add_argument('--prediction-loss-weight', type=float, default=1.0)
-        parser.add_argument('--impute-only-missing', type=bool, default=True)
-        parser.add_argument('--warm-up-steps', type=tuple, default=(0, 0))
-        return parser

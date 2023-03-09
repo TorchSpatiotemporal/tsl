@@ -1,12 +1,13 @@
 import os
 import warnings
+from argparse import ArgumentParser
 
 import numpy as np
-from test_tube import HyperOptArgumentParser as ArgParser
 
 import tsl
 from tsl.utils import parser_utils
 from tsl.utils.python_utils import ensure_list
+
 
 class TslExperiment:
     r"""
@@ -19,7 +20,9 @@ class TslExperiment:
         debug: Whether to run the experiment in debug mode.
         config_path: Path to configuration files, if not specified the default will be used.
     """
-    def __init__(self, run_fn, parser: ArgParser, debug=False, config_path=None):
+
+    def __init__(self, run_fn, parser: ArgumentParser, debug=False,
+                 config_path=None):
         self.run_fn = run_fn
         self.parser = parser
         self.debug = debug
@@ -36,7 +39,8 @@ class TslExperiment:
                 experiment_config = yaml.load(fp, Loader=yaml.FullLoader)
 
             # update hparams
-            hparams = parser_utils.update_from_config(hparams, experiment_config)
+            hparams = parser_utils.update_from_config(hparams,
+                                                      experiment_config)
             if hasattr(self.parser, 'parsed_args'):
                 self.parser.parsed_args.update(experiment_config)
         return hparams
@@ -54,7 +58,8 @@ class TslExperiment:
     def run_many_times_sequential(self, n):
         hparams = self.parser.parse_args()
         hparams = self._check_config(hparams)
-        warnings.warn('Running multiple times. Make sure that randomness is handled properly')
+        warnings.warn(
+            'Running multiple times. Make sure that randomness is handled properly')
         for i in range(n):
             print(f"**************Trial n.{i}**************")
             np.random.seed()
