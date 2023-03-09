@@ -324,16 +324,34 @@ def r2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None
     return 1. - (mse_ / variance)
 
 
-def mre(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None) -> float:
+def mre(y_hat: torch.Tensor, y: torch.Tensor,
+        mask: Optional[torch.Tensor] = None) -> float:
+    r"""Compute the MAE normalized by the L1-norm of the true signal :math:`y`,
+    i.e.
+
+    .. math::
+
+        \text{MRE} = \frac{\sum_{i=1}^n |\hat{y}_i - y_i|}{\sum_{i=1}^n |y_i|}
+
+    Args:
+        y_hat (torch.Tensor): The estimated variable.
+        y (torch.Tensor): The ground-truth variable.
+        mask (torch.Tensor, optional): If provided, compute the metric using
+        only the values at valid indices
+        (with :attr:`mask` set to :obj:`True`).
+            (default: :obj:`None`)
+
+    Returns:
+        float: The computed MRE value.
+    """
     if mask is None:
-        err = torch.abs(y_hat - y)
-        return err.sum() / (y.sum() + tsl.epsilon)
+        den = torch.abs(y).sum() + tsl.epsilon
     else:
         if mask.dtype != torch.bool:
             mask = mask.to(torch.bool)
-        err = torch.abs(y_hat[mask] - y[mask])
-        return err.sum() / (y[mask].sum() + tsl.epsilon)
-
+        den = torch.abs(y[mask]).sum() + tsl.epsilon
+    err = mae(y_hat, y, mask, reduction='sum')
+    return err / den
 
 def pinball_loss(y_hat, y, q):
     err = y - y_hat

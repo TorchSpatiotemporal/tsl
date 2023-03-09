@@ -315,10 +315,31 @@ def r2(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None,
     return 1. - (mse_ / variance)
 
 
-def mre(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None) -> float:
+def mre(y_hat: FrameArray, y: FrameArray,
+        mask: Optional[FrameArray] = None) -> float:
+    r"""Compute the MAE normalized by the L1-norm of the true signal :math:`y`,
+    i.e.
+
+    .. math::
+
+        \text{MRE} = \frac{\sum_{i=1}^n |\hat{y}_i - y_i|}{\sum_{i=1}^n |y_i|}
+
+    Args:
+        y_hat (FrameArray): The estimated variable.
+        y (tFrameArray): The ground-truth variable.
+        mask (FrameArray, optional): If provided, compute the metric using
+        only the values at valid indices
+        (with :attr:`mask` set to :obj:`True`).
+            (default: :obj:`None`)
+
+    Returns:
+        float: The computed MRE value.
+    """
     if mask is None:
-        mask = slice(None)
+        den = np.sum(np.abs(y)) + tsl.epsilon
     else:
-        mask = np.asarray(mask, dtype=bool)
-    err = np.abs(y_hat[mask] - y[mask])
-    return err.sum() / (y[mask].sum() + tsl.epsilon)
+        if mask.dtype != bool:
+            mask = mask.astype(bool)
+        den = np.sum(np.abs(y[mask])) + tsl.epsilon
+    err = mae(y_hat, y, mask, reduction='sum')
+    return err / den
