@@ -211,6 +211,7 @@ class GRINCell(nn.Module):
     def forward(self, x: Tensor, edge_index: LongTensor,
                 edge_weight: OptTensor = None, mask: OptTensor = None,
                 u: OptTensor = None, h: Union[List[Tensor], Tensor] = None):
+        """"""
         # x: [batch, steps, nodes, channels]
         steps = x.size(1)
 

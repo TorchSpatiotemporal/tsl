@@ -4,7 +4,7 @@ import torch
 from torch import Tensor
 
 from .linear import MultiLinear
-from ..recurrent.base import GRUCell, LSTMCell, RNNBase
+from ..recurrent.base import GRUCell, LSTMCell
 
 
 class MultiGRUCell(GRUCell):
@@ -138,30 +138,3 @@ class MultiLSTMCell(LSTMCell):
                             dtype=x.dtype, device=x.device),
                 torch.zeros(x.size(0), self.n_instances, self.hidden_size,
                             dtype=x.dtype, device=x.device))
-
-
-class MultiRNN(RNNBase):
-    """A Recurrent Neural Network whose cells' weights are not shared along
-    the different instances."""
-
-    def __init__(self, input_size: int, hidden_size: int, n_instances: int,
-                 n_layers: int = 1, cat_states_layers: bool = False,
-                 return_only_last_state: bool = False,
-                 cell: str = 'gru',
-                 bias: bool = True,
-                 **kwargs):
-
-        if cell == 'gru':
-            cell = MultiGRUCell
-        elif cell == 'lstm':
-            cell = MultiLSTMCell
-        else:
-            raise NotImplementedError(f'"{cell}" cell not implemented.')
-
-        rnn_cells = [
-            cell(input_size if i == 0 else hidden_size, hidden_size,
-                 n_instances, bias=bias, **kwargs)
-            for i in range(n_layers)
-        ]
-        super(MultiRNN, self).__init__(rnn_cells, cat_states_layers,
-                                       return_only_last_state)

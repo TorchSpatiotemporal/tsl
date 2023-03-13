@@ -5,12 +5,12 @@ from .attention import (PositionalEncoding,
                         SpatialSelfAttention)
 from .dense import Dense
 from .embedding import NodeEmbedding
-from .temporal_conv import TemporalConv2d, GatedTemporalConv2d
+from .temporal_conv import TemporalConv, GatedTemporalConv
 
 __all__ = [
     'Dense',
-    'TemporalConv2d',
-    'GatedTemporalConv2d',
+    'TemporalConv',
+    'GatedTemporalConv',
     'NodeEmbedding',
     'PositionalEncoding',
     'MultiHeadAttention',

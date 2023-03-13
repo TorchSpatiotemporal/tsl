@@ -3,8 +3,7 @@ from torch import nn, Tensor
 from torch_geometric.typing import Adj, OptTensor
 
 from tsl.nn.blocks.decoders import MLPDecoder
-from tsl.nn.blocks.encoders import ConditionalBlock
-from tsl.nn.layers.recurrent import DCRNN
+from tsl.nn.blocks.encoders import DCRNN, ConditionalBlock
 from ..base_model import BaseModel
 
 

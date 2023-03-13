@@ -24,26 +24,13 @@ layers.
 Recurrent Layers
 ----------------
 
-The subpackage :mod:`tsl.nn.layers.recurrent` contains the layers that process
-the input sequence in a recurrent fashion.
+The subpackage :mod:`tsl.nn.layers.recurrent` contains the cells used in
+encoders that process the input sequence in a recurrent fashion.
 
 .. currentmodule:: tsl.nn.layers.recurrent
-
-Recurrent Cells
-+++++++++++++++
-
 .. autosummary::
    :nosignatures:
-   {% for cls in tsl.nn.layers.recurrent.cell_classes %}
-     {{ cls }}
-   {% endfor %}
-
-Recurrent Networks
-++++++++++++++++++
-
-.. autosummary::
-   :nosignatures:
-   {% for cls in tsl.nn.layers.recurrent.rnn_classes %}
+   {% for cls in tsl.nn.layers.recurrent.classes %}
      {{ cls }}
    {% endfor %}
 

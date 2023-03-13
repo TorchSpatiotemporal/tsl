@@ -27,6 +27,7 @@ class _TopK(torch.nn.Module):
         self.p.data.uniform_(-stdv, stdv)
 
     def forward(self, x):
+        """"""
         scores = x @ self.p / self.p.norm()
         vals, topk_idxs = scores.topk(self.k, dim=-2)  # b k 1 -> b k f
         idxs = topk_idxs.expand(-1, self.k, x.size(-1))
@@ -138,6 +139,7 @@ class EvolveGCNHCell(_EvolveGCNCell):
         return self.activation_fn(out), W
 
     def message(self, x_j: Tensor, edge_weight) -> Tensor:
+        """"""
         return edge_weight.view(-1, 1) * x_j
 
     def message_and_aggregate(self, adj_t: SparseTensor, x: Tensor) -> Tensor:
@@ -209,60 +211,3 @@ class EvolveGCNOCell(_EvolveGCNCell):
             out += self.skip_con(x)
 
         return self.activation_fn(out), (W, hc)
-
-
-class EvolveGCN(nn.Module):
-    r"""EvolveGCN encoder from the paper `"EvolveGCN: Evolving Graph
-    Convolutional Networks for Dynamic Graphs"
-    <https://arxiv.org/abs/1902.10191>`_ (Pereja et al., AAAI 2020).
-
-    Args:
-        input_size (int): Size of the input.
-        hidden_size (int): Number of hidden units in each hidden layer.
-        n_layers (int): Number of layers in the encoder.
-        asymmetric_norm (bool): Whether to consider the input graph as directed.
-        variant (str): Variant of EvolveGCN to use (options: 'H' or 'O')
-        root_weight (bool): Whether to add a parametrized skip connection.
-        cached (bool): Whether to cache normalized edge_weights.
-        activation (str): Activation after each GCN layer.
-    """
-
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 n_layers,
-                 asymmetric_norm,
-                 variant='H',
-                 root_weight=False,
-                 cached=False,
-                 activation='relu'):
-        super(EvolveGCN, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.n_layers = n_layers
-        self.rnn_cells = nn.ModuleList()
-        if variant == 'H':
-            cell = EvolveGCNHCell
-        elif variant == 'O':
-            cell = EvolveGCNOCell
-        else:
-            raise NotImplementedError
-
-        for i in range(self.n_layers):
-            self.rnn_cells.append(
-                cell(in_size=self.input_size if i == 0 else self.hidden_size,
-                     out_size=self.hidden_size,
-                     asymmetric_norm=asymmetric_norm,
-                     activation=activation,
-                     root_weight=root_weight,
-                     cached=cached))
-
-    def forward(self, x, edge_index, edge_weight=None):
-        # x : b t n f
-        steps = x.size(1)
-        h = [None, ] * len(self.rnn_cells)
-        for t in range(steps):
-            out = x[:, t]
-            for c, cell in enumerate(self.rnn_cells):
-                out, h[c] = cell(out, h[c], edge_index, edge_weight)
-        return out

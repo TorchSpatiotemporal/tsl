@@ -2,7 +2,7 @@ from torch import nn
 
 from tsl.nn.models import BaseModel
 from tsl.nn.utils import maybe_cat_exog
-from tsl.nn.layers.recurrent import EvolveGCN
+from tsl.nn.blocks.encoders import EvolveGCN
 from tsl.nn.blocks.decoders import LinearReadout
 
 

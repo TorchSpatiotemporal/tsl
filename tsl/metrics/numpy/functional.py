@@ -328,8 +328,8 @@ def mre(y_hat: FrameArray, y: FrameArray,
         y_hat (FrameArray): The estimated variable.
         y (tFrameArray): The ground-truth variable.
         mask (FrameArray, optional): If provided, compute the metric using
-        only the values at valid indices
-        (with :attr:`mask` set to :obj:`True`).
+            only the values at valid indices (with :attr:`mask` set to
+            :obj:`True`).
             (default: :obj:`None`)
 
     Returns:

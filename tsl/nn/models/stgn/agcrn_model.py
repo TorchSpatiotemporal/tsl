@@ -2,7 +2,7 @@ from torch import nn, Tensor
 from torch_geometric.typing import OptTensor
 
 from tsl.nn.blocks.decoders import LinearReadout
-from tsl.nn.layers.recurrent import AGCRN
+from tsl.nn.blocks.encoders import AGCRN
 from tsl.nn.utils import maybe_cat_exog
 from ..base_model import BaseModel
 

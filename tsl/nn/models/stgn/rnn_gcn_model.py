@@ -1,11 +1,8 @@
+from einops import rearrange
 from torch import nn
 
-from tsl.nn.blocks.encoders import ConditionalBlock
 from tsl.nn.blocks.decoders.gcn_decoder import GCNDecoder
-from tsl.nn.layers import RNN
-
-from einops import rearrange
-
+from tsl.nn.blocks.encoders import ConditionalBlock, RNN
 from tsl.nn.models import BaseModel
 
 
@@ -13,7 +10,8 @@ class RNNEncGCNDecModel(BaseModel):
     """
     Simple time-then-space model.
 
-    Input time series are encoded in vectors using an RNN and then decoded using a stack of GCN layers.
+    Input time series are encoded in vectors using an RNN and then decoded using
+    a stack of GCN layers.
 
     Args:
         input_size (int): Input size.
@@ -25,9 +23,12 @@ class RNNEncGCNDecModel(BaseModel):
         rnn_dropout (float, optional): Dropout probability in the RNN encoder.
         gcn_dropout (float, optional): Dropout probability int the GCN decoder.
         horizon (int): Forecasting horizon.
-        cell_type (str, optional): Type of cell that should be use (options: [`gru`, `lstm`]). (default: `gru`)
+        cell_type (str, optional): Type of cell that should be used.
+            (options: [``'gru'``, ``'lstm'``]).
+            (default: ``'gru'``)
         activation (str, optional): Activation function.
     """
+
     def __init__(self,
                  input_size,
                  hidden_size,

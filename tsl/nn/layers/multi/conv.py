@@ -43,6 +43,7 @@ class MultiConv1d(nn.Module):
         self.reset_parameters()
 
     def extra_repr(self) -> str:
+        """"""
         return f'{self.in_channels}, {self.out_channels}, ' \
                f'kernel_size={self.kernel_size}, n_instances={self.n_instances}'
 
@@ -53,6 +54,7 @@ class MultiConv1d(nn.Module):
             init.uniform_(self.bias.data, -bound, bound)
 
     def forward(self, x):
+        """"""
         x = rearrange(x, '... t n f -> ... (n f) t')
 
         out = F.conv1d(x, weight=self.weight, bias=None, stride=self.stride,

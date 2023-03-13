@@ -1,6 +1,6 @@
 from torch import nn
 
-from tsl.nn.layers.recurrent import RNN
+from .recurrent import RNN
 from .conditional import ConditionalBlock
 from .mlp import MLP
 from .tcn import TemporalConvNet

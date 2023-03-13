@@ -1,20 +1,18 @@
+from einops.layers.torch import Rearrange
 from torch import nn
 
-from tsl.nn.layers.graph_convs import GraphConv
-from tsl.nn.blocks.decoders import MLPDecoder
-from tsl.nn.models import BaseModel
-
-from einops.layers.torch import Rearrange
-
-from tsl.nn.layers.recurrent import RNN
 from tsl.nn import utils
+from tsl.nn.blocks.decoders import MLPDecoder
+from tsl.nn.blocks.encoders import RNN
+from tsl.nn.layers.graph_convs import GraphConv
+from tsl.nn.models import BaseModel
 
 
 class GRUGCNModel(BaseModel):
-    r"""
-    Simple time-then-space model with a GRU encoder and a GCN decoder.
-
-    From Guo et al., "On the Equivalence Between Temporal and Static Equivariant Graph Representations", ICML 2022.
+    r"""Simple time-then-space model with a GRU encoder and a GCN decoder from
+    the paper `"On the Equivalence Between Temporal and Static Equivariant
+    Graph Representations" <https://arxiv.org/abs/2103.07016>`_ (Guo et al.,
+    ICML 2022).
 
     Args:
         input_size (int): Size of the input.
@@ -26,6 +24,7 @@ class GRUGCNModel(BaseModel):
         gcn_layers (int): Number of GCN layers in GCN decoder.
         asymmetric_norm (bool): Whether to use asymmetric or GCN normalization.
     """
+
     def __init__(self,
                  input_size,
                  hidden_size,
@@ -78,7 +77,8 @@ class GRUGCNModel(BaseModel):
                                   activation=activation,
                                   horizon=horizon)
 
-    def forward(self, x, edge_index, edge_weight=None, edge_features=None, u=None):
+    def forward(self, x, edge_index, edge_weight=None, edge_features=None,
+                u=None):
         """"""
         # x: [batches steps nodes features]
         x = utils.maybe_cat_exog(x, u)

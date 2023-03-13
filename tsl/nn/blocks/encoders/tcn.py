@@ -1,5 +1,5 @@
 import torch.nn as nn
-from tsl.nn.layers.base import TemporalConv2d, GatedTemporalConv2d
+from tsl.nn.layers.base import TemporalConv, GatedTemporalConv
 from tsl.nn.utils import maybe_cat_exog, get_functional_activation
 
 from einops import rearrange
@@ -46,7 +46,7 @@ class TemporalConvNet(nn.Module):
                  channel_last=True):
         super(TemporalConvNet, self).__init__()
         self.channel_last = channel_last
-        base_conv = TemporalConv2d if not gated else GatedTemporalConv2d
+        base_conv = TemporalConv if not gated else GatedTemporalConv
 
         if exog_channels is not None:
             input_channels += exog_channels
@@ -71,9 +71,9 @@ class TemporalConvNet(nn.Module):
         self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
 
         if output_channels is not None:
-            self.readout = TemporalConv2d(input_channels=hidden_channels,
-                                          output_channels=output_channels,
-                                          kernel_size=1)
+            self.readout = TemporalConv(input_channels=hidden_channels,
+                                        output_channels=output_channels,
+                                        kernel_size=1)
         else:
             self.register_parameter('readout', None)
 

@@ -1,8 +1,7 @@
 from torch import nn
 
+from tsl.nn.layers.multi import MultiLinear, MultiDense
 from tsl.nn.utils import maybe_cat_exog
-from .dense import MultiDense
-from .linear import MultiLinear
 
 
 class MultiMLP(nn.Module):

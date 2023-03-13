@@ -4,7 +4,7 @@ from einops import rearrange
 from tsl.nn.functional import gated_tanh
 
 
-class TemporalConv2d(nn.Module):
+class TemporalConv(nn.Module):
     """Learns a standard temporal convolutional filter.
 
     Args:
@@ -56,7 +56,7 @@ class TemporalConv2d(nn.Module):
         return x
 
 
-class GatedTemporalConv2d(TemporalConv2d):
+class GatedTemporalConv(TemporalConv):
     """Temporal convolutional filter with gated tanh connection."""
     def __init__(self,
                  input_channels,
@@ -69,7 +69,7 @@ class GatedTemporalConv2d(TemporalConv2d):
                  causal_pad=True,
                  weight_norm=False,
                  channel_last=False):
-        super(GatedTemporalConv2d, self).__init__(
+        super(GatedTemporalConv, self).__init__(
             input_channels=input_channels,
             output_channels=2 * output_channels,
             kernel_size=kernel_size,
@@ -85,6 +85,6 @@ class GatedTemporalConv2d(TemporalConv2d):
     def forward(self, x):
         """"""
         # batch, channels, nodes, steps
-        x = super(GatedTemporalConv2d, self).forward(x)
+        x = super(GatedTemporalConv, self).forward(x)
         dim = -1 if self.channel_last else 1
         return gated_tanh(x, dim=dim)
