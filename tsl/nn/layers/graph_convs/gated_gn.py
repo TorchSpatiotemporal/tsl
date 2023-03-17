@@ -1,7 +1,8 @@
 import torch
-from torch import nn
+from torch import nn, Tensor
 
 from torch_geometric.nn import MessagePassing
+from torch_geometric.typing import Adj
 
 from tsl.nn.utils import get_layer_activation
 
@@ -55,15 +56,15 @@ class GatedGraphNetwork(MessagePassing):
         else:
             self.skip_conn = nn.Identity()
 
-    def forward(self, x, edge_index, edge_weight=None):
+    def forward(self, x: Tensor, edge_index: Adj):
         """"""
-
         out = self.propagate(edge_index, x=x)
 
         out = self.update_mlp(torch.cat([out, x], -1)) + self.skip_conn(x)
 
         return out
 
-    def message(self, x_i, x_j):
+    def message(self, x_i: Tensor, x_j: Tensor):
+        """"""
         mij = self.msg_mlp(torch.cat([x_i, x_j], -1))
         return self.gate_mlp(mij) * mij

@@ -37,5 +37,6 @@ class Dense(nn.Module):
         self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
 
     def forward(self, x):
+        """"""
         out = self.activation(self.affinity(x))
         return self.dropout(out)

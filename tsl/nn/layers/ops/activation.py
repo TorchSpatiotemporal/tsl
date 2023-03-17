@@ -4,8 +4,7 @@ from tsl.nn.utils import get_layer_activation
 
 
 class Activation(nn.Module):
-    r"""
-    A utility layer for any activation function.
+    r"""A utility layer for any activation function.
 
     Args:
         activation (str): Name of the activation function.
@@ -18,4 +17,5 @@ class Activation(nn.Module):
         self.activation: nn.Module = activation_class(**kwargs)
 
     def forward(self, x):
+        """Returns :obj:`self.activation(input)`."""
         return self.activation(x)

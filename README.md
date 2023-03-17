@@ -1,5 +1,11 @@
 <div align="center">
-    <img src="docs/source/_static/img/tsl_logo_text.svg" width="60%"/>
+    <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo_text.svg" width="75%"/>
+    <h3>Neural spatiotemporal forecasting with PyTorch</h3>
+    <hr>
+    <img alt="PyPI" src="https://img.shields.io/pypi/v/torch-spatiotemporal">
+    <a href='https://torch-spatiotemporal.readthedocs.io/en/latest/?badge=latest'>
+        <img src='https://readthedocs.org/projects/torch-spatiotemporal/badge/?version=latest' alt='Documentation Status' />
+    </a>
 </div>
 
 **tsl** *(Torch Spatiotemporal)* is a library built to accelerate research on neural spatiotemporal data processing 

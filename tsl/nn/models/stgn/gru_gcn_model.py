@@ -5,7 +5,7 @@ from tsl.nn import utils
 from tsl.nn.blocks.decoders import MLPDecoder
 from tsl.nn.blocks.encoders import RNN
 from tsl.nn.layers.graph_convs import GraphConv
-from tsl.nn.models import BaseModel
+from tsl.nn.models.base_model import BaseModel
 
 
 class GRUGCNModel(BaseModel):

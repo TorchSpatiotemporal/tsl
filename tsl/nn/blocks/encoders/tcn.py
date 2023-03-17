@@ -1,8 +1,8 @@
 import torch.nn as nn
+from einops import rearrange
+
 from tsl.nn.layers.base import TemporalConv, GatedTemporalConv
 from tsl.nn.utils import maybe_cat_exog, get_functional_activation
-
-from einops import rearrange
 
 
 class TemporalConvNet(nn.Module):
@@ -27,6 +27,7 @@ class TemporalConvNet(nn.Module):
         bias (bool, optional): Whether to add a learnable bias to the output.
         channel_last (bool, optional): If `True` input must have layout (b s n c), (b c n s) otherwise.
     """
+
     def __init__(self,
                  input_channels,
                  hidden_channels,
@@ -56,15 +57,16 @@ class TemporalConvNet(nn.Module):
         for i in range(n_layers):
             if exponential_dilation:
                 d = dilation ** i
-            layers.append(base_conv(input_channels=input_channels if i == 0 else hidden_channels,
-                                    output_channels=hidden_channels,
-                                    kernel_size=kernel_size,
-                                    dilation=d,
-                                    stride=stride,
-                                    causal_pad=causal_padding,
-                                    weight_norm=weight_norm,
-                                    bias=bias
-                                    ))
+            layers.append(base_conv(
+                input_channels=input_channels if i == 0 else hidden_channels,
+                output_channels=hidden_channels,
+                kernel_size=kernel_size,
+                dilation=d,
+                stride=stride,
+                causal_pad=causal_padding,
+                weight_norm=weight_norm,
+                bias=bias
+                ))
 
         self.convs = nn.ModuleList(layers)
         self.f = get_functional_activation(activation) if not gated else nn.Identity()

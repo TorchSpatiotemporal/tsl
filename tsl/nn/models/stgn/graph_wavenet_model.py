@@ -11,7 +11,7 @@ from tsl.nn.blocks.encoders import TemporalConvNet
 from tsl.nn.layers.base import NodeEmbedding
 from tsl.nn.layers.graph_convs import DenseGraphConvOrderK, DiffConv
 from tsl.nn.layers.norm import Norm
-from ..base_model import BaseModel
+from tsl.nn.models.base_model import BaseModel
 
 
 class GraphWaveNetModel(BaseModel):

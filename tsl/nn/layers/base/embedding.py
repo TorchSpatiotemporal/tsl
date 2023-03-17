@@ -37,8 +37,9 @@ class NodeEmbedding(nn.Module):
 
         self.reset_emb()
 
-    def extra_repr(self) -> str:
-        return f"n_nodes={self.n_nodes}, embedding_size={self.emb_size}"
+    def __repr__(self) -> str:
+        return "{}(n_nodes={}, embedding_size={})".format(
+            self.__class__.__name__, self.n_nodes, self.emb_size)
 
     def reset_emb(self):
         with torch.no_grad():

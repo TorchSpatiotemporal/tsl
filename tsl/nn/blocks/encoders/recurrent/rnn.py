@@ -1,6 +1,7 @@
-import torch
+from typing import Optional
+
 from einops import rearrange
-from torch import nn
+from torch import nn, Tensor
 
 from tsl.nn.utils import maybe_cat_exog
 
@@ -53,12 +54,22 @@ class RNN(nn.Module):
         else:
             self.register_parameter('readout', None)
 
-    def forward(self, x, u=None):
-        """
+    def forward(self, x: Tensor, u: Optional[Tensor] = None):
+        """Process the input sequence :obj:`x` with optional exogenous variables
+        :obj:`u`.
 
         Args:
-            x (torch.Tensor): Input tensor.
-            return_last_state: Whether to return only the state corresponding to the last time step.
+            x (Tensor): Input data.
+            u (Tensor): Exogenous data.
+
+        Shapes:
+            x: :math:`(B, T, N, F_x)` where :math:`B` is the batch dimension,
+                :math:`T` is the number of time steps, :math:`N` is the number
+                of nodes, and :math:`F_x` is the number of input features.
+            u: :math:`(B, T, N, F_u)` or :math:`(B, T, F_u)` where :math:`B` is
+                the batch dimension, :math:`T` is the number of time steps,
+                :math:`N` is the number of nodes (optional), and :math:`F_u` is
+                the number of exogenous features.
         """
         # x: [batches, steps, nodes, features]
         x = maybe_cat_exog(x, u)

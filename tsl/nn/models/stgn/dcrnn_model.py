@@ -4,7 +4,7 @@ from torch_geometric.typing import Adj, OptTensor
 
 from tsl.nn.blocks.decoders import MLPDecoder
 from tsl.nn.blocks.encoders import DCRNN, ConditionalBlock
-from ..base_model import BaseModel
+from tsl.nn.models.base_model import BaseModel
 
 
 class DCRNNModel(BaseModel):

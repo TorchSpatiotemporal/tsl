@@ -1,6 +1,6 @@
 from .config import Config
 from .lazy_loader import LazyLoader
-from .logger import logger
+from ._logger import logger
 
 data = LazyLoader('data', globals(), 'tsl.data')
 datasets = LazyLoader('datasets', globals(), 'tsl.datasets')

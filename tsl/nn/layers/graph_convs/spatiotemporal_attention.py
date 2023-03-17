@@ -1,7 +1,6 @@
 import torch.nn as nn
-from torch.nn import MultiheadAttention
-
 from einops import rearrange, reduce
+from torch.nn import MultiheadAttention
 
 
 class SpatioTemporalAttention(nn.Module):
@@ -26,8 +25,10 @@ class SpatioTemporalAttention(nn.Module):
         else:
             self.input_encoder = nn.Identity()
 
-        self.temporal_attn = MultiheadAttention(self.d_model, self.n_heads, dropout=dropout)
-        self.spatial_attn = MultiheadAttention(self.d_model, self.n_heads, dropout=dropout)
+        self.temporal_attn = MultiheadAttention(self.d_model, self.n_heads,
+                                                dropout=dropout)
+        self.spatial_attn = MultiheadAttention(self.d_model, self.n_heads,
+                                               dropout=dropout)
         # Implementation of Feedforward model
         self.linear1 = nn.Linear(self.d_model, self.d_ff)
         self.linear2 = nn.Linear(self.d_ff, self.d_model)
@@ -48,7 +49,8 @@ class SpatioTemporalAttention(nn.Module):
 
         x = self.input_encoder(x)
         if (self.pool_size > 1) and (s >= self.pool_size):
-            q = reduce(x, '(s1 s2) m f -> s1 m f', self.pooling_op, s2=self.pool_size)
+            q = reduce(x, '(s1 s2) m f -> s1 m f', self.pooling_op,
+                       s2=self.pool_size)
         else:
             q = x
         # temporal module
@@ -67,4 +69,3 @@ class SpatioTemporalAttention(nn.Module):
         x = x + self.dropout3(x2)
         x = self.norm3(x)
         return x
-

@@ -100,6 +100,7 @@ class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
         return self.activation(out)
 
     def message(self, x_j: Tensor, edge_weight) -> Tensor:
+        """"""
         return edge_weight.view(-1, 1) * x_j
 
     def message_and_aggregate(self, adj_t: SparseTensor, x: Tensor) -> Tensor:

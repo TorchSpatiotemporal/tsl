@@ -20,11 +20,15 @@ def build_tri_community_graph(num_communities):
     r"""
     A family of planar graphs composed of a number of communities.
     Each community takes the form of a 6-node triangle:
+
+    .. code::
+
             2
            / \
           1 - 4
          / \ / \
         0 - 3 - 5
+
     All communities are arranged as a line
         c0 - c1 - c2 -  ....
 

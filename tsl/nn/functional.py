@@ -140,7 +140,7 @@ def sparse_multi_head_attention(q: Tensor, k: Tensor, v: Tensor, index: Tensor,
             is applied.
             (default: 0)
 
-    Shape:
+    Shapes:
         q: :math:`(S, H, E)` where S is sparsed dimension, H is the number of
             heads, and E is embedding dimension.
         k: :math:`(S, H, E)` where S is sparsed dimension, H is the number of

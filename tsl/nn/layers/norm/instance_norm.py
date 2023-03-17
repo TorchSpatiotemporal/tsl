@@ -36,6 +36,7 @@ class InstanceNorm(torch.nn.Module):
         inits.zeros(self.bias)
 
     def forward(self, x: Tensor) -> Tensor:
+        """"""
         # x : [*, nodes, features]
         mean = torch.mean(x, dim=-2, keepdim=True)
         std = torch.std(x, dim=-2, unbiased=False, keepdim=True)

@@ -1,9 +1,9 @@
 from torch import nn
 
-from tsl.nn.models import BaseModel
-from tsl.nn.utils import maybe_cat_exog
-from tsl.nn.blocks.encoders import EvolveGCN
 from tsl.nn.blocks.decoders import LinearReadout
+from tsl.nn.blocks.encoders import EvolveGCN
+from tsl.nn.models.base_model import BaseModel
+from tsl.nn.utils import maybe_cat_exog
 
 
 class EvolveGCNModel(BaseModel):
@@ -24,6 +24,7 @@ class EvolveGCNModel(BaseModel):
         variant (str): Variant of EvolveGCN to use (options: 'H' or 'O')
         activation (str): Activation after each GCN layer.
     """
+
     def __init__(self,
                  input_size,
                  hidden_size,

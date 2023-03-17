@@ -3,15 +3,14 @@ from typing import Optional
 
 import torch
 import torch.nn.functional as F
+from einops import rearrange
 from torch import Tensor
+from torch import nn as nn
+from torch_geometric.data import Batch, Data
 from torch_geometric.nn.conv import MessagePassing, GATConv
 from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.typing import Adj, OptTensor
 from torch_geometric.utils import add_remaining_self_loops
-
-from einops import rearrange
-from torch import nn as nn
-from torch_geometric.data import Batch, Data
 
 from tsl.nn.functional import sparse_softmax
 
@@ -169,7 +168,8 @@ class MultiHeadGraphAttention(MessagePassing):
                                 bias_initializer='zeros')
 
         if edge_dim is not None:
-            self.lin_edge = Linear(edge_dim, num_heads * self.head_dim, bias=False)
+            self.lin_edge = Linear(edge_dim, num_heads * self.head_dim,
+                                   bias=False)
         else:
             self.lin_edge = self.register_parameter('lin_edge', None)
 
@@ -193,6 +193,7 @@ class MultiHeadGraphAttention(MessagePassing):
                 edge_index: Adj, edge_attr: OptTensor = None,
                 return_attention_weights: Optional[bool] = False,
                 return_attention_matrix: Optional[bool] = False):
+        """"""
         # inputs: [*batch, nodes, channels]
         n = value.size(-2)
         x = value  # save original input for skip connection
@@ -235,7 +236,7 @@ class MultiHeadGraphAttention(MessagePassing):
 
     def message(self, q_i: Tensor, k_j: OptTensor, v_j: OptTensor,
                 edge_attr: OptTensor, index: Tensor, size_i: int) -> Tensor:
-
+        """"""
         # cat edge_attr to query and key
         if edge_attr is not None:
             q_i = q_i + edge_attr
