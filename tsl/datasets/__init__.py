@@ -5,14 +5,19 @@ from .prototypes import classes as prototype_classes
 from .air_quality import AirQuality
 from .elergone import Elergone
 from .metr_la import MetrLA
-from .pems_bay import PemsBay
 from .mts_benchmarks import (
     ElectricityBenchmark,
     TrafficBenchmark,
     SolarBenchmark,
     ExchangeBenchmark
 )
-
+from .pems_bay import PemsBay
+from .pems_benchmarks import (
+    PeMS03,
+    PeMS04,
+    PeMS07,
+    PeMS08
+)
 from .synthetic import GaussianNoiseSyntheticDataset
 
 dataset_classes = [
@@ -20,6 +25,10 @@ dataset_classes = [
     'Elergone',
     'MetrLA',
     'PemsBay',
+    'PeMS03',
+    'PeMS04',
+    'PeMS07',
+    'PeMS08',
     'ElectricityBenchmark',
     'TrafficBenchmark',
     'SolarBenchmark',

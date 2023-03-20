@@ -1,8 +1,8 @@
 from tsl.nn.layers.graph_convs.adaptive_graph_conv import AdaptiveGraphConv
-from tsl.nn.layers.recurrent.base import GraphGRUCell
+from tsl.nn.layers.recurrent.base import GraphGRUCellBase
 
 
-class AGCRNCell(GraphGRUCell):
+class AGCRNCell(GraphGRUCellBase):
     """The Adaptive Graph Convolutional cell from the paper `"Adaptive Graph
     Convolutional Recurrent Network for Traffic Forecasting"
     <https://arxiv.org/abs/2007.02842>`_ (Bai et al., NeurIPS 2020).

@@ -3,14 +3,15 @@ from typing import Union, List, Optional
 import torch
 from torch import Tensor, nn
 
-from tsl.nn.layers.recurrent.base import StateType, RNNCell
+from tsl.nn.layers.recurrent.base import StateType, RNNCellBase
 from tsl.utils import ensure_list
 
 
 class RNNBase(nn.Module):
     r"""Base class for implementing recurrent neural networks (RNNs)."""
 
-    def __init__(self, cells: Union[RNNCell, List[RNNCell], nn.ModuleList],
+    def __init__(self,
+                 cells: Union[RNNCellBase, List[RNNCellBase], nn.ModuleList],
                  cat_states_layers: bool = False,
                  return_only_last_state: bool = False):
         super().__init__()

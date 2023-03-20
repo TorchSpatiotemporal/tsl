@@ -1,14 +1,10 @@
-from typing import Tuple
+from torch.nn import Linear
 
-import torch
-from torch import Tensor
-
-from .linear import MultiLinear
-from ..recurrent.base import GRUCellBase, LSTMCellBase
+from .base import GRUCellBase, LSTMCellBase
 
 
-class MultiGRUCell(GRUCellBase):
-    r"""Multiple parallel gated recurrent unit (GRU) cells.
+class GRUCell(GRUCellBase):
+    r"""The gated recurrent unit (GRU) cell.
 
     .. math::
 
@@ -23,12 +19,10 @@ class MultiGRUCell(GRUCellBase):
     product.
 
     Args:
-        input_size (int): The number of features in the instance input sample.
-        hidden_size (int): The number of features in the instance hidden state.
-        n_instances (int): The number of parallel GRU cells. Each cell has
-            different weights.
+        input_size (int): The number of features in the input sample.
+        hidden_size (int): The number of features in the hidden state.
         bias (bool): If :obj:`True`, then the layer will learn an additive
-            bias for each instance gate.
+            bias for each gate.
             (default: :obj:`True`)
         device (optional): The device of the parameters.
             (default: :obj:`None`)
@@ -37,7 +31,7 @@ class MultiGRUCell(GRUCellBase):
 
     Examples::
 
-        >>> rnn = MultiGRUCell(20, 32, 10)
+        >>> rnn = GRUCell(20, 32)
         >>> input = torch.randn(64, 12, 10, 20)
         >>> h = None
         >>> output = []
@@ -49,29 +43,22 @@ class MultiGRUCell(GRUCellBase):
         torch.Size([64, 12, 10, 32])
     """
 
-    def __init__(self, input_size: int, hidden_size: int, n_instances: int,
+    def __init__(self, input_size: int, hidden_size: int,
                  bias: bool = True,
                  device=None, dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         self.input_size = input_size
-        self.n_instances = n_instances
         # instantiate gates
         in_size = input_size + hidden_size
-        forget_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                  **factory_kwargs)
-        update_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                  **factory_kwargs)
-        candidate_gate = MultiLinear(in_size, hidden_size, n_instances,
-                                     bias=bias, **factory_kwargs)
+        forget_gate = Linear(in_size, hidden_size, bias=bias, **factory_kwargs)
+        update_gate = Linear(in_size, hidden_size, bias=bias, **factory_kwargs)
+        candidate_gate = Linear(in_size, hidden_size, bias=bias,
+                                **factory_kwargs)
         super().__init__(hidden_size, forget_gate, update_gate, candidate_gate)
 
-    def initialize_state(self, x) -> Tensor:
-        return torch.zeros(x.size(0), self.n_instances, self.hidden_size,
-                           dtype=x.dtype, device=x.device)
 
-
-class MultiLSTMCell(LSTMCellBase):
-    r"""Multiple parallel long short-term memory (LSTM) cells.
+class LSTMCell(LSTMCellBase):
+    r"""The long short-term memory (LSTM) cell.
 
     .. math::
 
@@ -88,12 +75,10 @@ class MultiLSTMCell(LSTMCellBase):
     product.
 
     Args:
-        input_size (int): The number of features in the instance input sample.
-        hidden_size (int): The number of features in the instance hidden state.
-        n_instances (int): The number of parallel LSTM cells. Each cell has
-            different weights.
+        input_size (int): The number of features in the input sample.
+        hidden_size (int): The number of features in the hidden state.
         bias (bool): If :obj:`True`, then the layer will learn an additive
-            bias for each instance gate.
+            bias for each gate.
             (default: :obj:`True`)
         device (optional): The device of the parameters.
             (default: :obj:`None`)
@@ -102,7 +87,7 @@ class MultiLSTMCell(LSTMCellBase):
 
     Examples::
 
-        >>> rnn = MultiLSTMCell(20, 32, 10)
+        >>> rnn = LSTMCell(20, 32)
         >>> input = torch.randn(64, 12, 10, 20)
         >>> h = None
         >>> output = []
@@ -114,27 +99,16 @@ class MultiLSTMCell(LSTMCellBase):
         torch.Size([64, 12, 10, 32])
     """
 
-    def __init__(self, input_size: int, hidden_size: int, n_instances: int,
+    def __init__(self, input_size: int, hidden_size: int,
                  bias: bool = True,
                  device=None, dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         self.input_size = input_size
-        self.n_instances = n_instances
         # instantiate gates
         in_size = input_size + hidden_size
-        input_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                 **factory_kwargs)
-        forget_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                  **factory_kwargs)
-        cell_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                **factory_kwargs)
-        output_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                  **factory_kwargs)
+        input_gate = Linear(in_size, hidden_size, bias=bias, **factory_kwargs)
+        forget_gate = Linear(in_size, hidden_size, bias=bias, **factory_kwargs)
+        cell_gate = Linear(in_size, hidden_size, bias=bias, **factory_kwargs)
+        output_gate = Linear(in_size, hidden_size, bias=bias, **factory_kwargs)
         super().__init__(hidden_size, input_gate, forget_gate,
                          cell_gate, output_gate)
-
-    def initialize_state(self, x) -> Tuple[Tensor, Tensor]:
-        return (torch.zeros(x.size(0), self.n_instances, self.hidden_size,
-                            dtype=x.dtype, device=x.device),
-                torch.zeros(x.size(0), self.n_instances, self.hidden_size,
-                            dtype=x.dtype, device=x.device))

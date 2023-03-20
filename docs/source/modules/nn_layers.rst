@@ -28,6 +28,19 @@ The subpackage :mod:`tsl.nn.layers.recurrent` contains the cells used in
 encoders that process the input sequence in a recurrent fashion.
 
 .. currentmodule:: tsl.nn.layers.recurrent
+
+Base classes
+++++++++++++
+
+.. autosummary::
+   :nosignatures:
+   {% for cls in tsl.nn.layers.recurrent.base_classes %}
+     {{ cls }}
+   {% endfor %}
+
+Implemented cells
++++++++++++++++++
+
 .. autosummary::
    :nosignatures:
    {% for cls in tsl.nn.layers.recurrent.classes %}

@@ -1,8 +1,8 @@
 from tsl.nn.layers.graph_convs.diff_conv import DiffConv
-from tsl.nn.layers.recurrent.base import GraphGRUCell
+from tsl.nn.layers.recurrent.base import GraphGRUCellBase
 
 
-class DCRNNCell(GraphGRUCell):
+class DCRNNCell(GraphGRUCellBase):
     """The Diffusion Convolutional Recurrent cell from the paper
     `"Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic
     Forecasting" <https://arxiv.org/abs/1707.01926>`_ (Li et al., ICLR 2018).

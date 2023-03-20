@@ -6,14 +6,14 @@ from torch import Tensor, nn
 StateType = Union[Tensor, Tuple[Tensor]]
 
 
-class RNNCell(nn.Module):
+class RNNCellBase(nn.Module):
     """Base class for implementing recurrent neural networks (RNN) cells."""
 
     def initialize_state(self, *args, **kwargs) -> StateType:
         raise NotImplementedError
 
 
-class GRUCell(RNNCell):
+class GRUCellBase(RNNCellBase):
     """Base class for implementing gated recurrent unit (GRU) cells."""
 
     def __init__(self, hidden_size: int,
@@ -52,7 +52,7 @@ class GRUCell(RNNCell):
         return h_new
 
 
-class GraphGRUCell(GRUCell):
+class GraphGRUCellBase(GRUCellBase):
     """Base class for implementing graph-based gated recurrent unit (GRU)
     cells."""
 
@@ -61,7 +61,7 @@ class GraphGRUCell(GRUCell):
                            dtype=x.dtype, device=x.device)
 
 
-class LSTMCell(RNNCell):
+class LSTMCellBase(RNNCellBase):
     """Base class for implementing long short-term memory (LSTM) cells."""
 
     def __init__(self, hidden_size: int,
@@ -107,7 +107,7 @@ class LSTMCell(RNNCell):
         return h_new, c_new
 
 
-class GraphLSTMCell(LSTMCell):
+class GraphLSTMCellBase(LSTMCellBase):
     """Base class for implementing graph-based long short-term memory (LSTM)
      cells."""
 

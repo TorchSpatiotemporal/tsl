@@ -1,21 +1,24 @@
 from .agcrn import AGCRNCell
-from .base import (RNNCell,
-                   GRUCell,
-                   GraphGRUCell,
-                   LSTMCell,
-                   GraphLSTMCell)
+from .base import (RNNCellBase,
+                   GRUCellBase,
+                   GraphGRUCellBase,
+                   LSTMCellBase,
+                   GraphLSTMCellBase)
 from .dcrnn import DCRNNCell
 from .dense_dcrnn import DenseDCRNNCell
 from .evolvegcn import EvolveGCNHCell, EvolveGCNOCell
 from .gcrnn import GraphConvGRUCell, GraphConvLSTMCell
 from .grin import GRINCell
+from .rnn import GRUCell, LSTMCell
 
 __all__ = [
-    'RNNCell',
+    'RNNCellBase',
+    'GRUCellBase',
+    'LSTMCellBase',
+    'GraphGRUCellBase',
+    'GraphLSTMCellBase',
     'GRUCell',
     'LSTMCell',
-    'GraphGRUCell',
-    'GraphLSTMCell',
     'GraphConvGRUCell',
     'GraphConvLSTMCell',
     'DCRNNCell',
@@ -26,4 +29,5 @@ __all__ = [
     'GRINCell'
 ]
 
-classes = __all__
+base_classes = __all__[:5]
+classes = __all__[5:]

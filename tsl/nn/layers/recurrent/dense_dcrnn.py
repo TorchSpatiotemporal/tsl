@@ -1,8 +1,8 @@
 from tsl.nn.layers.graph_convs.dense_graph_conv import DenseGraphConvOrderK
-from tsl.nn.layers.recurrent.base import GraphGRUCell
+from tsl.nn.layers.recurrent.base import GraphGRUCellBase
 
 
-class DenseDCRNNCell(GraphGRUCell):
+class DenseDCRNNCell(GraphGRUCellBase):
     r"""Dense implementation of the Diffusion Convolutional Recurrent cell from
     the paper `"Diffusion Convolutional Recurrent Neural Network: Data-Driven
     Traffic Forecasting" <https://arxiv.org/abs/1707.01926>`_ (Li et al., ICLR

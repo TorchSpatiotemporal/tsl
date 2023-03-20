@@ -1,8 +1,8 @@
 from tsl.nn.layers.graph_convs import GraphConv
-from .base import GraphGRUCell, GraphLSTMCell
+from .base import GraphGRUCellBase, GraphLSTMCellBase
 
 
-class GraphConvGRUCell(GraphGRUCell):
+class GraphConvGRUCell(GraphGRUCellBase):
     r"""Gated Recurrent Unit with :class:`~tsl.nn.layers.graph_convs.GraphConv`
     as graph convolution in the gates, based on the paper
     `"Structured Sequence Modeling with Graph Convolutional Recurrent Networks"
@@ -64,7 +64,7 @@ class GraphConvGRUCell(GraphGRUCell):
                                                candidate_gate=candidate_gate)
 
 
-class GraphConvLSTMCell(GraphLSTMCell):
+class GraphConvLSTMCell(GraphLSTMCellBase):
     r"""LSTM with :class:`~tsl.nn.layers.graph_convs.GraphConv` as graph
     convolution in the gates, based on the paper `"Structured Sequence Modeling
     with Graph Convolutional Recurrent Networks"

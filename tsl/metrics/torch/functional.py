@@ -221,27 +221,28 @@ def rmse(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = No
 def nrmse(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None,
           reduction: ReductionType = 'mean') -> MetricOutputType:
     r"""Compute the `Normalized Root Mean Squared Error (NRMSE)
-        <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
-        estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
-        Normalization is by the max-min range of the data
+    <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
+    estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
+    Normalization is by the max-min range of the data
 
-        .. math::
+    .. math::
 
-            \text{NRMSE} = \frac{\sqrt{\frac{\sum_{i=1}^n (\hat{y}_i - y_i)^2}{n}} }{\max y - \min y}
+        \text{NRMSE} = \frac{\sqrt{\frac{\sum_{i=1}^n (\hat{y}_i - y_i)^2}{n}} }{\max y - \min y}
 
-        Args:
-            y_hat (torch.Tensor): The estimated variable.
-            y (torch.Tensor): The ground-truth variable.
-            mask (torch.Tensor, optional): If provided, compute the metric using only
-                the values at valid indices (with :attr:`mask` set to :obj:`True`).
-            reduction (str): Specifies the reduction to apply to the output:
-                ``'mean'`` | ``'sum'``. ``'mean'``: the sum of the output will be divided by the
-                number of elements in the output, ``'sum'``: the output will be
-                summed. (default: ``'mean'``)
+    Args:
+        y_hat (torch.Tensor): The estimated variable.
+        y (torch.Tensor): The ground-truth variable.
+        mask (torch.Tensor, optional): If provided, compute the metric using only
+            the values at valid indices (with :attr:`mask` set to :obj:`True`).
+        reduction (str): Specifies the reduction to apply to the output:
+            ``'mean'`` | ``'sum'``. ``'mean'``: the sum of the output will be
+            divided by the number of elements in the output, ``'sum'``: the
+            output will be summed.
+            (default: ``'mean'``)
 
-        Returns:
-            float: The range-normalzized NRMSE
-        """
+    Returns:
+        float: The range-normalzized NRMSE
+    """
     delta = torch.max(y) - torch.min(y) + tsl.epsilon
     return rmse(y_hat, y, mask, reduction) / delta
 
@@ -249,27 +250,29 @@ def nrmse(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = N
 def nrmse_2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None,
             reduction: ReductionType = 'mean') -> MetricOutputType:
     r"""Compute the `Normalized Root Mean Squared Error (NRMSE)
-            <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
-            estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
-            Normalization is by the power of the true signal :math:`y`
+    <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
+    estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
+    Normalization is by the power of the true signal :math:`y`
 
-            .. math::
+    .. math::
 
-                \text{NRMSE}_2 = \frac{\sqrt{\frac{\sum_{i=1}^n (\hat{y}_i - y_i)^2}{n}} }{\sum_{i=1}^n y_i^2}
+        \text{NRMSE}_2 = \frac{\sqrt{\frac{\sum_{i=1}^n (\hat{y}_i - y_i)^2}
+        {n}}}{\sum_{i=1}^n y_i^2}
 
-            Args:
-                y_hat (torch.Tensor): The estimated variable.
-                y (torch.Tensor): The ground-truth variable.
-                mask (torch.Tensor, optional): If provided, compute the metric using only
-                    the values at valid indices (with :attr:`mask` set to :obj:`True`).
-                reduction (str): Specifies the reduction to apply to the output:
-                    ``'mean'`` | ``'sum'``. ``'mean'``: the sum of the output will be divided by the
-                    number of elements in the output, ``'sum'``: the output will be
-                    summed. (default: ``'mean'``)
+    Args:
+        y_hat (torch.Tensor): The estimated variable.
+        y (torch.Tensor): The ground-truth variable.
+        mask (torch.Tensor, optional): If provided, compute the metric using only
+            the values at valid indices (with :attr:`mask` set to :obj:`True`).
+        reduction (str): Specifies the reduction to apply to the output:
+            ``'mean'`` | ``'sum'``. ``'mean'``: the sum of the output will be
+            divided by the number of elements in the output, ``'sum'``: the
+            output will be summed.
+            (default: ``'mean'``)
 
-            Returns:
-                float: The power-normalzized NRMSE.
-            """
+    Returns:
+        float: The power-normalzized NRMSE.
+    """
     if mask is None:
         power_y = torch.square(y).sum()
     else:
@@ -297,8 +300,9 @@ def r2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None
     Args:
         y_hat (torch.Tensor): The estimated variable.
         y (torch.Tensor): The ground-truth variable.
-        mask (torch.Tensor, optional): If provided, compute the metric using only
-                    the values at valid indices (with :attr:`mask` set to :obj:`True`).
+        mask (torch.Tensor, optional): If provided, compute the metric using
+            only the values at valid indices (with :attr:`mask` set to
+            :obj:`True`).
         reduction (str): Specifies the reduction to apply to the output:
             ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
             be applied, ``'mean'``: the sum of the output will be divided by the
@@ -308,8 +312,9 @@ def r2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None
             converted to :obj:`0`. This has an effect only when :attr:`mask` is
             not :obj:`None` and :attr:`reduction` is :obj:`'none'`.
             (default: :obj:`False`)
-        mean_axis (int, Tuple, optional): the axis along which the mean of y is computed, to compute the variance of y
-            needed in the denominator of the R2 formula.
+        mean_axis (int, Tuple, optional): the axis along which the mean of y is
+            computed, to compute the variance of y needed in the denominator
+            of the R2 formula.
     Returns:
         float | torch.Tensor: The :math:`R^2`.
     """
@@ -337,8 +342,8 @@ def mre(y_hat: torch.Tensor, y: torch.Tensor,
         y_hat (torch.Tensor): The estimated variable.
         y (torch.Tensor): The ground-truth variable.
         mask (torch.Tensor, optional): If provided, compute the metric using
-        only the values at valid indices
-        (with :attr:`mask` set to :obj:`True`).
+            only the values at valid indices (with :attr:`mask` set to
+            :obj:`True`).
             (default: :obj:`None`)
 
     Returns:
