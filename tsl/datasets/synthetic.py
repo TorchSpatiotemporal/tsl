@@ -1,4 +1,5 @@
 import math
+from typing import Mapping, Type
 
 import numpy as np
 import torch
@@ -6,33 +7,40 @@ from torch import nn
 from tqdm import tqdm
 
 from tsl.datasets import TabularDataset
-
-from tsl.typing import SparseTensArray
 from tsl.ops.connectivity import parse_connectivity
+from tsl.typing import SparseTensArray
 from tsl.utils.casting import torch_to_numpy
 from tsl.utils.python_utils import foo_signature
 
 
 class GaussianNoiseSyntheticDataset(TabularDataset):
-    r"""
-    A generator of synthetic datasets from an input model and input graph.
+    r"""A generator of synthetic datasets from an input model and input graph.
 
-    The input model must be implemented as a torch model and must return the observation at the next step
-    and (optionally) the hidden state for the next step. Gaussian noise will be added to the output of the model at each
-    step.
+    The input model must be implemented as a :class:`torch.nn.Module` and must
+    return the observation at the next step and (optionally) the hidden state
+    for the next step. Gaussian noise will be added to the output of the model
+    at each step.
 
-     Args:
+    Args:
         num_features (int): Number of features in the generated dataset.
         num_nodes (int): Number of nodes in the graph.
         num_steps (int): Number of steps to generate.
         connectivity (SparseTensArray): Connectivity of the underlying graph.
-        model (optional, nn.Module): Model used to generate data. If `None`, it will attempt to create model from
-                    `model_class` and `model_kwargs`.
-        model_class (optional, nn.Module): Class of the model used to generate the data.
-        model_kwargs (optional, nn.Module): Keyword arguments to initialize the model.
+        model (torch.nn.Module): Model used to generate data. If :obj:`None`,
+            it will attempt to create model from ``model_class`` and
+            ``model_kwargs``.
+        model_class (type, optional): Class of the model used to generate the
+            data.
+            (default: :obj:`None`)
+        model_kwargs (dict, optional): Keyword arguments needed to initialize
+            the model.
+            (default: :obj:`None`)
         sigma_noise (float): Standard deviation of the noise.
-        name (optional, str): Name for the generated dataset.
-        seed (optional, int): Seed for the random number generator.
+            (default: :obj:`0.2`)
+        name (str, optional): Name for the generated dataset.
+            (default: :obj:`None`)
+        seed (int, optional): Seed for the random number generator.
+            (default: :obj:`None`)
     """
 
     seed: int = None
@@ -44,11 +52,11 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
                  connectivity: SparseTensArray,
                  min_window: int = 1,
                  model: nn.Module = None,
-                 model_class=None,
-                 model_kwargs=None,
-                 sigma_noise=.2,
-                 name=None,
-                 seed=None,
+                 model_class: Type = None,
+                 model_kwargs: Mapping = None,
+                 sigma_noise: float = .2,
+                 name: str = None,
+                 seed: int = None,
                  **kwargs):
         self.name = name
         self._num_nodes = num_nodes
@@ -88,12 +96,16 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
 
     @property
     def mae_optimal_model(self):
-        """ E[|X|] of a Gaussian X"""
+        r""":math:`\mathbb{E}[|\mathbf{X}|]` of a Gaussian
+        :math:`\mathbf{X} \sim \mathcal{N}(0, \sigma^2)`, computed as
+        :math:`\varepsilon = \sqrt{\frac{2}{\pi}}\sigma`.
+        """
         return math.sqrt(2.0 / math.pi) * self.sigma_noise
 
     def _filter_forward_kwargs(self, kwargs):
         if not self._model_forward_signature['has_kwargs']:
-            kwargs = {k: v for k, v in kwargs.items() if k in self._model_forward_signature['signature']}
+            kwargs = {k: v for k, v in kwargs.items() if
+                      k in self._model_forward_signature['signature']}
         return kwargs
 
     def _model_forward(self, *args, **kwargs):
@@ -104,8 +116,7 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
         return out  # Assumes that if the output has length 2, it will contain [output, hidden_state].
 
     def generate_data(self, seed=None):
-        r"""
-        """
+        """"""
         rng = torch.Generator()
         if seed is not None:
             rng.manual_seed(seed)
@@ -113,7 +124,8 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
         # initialize with noise
         x = torch.empty((self._num_steps + self._min_window,
                          self._num_nodes,
-                         self._num_features)).normal_(generator=rng) * self.sigma_noise
+                         self._num_features)).normal_(
+            generator=rng) * self.sigma_noise
 
         y_opt = torch.empty((self._num_steps,
                              self._num_nodes,
@@ -136,7 +148,8 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
                                                edge_weight=edge_weight)
                 y_opt[t - self._min_window:t + 1 - self._min_window] = x_t[0]
                 # add noise
-                x_t = x_t + torch.zeros_like(x_t).normal_(generator=rng) * self.sigma_noise
+                x_t = x_t + torch.zeros_like(x_t).normal_(
+                    generator=rng) * self.sigma_noise
                 x[t:t + 1] = x_t[0]
 
         x = torch_to_numpy(x[self._min_window:])
@@ -144,6 +157,7 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
         return x, y_opt, np.ones_like(x)
 
     def get_connectivity(self, layout: str = 'edge_index'):
+        """"""
         if self.connectivity is None:
             return self.connectivity
         return parse_connectivity(connectivity=self.connectivity,

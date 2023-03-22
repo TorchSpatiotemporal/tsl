@@ -25,5 +25,9 @@ def register_resolvers():
     OmegaConf.register_new_resolver(name='sum', resolver=lambda *x: sum(x))
     # ${prod:1,2,3,4} -> 24
     OmegaConf.register_new_resolver(name='prod', resolver=prod_resolver)
+    # ${div:1,4} -> 0.25
+    OmegaConf.register_new_resolver(name='div', resolver=lambda x, d: x / d)
+    # ${exp:3,2} -> 9
+    OmegaConf.register_new_resolver(name='exp', resolver=lambda x, e: x ** e)
     # ${ternary:True,is_true,is_false} -> is_true
     OmegaConf.register_new_resolver(name='ternary', resolver=ternary_resolver)

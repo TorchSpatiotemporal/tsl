@@ -5,15 +5,13 @@ import numpy as np
 import pandas as pd
 
 from tsl import logger
+from tsl.datasets.prototypes import DatetimeDataset
 from tsl.ops.similarities import gaussian_kernel
 from tsl.utils import download_url, extract_zip
-from tsl.datasets.prototypes import DatetimeDataset
 
 
 class _PeMS(DatetimeDataset):
-    r"""
-    Abstract class for PeMSD datasets.
-    """
+    r"""Abstract class for PeMSD datasets."""
 
     url: None
     start_date: None
@@ -64,10 +62,10 @@ class _PeMS(DatetimeDataset):
 
         if data.shape[-1] > 1:
             df_occ = pd.DataFrame(data=data[..., 1],
-                                   index=index).astype('float32')
+                                  index=index).astype('float32')
 
             df_speed = pd.DataFrame(data=data[..., 2],
-                                   index=index).astype('float32')
+                                    index=index).astype('float32')
         else:
             df_occ = df_speed = None
 
@@ -75,9 +73,9 @@ class _PeMS(DatetimeDataset):
         path = os.path.join(self.root_dir, 'distance_matrix.npy')
         dist = np.load(path)
         return df_flow, \
-               df_occ, \
-               df_speed, \
-               dist
+            df_occ, \
+            df_speed, \
+            dist
 
     def load(self, mask_zeros: bool = True):
         *dfs, dist = self.load_raw()
@@ -113,22 +111,23 @@ class _PeMS(DatetimeDataset):
 
 class PeMS03(_PeMS):
     r"""The dataset contains 3 months of traffic readings from 09/01/2018 to
-        11/30/2018 collected every 5 minutes by 358 traffic sensors.
+    11/30/2018 collected every 5 minutes by 358 traffic sensors.
 
-        The measurements are provided by California Transportation Agencies
-        (CalTrans) Performance Measurement System (PeMS). A benchmark dataset for
-        traffic forecasting as described in
-        `"Learning Dynamics and Heterogeneity of Spatial-Temporal Graph Data for Traffic Forecasting" <https://ieeexplore.ieee.org/document/9346058>`.
+    The measurements are provided by California Transportation Agencies
+    (CalTrans) Performance Measurement System (PeMS). A benchmark dataset for
+    traffic forecasting as described in the paper `"Learning Dynamics and
+    Heterogeneity of Spatial-Temporal Graph Data for Traffic Forecasting"
+    <https://ieeexplore.ieee.org/document/9346058>`_ (Guo et al., 2021).
 
-        Dataset information:
-            + Time steps: 26208
-            + Nodes: 358
-            + Channels: 1
-            + Sampling rate: 5 minutes
-            + Missing values: 0% (already imputed in the dataset)
+    Dataset information:
+        + Time steps: 26208
+        + Nodes: 358
+        + Channels: 1
+        + Sampling rate: 5 minutes
+        + Missing values: 0% (already imputed in the dataset)
 
-        Static attributes:
-            + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
+    Static attributes:
+        + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
     name = 'PeMS03'
     start_date = '09-01-2018 00:00'
@@ -147,7 +146,8 @@ class PeMS03(_PeMS):
         logger.info('Building distance matrix...')
         raw_dist_path = os.path.join(self.root_dir, self.raw_files_paths[1])
         distances = pd.read_csv(raw_dist_path)
-        ids = Path(os.path.join(self.root_dir, 'index.txt')).read_text().splitlines()
+        ids = Path(
+            os.path.join(self.root_dir, 'index.txt')).read_text().splitlines()
         dist = np.ones((num_sensors, num_sensors), dtype=np.float32) * np.inf
         sensor_to_idx = {int(sensor_id): i for i, sensor_id in enumerate(ids)}
         for row in distances.values:
@@ -161,29 +161,32 @@ class PeMS03(_PeMS):
 
 class PeMS04(_PeMS):
     r"""The dataset contains 2 months of traffic readings from 01/01/2018 to
-        02/28/2018 collected every 5 minutes by 307 traffic sensors in San Francisco
-        Bay Area.
+    02/28/2018 collected every 5 minutes by 307 traffic sensors in San Francisco
+    Bay Area.
 
-        The measurements are provided by California Transportation Agencies
-        (CalTrans) Performance Measurement System (PeMS). A benchmark dataset for
-        traffic forecasting as described in
-        `"Learning Dynamics and Heterogeneity of Spatial-Temporal Graph Data for Traffic Forecasting" <https://ieeexplore.ieee.org/document/9346058>`.
+    The measurements are provided by California Transportation Agencies
+    (CalTrans) Performance Measurement System (PeMS). A benchmark dataset for
+    traffic forecasting as described in the paper `"Learning Dynamics and
+    Heterogeneity of Spatial-Temporal Graph Data for Traffic Forecasting"
+    <https://ieeexplore.ieee.org/document/9346058>`_ (Guo et al., 2021).
 
-        The target variable is the total flow (number of detected vehicles).
+    The target variable is the total flow (number of detected vehicles).
 
-        Dataset information:
-            + Time steps: 16992
-            + Nodes: 307
-            + Channels: 1
-            + Sampling rate: 5 minutes
-            + Missing values: 0% (already imputed in the dataset)
+    Dataset information:
+        + Time steps: 16992
+        + Nodes: 307
+        + Channels: 1
+        + Sampling rate: 5 minutes
+        + Missing values: 0% (already imputed in the dataset)
 
-        Covariates:
-            + :obj:`occupancy`: :math:`T \times N \times 1` Time series associated to the occupancy of the lanes.
-            + :obj:`speed`: :math:`T \times N \times 1` Time series associated to average speed of the detected vehicles.
+    Covariates:
+        + :obj:`occupancy`: :math:`T \times N \times 1` Time series associated
+          to the occupancy of the lanes.
+        + :obj:`speed`: :math:`T \times N \times 1` Time series associated to
+          average speed of the detected vehicles.
 
-        Static attributes:
-            + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
+    Static attributes:
+        + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
     name = 'PeMS04'
     start_date = '01-01-2018 00:00'
@@ -201,22 +204,23 @@ class PeMS04(_PeMS):
 
 class PeMS07(_PeMS):
     r"""The dataset contains 4 months of traffic readings from 05/01/2017 to
-        08/31/2017 collected every 5 minutes by 883 traffic sensors.
+    08/31/2017 collected every 5 minutes by 883 traffic sensors.
 
-        The measurements are provided by California Transportation Agencies
-        (CalTrans) Performance Measurement System (PeMS). A benchmark dataset for
-        traffic forecasting as described in
-        `"Learning Dynamics and Heterogeneity of Spatial-Temporal Graph Data for Traffic Forecasting" <https://ieeexplore.ieee.org/document/9346058>`.
+    The measurements are provided by California Transportation Agencies
+    (CalTrans) Performance Measurement System (PeMS). A benchmark dataset for
+    traffic forecasting as described in the paper `"Learning Dynamics and
+    Heterogeneity of Spatial-Temporal Graph Data for Traffic Forecasting"
+    <https://ieeexplore.ieee.org/document/9346058>`_ (Guo et al., 2021).
 
-        Dataset information:
-            + Time steps: 28224
-            + Nodes: 883
-            + Channels: 1
-            + Sampling rate: 5 minutes
-            + Missing values: 0% (already imputed in the dataset)
+    Dataset information:
+        + Time steps: 28224
+        + Nodes: 883
+        + Channels: 1
+        + Sampling rate: 5 minutes
+        + Missing values: 0% (already imputed in the dataset)
 
-        Static attributes:
-            + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
+    Static attributes:
+        + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
     name = 'PeMS07'
     start_date = '05-01-2017 00:00'
@@ -234,27 +238,30 @@ class PeMS07(_PeMS):
 
 class PeMS08(_PeMS):
     r"""The dataset contains 2 months of traffic readings from 07/01/2016 to
-        08/31/2016 collected every 5 minutes by 170 traffic sensors in San Bernardino.
+    08/31/2016 collected every 5 minutes by 170 traffic sensors in San
+    Bernardino.
 
-        The measurements are provided by California Transportation Agencies
-        (CalTrans) Performance Measurement System (PeMS). A benchmark dataset for
-        traffic forecasting as described in
-        `"Learning Dynamics and Heterogeneity of Spatial-Temporal Graph Data for Traffic Forecasting" <https://ieeexplore.ieee.org/document/9346058>`.
+    The measurements are provided by California Transportation Agencies
+    (CalTrans) Performance Measurement System (PeMS). A benchmark dataset for
+    traffic forecasting as described in the paper `"Learning Dynamics and
+    Heterogeneity of Spatial-Temporal Graph Data for Traffic Forecasting"
+    <https://ieeexplore.ieee.org/document/9346058>`_ (Guo et al., 2021).
 
-        Dataset information:
-            + Time steps: 17856
-            + Nodes: 170
-            + Channels: 1
-            + Sampling rate: 5 minutes
-            + Missing values: 0% (already imputed in the dataset)
+    Dataset information:
+        + Time steps: 17856
+        + Nodes: 170
+        + Channels: 1
+        + Sampling rate: 5 minutes
+        + Missing values: 0% (already imputed in the dataset)
 
-        Covariates:
-            + :obj:`occupancy`: :math:`T \times N \times 1` Time series associated to the occupancy of the lanes.
-            + :obj:`speed`: :math:`T \times N \times 1` Time series associated to average speed of the detected vehicles.
+    Covariates:
+        + :obj:`occupancy`: :math:`T \times N \times 1` Time series associated
+          to the occupancy of the lanes.
+        + :obj:`speed`: :math:`T \times N \times 1` Time series associated to
+          average speed of the detected vehicles.
 
-
-        Static attributes:
-            + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
+    Static attributes:
+        + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
     name = 'PeMS08'
     start_date = '07-01-2016 00:00'
@@ -268,19 +275,3 @@ class PeMS08(_PeMS):
     @property
     def required_file_names(self):
         return ['pems08.npz', 'distance_matrix.npy']
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    datasets = [PeMS03(), PeMS04(), PeMS07(), PeMS08()]
-    for d in datasets:
-        adj = d.get_connectivity(
-            method='binary',
-            threshold=0.1,
-            include_self=False,
-            layout='dense',
-            force_symmetric=True
-        )
-        plt.matshow(adj)
-        plt.show()
-

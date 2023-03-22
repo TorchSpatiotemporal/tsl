@@ -3,6 +3,7 @@ from .prototypes import Dataset, TabularDataset, DatetimeDataset
 from .prototypes import classes as prototype_classes
 # Datasets
 from .air_quality import AirQuality
+from .gpvar import GPVARDataset, GPVARDatasetAZ
 from .elergone import Elergone
 from .metr_la import MetrLA
 from .mts_benchmarks import (
@@ -33,7 +34,9 @@ dataset_classes = [
     'TrafficBenchmark',
     'SolarBenchmark',
     'ExchangeBenchmark',
-    'GaussianNoiseSyntheticDataset'
+    'GaussianNoiseSyntheticDataset',
+    'GPVARDataset',
+    'GPVARDatasetAZ'
 ]
 
 __all__ = prototype_classes + dataset_classes
