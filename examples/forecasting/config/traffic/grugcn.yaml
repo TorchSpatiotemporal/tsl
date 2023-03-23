@@ -10,7 +10,7 @@ model:
     hidden_size: 32
     enc_layers: 1
     gcn_layers: 2
-    asymmetric_norm: True
+    norm: mean
 
 optimizer:
   hparams:

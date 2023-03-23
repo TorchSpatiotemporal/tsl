@@ -26,7 +26,7 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
        accounting for up to :math:`L`-hop neighbors and :math:`P` time steps
        in the past.
     """
-    asymmetric_norm = False
+    norm = 'none'
     cached = False
 
     def __init__(self,
@@ -39,7 +39,8 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
         self.spatial_order = spatial_order
         self.weight = nn.Parameter(
             torch.Tensor(spatial_order + 1, temporal_order))
-        self.gcn_norm = gcn_norm
+        if gcn_norm:
+            self.norm = 'gcn'
 
     def reset_parameters(self):
         nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))

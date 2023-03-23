@@ -36,7 +36,7 @@ class TemporalConv(nn.Module):
         else:
             self.padding = padding
         self.pad_layer = nn.ZeroPad2d(self.padding)
-        # we use conv2d here to accommodate multiple input sequences
+        # we use Conv2d here to accommodate multiple input sequences
         self.conv = nn.Conv2d(input_channels, output_channels, (1, kernel_size),
                               stride=stride, padding=(0, 0),
                               dilation=(1, dilation), bias=bias)

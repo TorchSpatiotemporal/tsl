@@ -14,8 +14,7 @@ class Dense(nn.Module):
     where :math:`\mathbf{x} \in \mathbb{R}^{d_{in}}, \mathbf{x}^{\prime} \in
     \mathbb{R}^{d_{out}}` are the input and output features, respectively,
     :math:`\boldsymbol{\Theta} \in \mathbb{R}^{d_{out} \times d_{in}} \mathbf{b}
-    \in \mathbb{R}^{d_{out}}` are trainable parameters, and :math:`\sigma` is a
-    nonlinear activation function.
+    \in \mathbb{R}^{d_{out}}` are trainable parameters, and :math:`\sigma` is an activation function.
 
     Args:
         input_size (int): Number of input features.

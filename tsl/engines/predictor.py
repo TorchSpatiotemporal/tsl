@@ -130,9 +130,9 @@ class Predictor(pl.LightningModule):
                 for k, v in model_kwargs.items():
                     assert v == self.model_kwargs[k]
         else:
-            logger.warn("Predictor with already instantiated model is loading "
-                        f"a state_dict from {filename}. Cannot check if model "
-                        "hyperparameters are the same.")
+            logger.warning("Predictor with already instantiated model is loading "
+                           f"a state_dict from {filename}. Cannot check if model "
+                           "hyperparameters are the same.")
         self.load_state_dict(storage['state_dict'])
 
     @property
@@ -150,7 +150,7 @@ class Predictor(pl.LightningModule):
     def filter_forward_kwargs(self) -> bool:
         """"""
         return self._model_fwd_signature is not None and \
-            not self._model_fwd_signature['has_kwargs']
+               not self._model_fwd_signature['has_kwargs']
 
     def _filter_forward_kwargs(self, kwargs: dict) -> dict:
         """"""

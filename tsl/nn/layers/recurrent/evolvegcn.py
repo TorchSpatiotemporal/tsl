@@ -41,12 +41,12 @@ class _EvolveGCNCell(MessagePassing, NormalizedAdjacencyMixin):
     r"""
     """
 
-    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu',
+    def __init__(self, in_size, out_size, norm, activation='relu',
                  root_weight=False, bias=True, cached=False):
         super(_EvolveGCNCell, self).__init__(aggr='add')
         self.in_size = in_size
         self.out_size = out_size
-        self.asymmetric_norm = asymmetric_norm
+        self.norm = norm
         self.cached = cached
 
         self.activation_fn = get_functional_activation(activation)
@@ -83,7 +83,7 @@ class EvolveGCNHCell(_EvolveGCNCell):
     Args:
         in_size (int): Size of the input.
         out_size (int): Number of units in the hidden state.
-        asymmetric_norm (bool): Whether to consider the graph as directed when normalizaing weights.
+        norm (bool): Methods used to normalize the adjacency matrix.
         activation (str): Activation function after the GCN layer.
         root_weight (bool): Whether to add a parametrized skip connection.
         bias (bool): Whether to learn a bias.
@@ -92,11 +92,11 @@ class EvolveGCNHCell(_EvolveGCNCell):
     _cached_edge_index: Optional[Tuple[Tensor, Tensor]]
     _cached_adj_t: Optional[SparseTensor]
 
-    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu',
+    def __init__(self, in_size, out_size, norm, activation='relu',
                  root_weight=False, bias=True, cached=False):
         super(EvolveGCNHCell, self).__init__(in_size,
                                              out_size,
-                                             asymmetric_norm=asymmetric_norm,
+                                             norm=norm,
                                              activation=activation,
                                              root_weight=root_weight,
                                              bias=bias,
@@ -160,7 +160,7 @@ class EvolveGCNOCell(_EvolveGCNCell):
     Args:
         in_size (int): Size of the input.
         out_size (int): Number of units in the hidden state.
-        asymmetric_norm (bool): Whether to consider the graph as directed when normalizaing weights.
+        norm (str): Method used to normalize the adjacency matrix.
         activation (str): Activation function after the GCN layer.
         root_weight (bool): Whether to add a parametrized skip connection.
         bias (bool): Whether to learn a bias.
@@ -169,11 +169,11 @@ class EvolveGCNOCell(_EvolveGCNCell):
     _cached_edge_index: Optional[Tuple[Tensor, Tensor]]
     _cached_adj_t: Optional[SparseTensor]
 
-    def __init__(self, in_size, out_size, asymmetric_norm, activation='relu',
+    def __init__(self, in_size, out_size, norm, activation='relu',
                  root_weight=False, bias=True, cached=False):
         super(EvolveGCNOCell, self).__init__(in_size,
                                              out_size,
-                                             asymmetric_norm=asymmetric_norm,
+                                             norm=norm,
                                              activation=activation,
                                              root_weight=root_weight,
                                              bias=bias,

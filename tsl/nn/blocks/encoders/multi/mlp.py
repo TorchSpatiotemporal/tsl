@@ -5,8 +5,8 @@ from tsl.nn.utils import maybe_cat_exog
 
 
 class MultiMLP(nn.Module):
-    """A multi-layer perceptron (MLP) with different weights for the different
-    instances in the input data with optional linear readout.
+    """A multi-layer perceptron (MLP) (with optional linear readout) with different weights for each element in the
+    specified dimension.
 
     Args:
         input_size (int): Input size.
@@ -19,7 +19,8 @@ class MultiMLP(nn.Module):
 
     def __init__(self, input_size: int, hidden_size: int, n_instances: int,
                  *,
-                 ndim: int = None, pattern: str = None,
+                 ndim: int = None,
+                 pattern: str = None,
                  instance_dim: int = -2,
                  output_size: int = None,
                  exog_size: int = None,

@@ -23,7 +23,7 @@ class EvolveGCN(nn.Module):
                  input_size,
                  hidden_size,
                  n_layers,
-                 asymmetric_norm,
+                 norm,
                  variant='H',
                  root_weight=False,
                  cached=False,
@@ -44,7 +44,7 @@ class EvolveGCN(nn.Module):
             self.rnn_cells.append(
                 cell(in_size=self.input_size if i == 0 else self.hidden_size,
                      out_size=self.hidden_size,
-                     asymmetric_norm=asymmetric_norm,
+                     norm=norm,
                      activation=activation,
                      root_weight=root_weight,
                      cached=cached))

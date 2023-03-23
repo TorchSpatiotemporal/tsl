@@ -22,7 +22,7 @@ class GRUGCNModel(BaseModel):
         exog_size (int): Size of the optional exogenous variables.
         enc_layers (int): Number of layers in the GRU encoder.
         gcn_layers (int): Number of GCN layers in GCN decoder.
-        asymmetric_norm (bool): Whether to use asymmetric or GCN normalization.
+        norm (str): Normalization used by the graph convolutional layers.
     """
 
     def __init__(self,
@@ -33,7 +33,7 @@ class GRUGCNModel(BaseModel):
                  exog_size,
                  enc_layers,
                  gcn_layers,
-                 asymmetric_norm,
+                 norm='mean',
                  encode_edges=False,
                  activation='softplus'):
         super(GRUGCNModel, self).__init__()
@@ -64,7 +64,7 @@ class GRUGCNModel(BaseModel):
                 GraphConv(hidden_size,
                           hidden_size,
                           root_weight=False,
-                          asymmetric_norm=asymmetric_norm,
+                          norm=norm,
                           activation=activation) for _ in range(gcn_layers)
             ]
         )

@@ -24,12 +24,11 @@ class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
         bias (bool): If :obj:`False`, then the layer will not learn an additive
             bias vector.
             (default: :obj:`True`)
-        asymmetric_norm (bool): If :obj:`True`, then normalize the edge weights
-            as :math:`a_{j \rightarrow i} =  \frac{a_{j \rightarrow i}}
-            {deg_{i}}`, otherwise apply the GCN normalization.
+        norm (str): The normalization used for edges and edge weights. If :obj:`mean`, then edge weights are normalized
+                    as :math:`a_{j \rightarrow i} =  \frac{a_{j \rightarrow i}} {deg_{i}}`, other available options are:
+                    :obj:`gcn`, :obj:`asym` and :obj:`none`.
             (default: :obj:`True`)
-        root_weight (bool): If :obj:`True`, then add a filter (with different
-            weights) for the root node itself.
+        root_weight (bool): If :obj:`True`, then add a linear layer for the root node itself (a skip connection).
             (default :obj:`True`)
         activation (str, optional): Activation function to be used, :obj:`None`
             for identity function (i.e., no activation).
@@ -37,24 +36,20 @@ class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
         cached (bool): If :obj:`True`, then cached the normalized edge weights
             computed in the first call.
             (default :obj:`False`)
-        **kwargs (optional): Additional arguments of
-            :class:`torch_geometric.nn.conv.MessagePassing`.
     """
 
     def __init__(self, input_size: int,
                  output_size: int,
                  bias: bool = True,
-                 asymmetric_norm: bool = True,
+                 norm: str = 'mean',
                  root_weight: bool = True,
                  activation: str = None,
-                 cached: bool = False,
-                 **kwargs):
+                 cached: bool = False):
         super(GraphConv, self).__init__(aggr="add", node_dim=-2)
-        super().__init__(**kwargs)
 
         self.in_channels = input_size
         self.out_channels = output_size
-        self.asymmetric_norm = asymmetric_norm
+        self.norm = norm
         self.cached = cached
         self.activation = get_functional_activation(activation)
 

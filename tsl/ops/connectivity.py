@@ -282,21 +282,34 @@ def asymmetric_norm(edge_index: SparseTensArray,
     return edge_index, norm_weight
 
 
-def normalize_connectivity(edge_index, edge_weight, symmetric, num_nodes,
-                           add_self_loops=False) -> Tuple[Adj, OptTensor]:
-    if symmetric:
+def normalize_connectivity(edge_index, edge_weight, norm, num_nodes) -> Tuple[Adj, OptTensor]:
+    if norm == 'sym':
         norm_edge_index = gcn_norm(edge_index,
                                    edge_weight,
                                    num_nodes,
-                                   add_self_loops=add_self_loops)
+                                   add_self_loops=False)
         if isinstance(edge_index, SparseTensor):
             return norm_edge_index, None
         return norm_edge_index
-    return asymmetric_norm(edge_index,
-                           edge_weight,
-                           dim=1,
-                           num_nodes=num_nodes,
-                           add_self_loops=add_self_loops)
+    elif (norm == 'asym') or (norm == 'mean'):
+        return asymmetric_norm(edge_index,
+                               edge_weight,
+                               dim=1,
+                               num_nodes=num_nodes,
+                               add_self_loops=False)
+    elif norm == 'gcn':
+        norm_edge_index = gcn_norm(edge_index,
+                                   edge_weight,
+                                   num_nodes,
+                                   add_self_loops=True)
+        if isinstance(edge_index, SparseTensor):
+            return norm_edge_index, None
+    elif (norm == 'none') or (norm is None):
+        if (edge_weight is None) and not isinstance(edge_index, SparseTensor):
+            edge_weight = torch.ones((edge_index.size(1),), device=edge_index.device)
+        return edge_index, edge_weight
+    else:
+        raise NotImplementedError(f'Normalization {norm} not implemented.')
 
 
 def power_series(edge_index: TensArray, edge_weights: OptTensArray = None,
