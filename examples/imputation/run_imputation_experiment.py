@@ -55,6 +55,9 @@ def run_imputation(cfg: DictConfig):
                           p_fault=cfg.get('p_fault'),
                           p_noise=cfg.get('p_noise'))
 
+    # encode time of the day and use it as exogenous variable
+    covariates = {'u': dataset.datetime_encoded('day').values}
+
     # get adjacency matrix
     adj = dataset.get_connectivity(**cfg.dataset.connectivity)
 
@@ -62,6 +65,7 @@ def run_imputation(cfg: DictConfig):
     torch_dataset = ImputationDataset(target=dataset.dataframe(),
                                       eval_mask=dataset.eval_mask,
                                       input_mask=dataset.training_mask,
+                                      covariates=covariates,
                                       transform=MaskInput(),
                                       connectivity=adj,
                                       window=cfg.window,
@@ -90,7 +94,8 @@ def run_imputation(cfg: DictConfig):
     model_cls = get_model_class(cfg.model.name)
 
     model_kwargs = dict(n_nodes=torch_dataset.n_nodes,
-                        input_size=torch_dataset.n_channels)
+                        input_size=torch_dataset.n_channels,
+                        exog_size=torch_dataset.input_map.u.shape[-1])
 
     model_cls.filter_model_args_(model_kwargs)
     model_kwargs.update(cfg.model.hparams)

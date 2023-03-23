@@ -5,7 +5,6 @@ import torch.nn as nn
 from torch import Tensor
 from torch_geometric.typing import OptTensor, Adj
 
-from tsl.nn.functional import reverse_tensor
 from tsl.nn.layers.base import NodeEmbedding
 from tsl.nn.layers.recurrent import GRINCell
 from tsl.nn.models.base_model import BaseModel
@@ -108,13 +107,12 @@ class GRINModel(BaseModel):
                                                        edge_index, edge_weight,
                                                        mask=input_mask, u=u)
         # Backward
-        rev_x = reverse_tensor(x, dim=1)
-        rev_mask = reverse_tensor(input_mask,
-                                  dim=1) if input_mask is not None else None
-        rev_u = reverse_tensor(u, dim=1) if u is not None else None
+        rev_x = x.flip(1)
+        rev_mask = input_mask.flip(1) if input_mask is not None else None
+        rev_u = u.flip(1) if u is not None else None
         *bwd, _ = self.bwd_gril(rev_x, edge_index, edge_weight,
                                 mask=rev_mask, u=rev_u)
-        bwd_out, bwd_pred, bwd_repr = [reverse_tensor(res, 1) for res in bwd]
+        bwd_out, bwd_pred, bwd_repr = [res.flip(1) for res in bwd]
 
         if self.merge_mode == 'mlp':
             inputs = [fwd_repr, bwd_repr, input_mask]

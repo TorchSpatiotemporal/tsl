@@ -9,6 +9,6 @@ model:
     cell: 'gru'
     concat_mask: True
     detach_input: False
-    fully_connected: True
-    state_init: 'zero'
-    dropout: 0
+    fully_connected: False
+    n_layers: 1
+    cat_states_layers: False
