@@ -1,5 +1,6 @@
 from .agcrn import AGCRNCell
-from .base import (RNNCellBase,
+from .base import (StateType,
+                   RNNCellBase,
                    GRUCellBase,
                    GraphGRUCellBase,
                    LSTMCellBase,

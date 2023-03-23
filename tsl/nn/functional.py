@@ -13,7 +13,6 @@ import tsl
 __all__ = [
     'expand_then_cat',
     'gated_tanh',
-    'reverse_tensor',
     'sparse_softmax',
     'sparse_multi_head_attention'
 ]
@@ -55,18 +54,6 @@ def gated_tanh(input: Tensor, dim: int = -1) -> Tensor:
 
     out, gate = torch.tensor_split(input, 2, dim=dim)
     return torch.tanh(out) * torch.sigmoid(gate)
-
-
-@torch.jit.script
-def reverse_tensor(tensor: Tensor, dim: int) -> Tensor:
-    """Reverse tensor along specific dimension.
-
-    Args:
-        tensor (Tensor): Input tensor.
-        dim (int): Dimension along which to reverse sequence.
-    """
-    indices = torch.arange(tensor.size(dim) - 1, -1, -1, device=tensor.device)
-    return tensor.index_select(dim, indices)
 
 
 @torch.jit.script

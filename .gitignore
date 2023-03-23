@@ -1,7 +1,8 @@
 # tsl
 *.ipynb
 **/.DS_Store
-tsl/.storage
+**/.storage
+**/logs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

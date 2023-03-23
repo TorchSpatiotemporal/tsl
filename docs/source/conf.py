@@ -118,7 +118,7 @@ ogp_image = ogp_site_url + "_static/tsl_logo.svg"
 hoverxref_auto_ref = True
 hoverxref_roles = ['class', 'mod', 'doc', 'meth', 'func']
 hoverxref_mathjax = True
-hoverxref_intersphinx = ['PyTorch', 'PyG', 'pytorch_lightning']
+hoverxref_intersphinx = ['PyG', 'numpy']
 
 
 # -- Setup options -----------------------------------------------------------
