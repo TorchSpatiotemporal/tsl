@@ -304,6 +304,7 @@ def normalize_connectivity(edge_index, edge_weight, norm, num_nodes) -> Tuple[Ad
                                    add_self_loops=True)
         if isinstance(edge_index, SparseTensor):
             return norm_edge_index, None
+        return norm_edge_index
     elif (norm == 'none') or (norm is None):
         if (edge_weight is None) and not isinstance(edge_index, SparseTensor):
             edge_weight = torch.ones((edge_index.size(1),), device=edge_index.device)

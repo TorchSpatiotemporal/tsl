@@ -1,4 +1,3 @@
-#%%
 import numpy as np
 import torch
 from torch_geometric.utils import is_undirected
@@ -12,7 +11,6 @@ edge_index, edge_weight = C.parse_connectivity((edge_index, edge_weight), 'edge_
 adj_t = C.parse_connectivity((edge_index, edge_weight), 'sparse')
 
 assert not is_undirected(edge_index)
-#%%
 
 def test_convert_connectivity():
     ei, ew = C.convert_torch_connectivity(adj_t, 'edge_index')
@@ -34,6 +32,6 @@ def _test_normalize_connectivity(norm):
 
 
 def test_normalize_connectivity():
-    norms = ['mean', 'sym', 'asym', 'none', None]
+    norms = ['mean', 'sym', 'asym', 'none', 'gcn', None]
     for n in norms:
         _test_normalize_connectivity(n)
