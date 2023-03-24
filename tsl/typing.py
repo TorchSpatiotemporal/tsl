@@ -15,6 +15,8 @@ ScipySparseMatrix = Union[coo_matrix, csr_matrix, csc_matrix]
 SparseTensArray = Union[Tensor, SparseTensor, ndarray, ScipySparseMatrix]
 OptSparseTensArray = Optional[SparseTensArray]
 
+TorchConnectivity = Union[Tensor, Tuple[Tensor, Optional[Tensor]], SparseTensor]
+
 FrameArray = Union[DataFrame, ndarray]
 OptFrameArray = Optional[FrameArray]
 

@@ -13,8 +13,12 @@ from torch_geometric.typing import Adj, OptTensor
 from torch_geometric.utils import add_remaining_self_loops, subgraph
 from torch_sparse import SparseTensor, fill_diag
 
-from tsl.typing import TensArray, OptTensArray, SparseTensArray, DataArray, \
-    ScipySparseMatrix
+from tsl.typing import (TensArray,
+                        OptTensArray,
+                        SparseTensArray,
+                        DataArray,
+                        ScipySparseMatrix,
+                        TorchConnectivity)
 from tsl.utils import casting
 
 
@@ -41,7 +45,7 @@ def infer_backend(obj, backend: ModuleType = None):
     raise RuntimeError(f"Cannot infer valid backed from {type(obj)}.")
 
 
-def convert_torch_connectivity(connectivity: Union[Tensor, SparseTensor],
+def convert_torch_connectivity(connectivity: TorchConnectivity,
                                target_layout: str,
                                input_layout: Optional[str] = None,
                                num_nodes: Optional[int] = None):
@@ -282,7 +286,8 @@ def asymmetric_norm(edge_index: SparseTensArray,
     return edge_index, norm_weight
 
 
-def normalize_connectivity(edge_index, edge_weight, norm, num_nodes) -> Tuple[Adj, OptTensor]:
+def normalize_connectivity(edge_index, edge_weight, norm, num_nodes) -> Tuple[
+    Adj, OptTensor]:
     if norm == 'sym':
         norm_edge_index = gcn_norm(edge_index,
                                    edge_weight,
@@ -306,7 +311,8 @@ def normalize_connectivity(edge_index, edge_weight, norm, num_nodes) -> Tuple[Ad
             return norm_edge_index, None
     elif (norm == 'none') or (norm is None):
         if (edge_weight is None) and not isinstance(edge_index, SparseTensor):
-            edge_weight = torch.ones((edge_index.size(1),), device=edge_index.device)
+            edge_weight = torch.ones((edge_index.size(1),),
+                                     device=edge_index.device)
         return edge_index, edge_weight
     else:
         raise NotImplementedError(f'Normalization {norm} not implemented.')
