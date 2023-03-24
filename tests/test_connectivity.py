@@ -16,8 +16,9 @@ assert not is_undirected(edge_index)
 
 def test_convert_connectivity():
     ei, ew = C.convert_torch_connectivity(adj_t, 'edge_index')
+    a_ = C.convert_torch_connectivity((ei, ew), 'sparse')
     assert ew is None
-    assert torch.allclose(edge_index, ei)
+    assert torch.allclose(adj_t.to_dense(), a_.to_dense())
 
 
 def _test_normalize_connectivity(norm):
