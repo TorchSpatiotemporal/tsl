@@ -24,11 +24,14 @@ class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
         bias (bool): If :obj:`False`, then the layer will not learn an additive
             bias vector.
             (default: :obj:`True`)
-        norm (str): The normalization used for edges and edge weights. If :obj:`mean`, then edge weights are normalized
-                    as :math:`a_{j \rightarrow i} =  \frac{a_{j \rightarrow i}} {deg_{i}}`, other available options are:
-                    :obj:`gcn`, :obj:`asym` and :obj:`none`.
-            (default: :obj:`True`)
-        root_weight (bool): If :obj:`True`, then add a linear layer for the root node itself (a skip connection).
+        norm (str): The normalization used for edges and edge weights. If
+            :obj:`'mean'`, then edge weights are normalized as
+            :math:`a_{j \rightarrow i} =  \frac{a_{j \rightarrow i}} {deg_{i}}`,
+            other available options are: :obj:`'gcn'`, :obj:`'asym'` and
+            :obj:`'none'`.
+            (default: :obj:`'mean'`)
+        root_weight (bool): If :obj:`True`, then add a linear layer for the root
+            node itself (a skip connection).
             (default :obj:`True`)
         activation (str, optional): Activation function to be used, :obj:`None`
             for identity function (i.e., no activation).
