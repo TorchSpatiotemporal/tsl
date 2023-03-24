@@ -130,9 +130,9 @@ class Predictor(pl.LightningModule):
                 for k, v in model_kwargs.items():
                     assert v == self.model_kwargs[k]
         else:
-            logger.warning("Predictor with already instantiated model is loading "
-                           f"a state_dict from {filename}. Cannot check if model "
-                           "hyperparameters are the same.")
+            logger.warning("Predictor with already instantiated model is "
+                           f"loading a state_dict from {filename}. Cannot "
+                           " check if model hyperparameters are the same.")
         self.load_state_dict(storage['state_dict'])
 
     @property
@@ -162,7 +162,7 @@ class Predictor(pl.LightningModule):
                   f"({self.model.__class__.__name__}). "
             if len(filtered):
                 msg = f"Arguments {list(filtered)} are filtered out. " + msg
-            logger.warn(msg)
+            logger.warning(msg)
             self._check_kwargs = False
         return {k: v for k, v in kwargs.items() if k in
                 self._model_fwd_signature['signature']}

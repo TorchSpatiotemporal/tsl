@@ -40,9 +40,6 @@ class RNNImputerModel(BaseModel):
             (default: :obj:`False`)
         n_layers (int, optional): Number of hidden layers.
             (default: :obj:`1`)
-        return_previous_state (bool): If :obj:`True`, then the returned states
-            are shifted one-step behind the imputations.
-            (default: :obj:`True`)
         cat_states_layers (bool): If :obj:`True`, then the states of the RNN are
             concatenated together.
             (default: :obj:`False`)
@@ -56,7 +53,6 @@ class RNNImputerModel(BaseModel):
                  n_nodes: Optional[int] = None,
                  detach_input: bool = False,
                  n_layers: int = 1,
-                 return_previous_state: bool = True,
                  cat_states_layers: bool = False):
         super(RNNImputerModel, self).__init__()
 
@@ -67,7 +63,6 @@ class RNNImputerModel(BaseModel):
         self.fully_connected = fully_connected
         self.detach_input = detach_input
         self.n_layers = n_layers
-        self.return_previous_state = return_previous_state
         self.cat_states_layers = cat_states_layers
 
         if fully_connected:
@@ -82,14 +77,9 @@ class RNNImputerModel(BaseModel):
                            "'fully_connected' is False.")
             concat_mask = False
 
-        self.rnn = RNNI(input_size=input_size,
-                        hidden_size=hidden_size,
-                        exog_size=exog_size,
-                        cell=cell,
-                        concat_mask=concat_mask,
-                        detach_input=detach_input,
-                        n_layers=n_layers,
-                        return_previous_state=return_previous_state,
+        self.rnn = RNNI(input_size=input_size, hidden_size=hidden_size,
+                        exog_size=exog_size, cell=cell, concat_mask=concat_mask,
+                        n_layers=n_layers, detach_input=detach_input,
                         cat_states_layers=cat_states_layers)
 
     def forward(self, x: Tensor, input_mask: Tensor,
@@ -176,7 +166,6 @@ class BiRNNImputerModel(BaseModel):
                  n_nodes: Optional[int] = None,
                  detach_input: bool = False,
                  n_layers: int = 1,
-                 return_previous_state: bool = True,
                  cat_states_layers: bool = False,
                  dropout: float = 0.):
         super(BiRNNImputerModel, self).__init__(return_type=list)
@@ -188,7 +177,6 @@ class BiRNNImputerModel(BaseModel):
         self.fully_connected = fully_connected
         self.detach_input = detach_input
         self.n_layers = n_layers
-        self.return_previous_state = return_previous_state
         self.cat_states_layers = cat_states_layers
 
         if fully_connected:
@@ -203,24 +191,15 @@ class BiRNNImputerModel(BaseModel):
                            "'fully_connected' is False.")
             concat_mask = False
 
-        self.fwd_rnn = RNNI(input_size=input_size,
-                            hidden_size=hidden_size,
-                            exog_size=exog_size,
-                            cell=cell,
-                            concat_mask=concat_mask,
+        self.fwd_rnn = RNNI(input_size=input_size, hidden_size=hidden_size,
+                            exog_size=exog_size, cell=cell,
+                            concat_mask=concat_mask, n_layers=n_layers,
                             detach_input=detach_input,
-                            n_layers=n_layers,
-                            return_previous_state=return_previous_state,
                             cat_states_layers=cat_states_layers)
-        self.bwd_rnn = RNNI(input_size=input_size,
-                            hidden_size=hidden_size,
-                            exog_size=exog_size,
-                            cell=cell,
-                            concat_mask=concat_mask,
-                            detach_input=detach_input,
-                            n_layers=n_layers,
-                            backward=True,
-                            return_previous_state=return_previous_state,
+        self.bwd_rnn = RNNI(input_size=input_size, hidden_size=hidden_size,
+                            exog_size=exog_size, cell=cell,
+                            concat_mask=concat_mask, flip_time=True,
+                            n_layers=n_layers, detach_input=detach_input,
                             cat_states_layers=cat_states_layers)
 
         self.dropout = nn.Dropout(dropout)

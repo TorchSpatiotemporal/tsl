@@ -102,7 +102,7 @@ class RNNI(RNNIBase):
         concat_mask (bool): If :obj:`True`, then the input tensor is
             concatenated to the mask when fed to the RNN cell.
             (default: :obj:`True`)
-        backward (bool): If :obj:`True`, then the time is folded in the
+        flip_time (bool): If :obj:`True`, then the time is folded in the
             backward direction.
             (default: :obj:`False`)
         n_layers (int, optional): Number of hidden layers.
@@ -111,9 +111,6 @@ class RNNI(RNNIBase):
             on predictions before they are used to fill the gaps, breaking the
             error backpropagation.
             (default: :obj:`False`)
-        return_previous_state (bool): If :obj:`True`, then the returned states
-            are shifted one-step behind the imputations.
-            (default: :obj:`True`)
         cat_states_layers (bool): If :obj:`True`, then the states of the RNN are
             concatenated together.
             (default: :obj:`False`)
@@ -123,10 +120,9 @@ class RNNI(RNNIBase):
                  exog_size: int = 0,
                  cell: str = 'gru',
                  concat_mask: bool = True,
-                 backward: bool = False,
+                 flip_time: bool = False,
                  n_layers: int = 1,
                  detach_input: bool = False,
-                 return_previous_state: bool = True,
                  cat_states_layers: bool = False):
 
         if cell == 'gru':
@@ -146,8 +142,8 @@ class RNNI(RNNIBase):
         cells = [cell(input_size if i == 0 else hidden_size, hidden_size)
                  for i in range(n_layers)]
 
-        super(RNNI, self).__init__(cells, detach_input, concat_mask, backward,
-                                   return_previous_state, cat_states_layers)
+        super(RNNI, self).__init__(cells, detach_input, concat_mask, flip_time,
+                                   cat_states_layers)
         self.readout = nn.Linear(hidden_size, self.input_size)
 
     def state_readout(self, h: List[StateType]):
