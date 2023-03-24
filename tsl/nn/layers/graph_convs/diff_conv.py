@@ -40,7 +40,11 @@ class DiffConv(MessagePassing):
         self.root_weight = root_weight
         self.add_backward = add_backward
 
-        n_filters = 2 * k if not root_weight else 2 * k + 1
+        n_filters = k
+        if add_backward:
+            n_filters *= 2
+        if root_weight:
+            n_filters += 1
 
         self.filters = nn.Linear(in_channels * n_filters, out_channels,
                                  bias=bias)
