@@ -1,46 +1,54 @@
 <div align="center">
-    <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo_text.svg" width="75%"/>
+    <br><br>
+    <img src=./docs/source/_static/img/tsl_logo_text.svg width="75%"/>
     <h3>Neural spatiotemporal forecasting with PyTorch</h3>
     <hr>
     <img alt="PyPI" src="https://img.shields.io/pypi/v/torch-spatiotemporal">
+    <img alt="PyPI - Python Version" src="https://img.shields.io/badge/python-%3E%3D3.8-blue">
+    <img alt="Total downloads" src="https://static.pepy.tech/badge/torch-spatiotemporal">
     <a href='https://torch-spatiotemporal.readthedocs.io/en/latest/?badge=latest'>
         <img src='https://readthedocs.org/projects/torch-spatiotemporal/badge/?version=latest' alt='Documentation Status' />
     </a>
+    <p>
+    🚀 <a href="https://torch-spatiotemporal.readthedocs.io/en/latest/usage/quickstart.html">Getting Started</a> - 📚 <a href="https://torch-spatiotemporal.readthedocs.io/en/latest/">Documentation</a> - 💻 <a href="https://torch-spatiotemporal.readthedocs.io/en/latest/notebooks/a_gentle_introduction_to_tsl.html">Introductory notebook</a>
+    </p>
 </div>
 
-**tsl** *(Torch Spatiotemporal)* is a library built to accelerate research on neural spatiotemporal data processing 
-methods, with a focus on Graph Neural Networks.
+<p><img src="./docs/source/_static/img/tsl_logo.svg" width="30px" style="display: inline-block; height: 1.3em; width: unset; vertical-align: text-top;"/> <b>tsl</b> <em>(Torch Spatiotemporal)</em> is a library built to accelerate research on neural spatiotemporal data processing 
+methods, with a focus on Graph Neural Networks.</p>
 
-`tsl` is built on several libraries of the *Python* scientific computing ecosystem, with the final objective of providing a straightforward process that goes from data preprocessing to model prototyping.
-In particular, `tsl` offers a wide range of utilities to develop neural networks in *PyTorch* for processing spatiotemporal data signals.
+<p><img src="./docs/source/_static/img/tsl_logo.svg" width="30px" style="display: inline-block; height: 1.3em; width: unset; vertical-align: text-top;"/> tsl is built on several libraries of the <b>Python</b> scientific computing ecosystem, with the final objective of providing a straightforward process that goes from data preprocessing to model prototyping.
+In particular, <img src="./docs/source/_static/img/tsl_logo.svg" width="30px" style="display: inline-block; height: 1.3em; width: unset; vertical-align: text-top;"/> tsl offers a wide range of utilities to develop neural networks in <img src="./docs/source/_static/img/logos/pytorch.svg" width="30px" style="display: inline-block; height: 1.3em; width: unset; vertical-align: text-top;"/> <a href="https://pytorch.org"><b>PyTorch</b></a> for processing spatiotemporal data signals.</p>
+
+## Getting Started
+
+Before you start using <img src="./docs/source/_static/img/tsl_logo.svg" width="30px" style="display: inline-block; height: 1.3em; width: unset; vertical-align: text-top;"/> tsl, please review the <a href="https://torch-spatiotemporal.readthedocs.io/en/latest/">documentation</a> to get an understanding of the library and its capabilities.
+
+You can also explore the examples provided in the `examples` directory to see how train deep learning models working with spatiotemporal data.
 
 ## Installation
 
-`tsl` is compatible with Python>=3.7. We recommend installation from source to be up-to-date with the latest version:
+Before installing <img src="./docs/source/_static/img/tsl_logo.svg" width="30px" style="display: inline-block; height: 1.3em; width: unset; vertical-align: text-top;"/> tsl, make sure you have installed <img src="./docs/source/_static/img/logos/pytorch.svg" width="30px" style="display: inline-block; height: 1.3em; width: unset; vertical-align: text-top;"/> <a href="https://pytorch.org">PyTorch</a> (>=1.9.0) and <img src="./docs/source/_static/img/logos/pyg.svg" width="30px" style="display: inline-block; height: 1.3em; width: unset; vertical-align: text-top;"/> <a href="https://pyg.org">PyG</a> (>=2.0.3) in your virtual environment (see [PyG installation guidelines](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html)). <img src="./docs/source/_static/img/tsl_logo.svg" width="30px" style="display: inline-block; height: 1.3em; width: unset; vertical-align: text-top;"/> tsl is available for Python>=3.8. We recommend installation from github to be up-to-date with the latest version:
 
 ```bash
-git clone https://github.com/TorchSpatiotemporal/tsl.git
-cd tsl
-python setup.py install  # Or 'pip install .'
+pip install git+https://github.com/TorchSpatiotemporal/tsl.git
 ```
 
-To solve all dependencies, we recommend using Anaconda and the provided environment configuration by running the command:
-
-```bash
-conda env create -f tsl_env.yml
-```
-
-Alternatively, you can install the library from pip:
+Alternatively, you can install the library from the pypi repository:
 
 ```bash
 pip install torch-spatiotemporal
 ```
 
-Please refer to [PyG installation guidelines](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) for installation of PyG ecosystem without conda.
+To avoid dependencies issues, we recommend using [Anaconda](https://www.anaconda.com/) and the provided environment configuration by running the command:
+
+```bash
+conda env create -f conda_env.yml
+```
 
 ## Tutorial
 
-The best way to start using `tsl` is by following the tutorial notebook in `examples/notebooks/a_gentle_introduction_to_tsl.ipynb`.
+The best way to start using <img src="./docs/source/_static/img/tsl_logo.svg" width="30px" style="display: inline-block; height: 1.3em; width: unset; vertical-align: text-top;"/> tsl is by following the tutorial notebook in `examples/notebooks/a_gentle_introduction_to_tsl.ipynb`.
 
 ## Documentation
 
@@ -62,3 +70,9 @@ If you use Torch Spatiotemporal for your research, please consider citing the li
 ```
 
 By [Andrea Cini](https://andreacini.github.io/) and [Ivan Marisca](https://marshka.github.io/).
+
+Thanks to all contributors!
+
+<a href="https://github.com/TorchSpatiotemporal/tsl/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=TorchSpatiotemporal/tsl" />
+</a>

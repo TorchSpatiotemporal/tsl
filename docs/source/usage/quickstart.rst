@@ -4,7 +4,7 @@ Quickstart
 Installation
 ------------
 
-Torch Spatiotemporal is compatible with Python>=3.7. We recommend installation
+Torch Spatiotemporal is compatible with Python>=3.8. We recommend installation
 on a `Anaconda or Miniconda <https://conda.io/projects/conda/en/latest/user-guide/install>`_
 environment or a `virtual env <https://docs.python.org/3/library/venv.html>`_.
 
@@ -33,7 +33,7 @@ directory and create a new conda environment using the provided conda configurat
 
     git clone https://github.com/TorchSpatiotemporal/tsl.git
     cd tsl
-    conda env create -f tsl_env.yml
+    conda env create -f conda_env.yml
 
 Then, activate the environment and install tsl using :code:`pip`.
 
@@ -53,7 +53,13 @@ Installing using pip
 Alternatively, you can install the library directly from :code:`pip`. Please
 refer to `PyTorch <https://pytorch.org/>`_ and `PyG installation guidelines <https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html>`_
 for installation without conda. After having installed the libraries, install
-:code:`torch-spatiotemporal` from pip.
+:code:`torch-spatiotemporal` using pip. For the latest version:
+
+.. code-block:: bash
+
+    pip install git+https://github.com/TorchSpatiotemporal/tsl.git
+
+For the stable version:
 
 .. code-block:: bash
 

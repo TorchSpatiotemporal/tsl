@@ -8,9 +8,9 @@ with open("README.md", "r") as fh:
 
 install_requires = [
     'einops',
-    'numpy',
+    'numpy>1.20.3',
     'pandas>=1.4,<1.5',
-    'pytorch_lightning>=1.5,<1.9',
+    'pytorch_lightning>=1.8,<1.9',
     'PyYAML',
     'scikit_learn',
     'scipy',
@@ -65,7 +65,7 @@ setup(
         'spatiotemporal-graph-neural-networks',
         'spatiotemporal-processing',
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     install_requires=install_requires,
     extras_require={
         'experiment': experiment_requires,
