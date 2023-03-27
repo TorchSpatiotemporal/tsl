@@ -7,7 +7,7 @@ from torch_geometric.utils import is_undirected
 from torch_sparse import SparseTensor
 
 from tsl.ops.connectivity import maybe_num_nodes, infer_backend, convert_torch_connectivity, adj_to_edge_index, \
-    parse_connectivity, normalize_connectivity, edge_index_to_adj
+    parse_connectivity, normalize_connectivity, edge_index_to_adj, transpose, reduce_graph
 from tsl.ops.graph_generators import build_circle_graph
 
 num_nodes = 30
@@ -48,6 +48,9 @@ def test_maybe_num_nodes():
     # Test for empty input
     edge_index = np.array([], dtype=np.int64)
     assert maybe_num_nodes(edge_index) == 0
+
+    # Test for num_nodes not None
+    assert maybe_num_nodes(edge_index, num_nodes=10) == 10
 
     # Test for invalid input
     try:
@@ -172,3 +175,18 @@ def test_edge_index_to_adj():
     adj = edge_index_to_adj(edge_index, edge_weights, 3)
     expected_adj = torch.tensor([[0, 0.5, 0], [0, 0, 1], [0.3, 0, 0]]).T
     assert torch.allclose(adj, expected_adj)
+
+
+def test_transpose():
+    edge_index = torch.tensor([[0, 1, 2], [1, 2, 0]])
+    expected_edge_index = torch.tensor([[1, 2, 0], [0, 1, 2]])
+    assert torch.allclose(transpose(edge_index), expected_edge_index)
+    # Test for sparse tensor
+    adj = SparseTensor(row=torch.tensor([0, 1, 2]), col=torch.tensor([1, 2, 0]))
+    expected_adj = SparseTensor(row=torch.tensor([1, 2, 0]), col=torch.tensor([0, 1, 2]))
+    assert torch.allclose(transpose(adj).to_dense(), expected_adj.to_dense())
+    # Test for np.ndarray input
+    edge_index_np = edge_index.numpy()
+    expected_edge_index_np = expected_edge_index.numpy()
+    assert np.allclose(transpose(edge_index_np), expected_edge_index_np)
+
