@@ -52,6 +52,18 @@ class GRUCellBase(RNNCellBase):
         return h_new
 
 
+class GRUCell(nn.GRUCell, RNNCellBase):
+
+    __doc__ = nn.GRUCell.__doc__
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}(hidden_size={self.hidden_size})'
+
+    def initialize_state(self, x) -> Tensor:
+        return torch.zeros(x.size(0), self.hidden_size,
+                           dtype=x.dtype, device=x.device)
+
+
 class GraphGRUCellBase(GRUCellBase):
     """Base class for implementing graph-based gated recurrent unit (GRU)
     cells."""
@@ -105,6 +117,20 @@ class LSTMCellBase(RNNCellBase):
         c_new = f * c + i * g
         h_new = o * torch.tanh(c_new)
         return h_new, c_new
+
+
+class LSTMCell(nn.LSTMCell, RNNCellBase):
+
+    __doc__ = nn.LSTMCell.__doc__
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}(hidden_size={self.hidden_size})'
+
+    def initialize_state(self, x) -> Tuple[Tensor, Tensor]:
+        return (torch.zeros(x.size(0), self.hidden_size,
+                            dtype=x.dtype, device=x.device),
+                torch.zeros(x.size(0), self.hidden_size,
+                            dtype=x.dtype, device=x.device))
 
 
 class GraphLSTMCellBase(LSTMCellBase):

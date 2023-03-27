@@ -86,14 +86,12 @@ class RNNIBase(RNNBase):
                  cells: Union[RNNCellBase, List[RNNCellBase], nn.ModuleList],
                  detach_input: bool = False,
                  concat_mask: bool = False,
-                 backward: bool = False,
-                 return_previous_state: bool = True,
+                 flip_time: bool = False,
                  cat_states_layers: bool = False):
         super().__init__(cells, cat_states_layers, return_only_last_state=False)
         self.detach_input = detach_input
         self.concat_mask = concat_mask
-        self.backward = backward
-        self.return_previous_state = return_previous_state
+        self.flip_time = flip_time
 
     def state_readout(self, h: List[StateType]):
         raise NotImplementedError
@@ -130,22 +128,18 @@ class RNNIBase(RNNBase):
         # temporal conv
         h_out, x_out = [], []
         steps = x.size(1)
-        steps = range(steps) if not self.backward else range(steps - 1, -1, -1)
+        steps = range(steps) if not self.flip_time else range(steps - 1, -1, -1)
         for step in steps:
             # readout phase
             x_hat = self.state_readout(h)
             x_out.append(x_hat)
-            #
-            if self.return_previous_state:
-                h_out.append(self.postprocess_state(h))
-            #
+            h_out.append(self.postprocess_state(h))
+            # preprocess input to rnn's cell given readout
             x_t = self.preprocess_input(x[:, step], x_hat, input_mask[:, step],
                                         step, *args, **kwargs)
             h = self.single_pass(x_t, h, *args, **kwargs)
-            if not self.return_previous_state:
-                h_out.append(self.postprocess_state(h))
 
-        if self.backward:
+        if self.flip_time:
             x_out, h_out = x_out[::-1], h_out[::-1]
 
         x_out = torch.stack(x_out, dim=1)  # [b t * f]
