@@ -41,6 +41,7 @@ class DCRNNModel(BaseModel):
                  kernel_size: int = 2,
                  ff_size: int = 256,
                  n_layers: int = 1,
+                 cache_support: bool = False,
                  dropout: float = 0.,
                  activation: str = 'relu'):
         super(DCRNNModel, self).__init__(return_type=Tensor)
@@ -57,6 +58,7 @@ class DCRNNModel(BaseModel):
                            n_layers=n_layers,
                            k=kernel_size,
                            return_only_last_state=True)
+        self.cache_support = cache_support
 
         self.readout = MLPDecoder(input_size=hidden_size,
                                   hidden_size=ff_size,
@@ -75,5 +77,6 @@ class DCRNNModel(BaseModel):
         else:
             x = self.input_encoder(x)
 
-        out = self.dcrnn(x, edge_index, edge_weight)
+        out = self.dcrnn(x, edge_index, edge_weight,
+                         cache_support=self.cache_support)
         return self.readout(out)

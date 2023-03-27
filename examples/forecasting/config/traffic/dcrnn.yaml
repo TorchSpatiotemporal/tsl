@@ -10,6 +10,7 @@ model:
     kernel_size: 2
     n_layers: 1
     dropout: 0
+    cache_support: True
 
 dataset:
   connectivity:

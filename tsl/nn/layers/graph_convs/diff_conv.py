@@ -4,9 +4,40 @@ import torch
 from torch import nn, Tensor
 from torch_geometric.nn import MessagePassing
 from torch_geometric.typing import Adj, OptTensor
-from torch_sparse import SparseTensor, matmul
+from torch_geometric.utils.num_nodes import maybe_num_nodes
+from torch_sparse import SparseTensor, matmul, cat as cat_sparse
 
 from tsl.ops.connectivity import transpose, asymmetric_norm
+
+
+def diff_conv_gso(edge_index: Tensor, edge_weight: OptTensor = None, k: int = 2,
+                  num_nodes: int = None,
+                  add_backward: bool = True):
+    if isinstance(edge_index, Tensor):
+        # transpose
+        col, row = edge_index
+        num_nodes = maybe_num_nodes(edge_index, num_nodes)
+        adj = SparseTensor(row=row, col=col, value=edge_weight,
+                           sparse_sizes=(num_nodes, num_nodes))
+    elif isinstance(edge_index, SparseTensor):
+        adj = edge_index
+    else:
+        raise RuntimeError("Edge index must be (edge_index, edge_weight) "
+                           "tuple or SparseTensor.")
+
+    # normalize
+    adj0, _ = asymmetric_norm(adj, dim=1, num_nodes=num_nodes)
+
+    out = [adj0]
+    for _ in range(k - 1):
+        out.append(adj0 @ out[-1])
+
+    if add_backward:
+        out_bwd = DiffConv.gso(adj.t(), k=k, num_nodes=num_nodes,
+                               add_backward=False)
+        return cat_sparse(out + [out_bwd], dim=0)
+
+    return cat_sparse(out, dim=0)
 
 
 class DiffConv(MessagePassing):
@@ -59,15 +90,15 @@ class DiffConv(MessagePassing):
         """Normalize the connectivity weights and (optionally) add normalized
         backward weights."""
         norm_edge_index, \
-        norm_edge_weight = asymmetric_norm(edge_index, edge_weight,
-                                           dim=1, num_nodes=num_nodes)
+            norm_edge_weight = asymmetric_norm(edge_index, edge_weight,
+                                               dim=1, num_nodes=num_nodes)
         # Add backward matrices
         if add_backward:
             return [(norm_edge_index, norm_edge_weight)] + \
-                   DiffConv.compute_support_index(transpose(edge_index),
-                                                  edge_weight=edge_weight,
-                                                  num_nodes=num_nodes,
-                                                  add_backward=False)
+                DiffConv.compute_support_index(transpose(edge_index),
+                                               edge_weight=edge_weight,
+                                               num_nodes=num_nodes,
+                                               add_backward=False)
         # Normalize
         return [(norm_edge_index, norm_edge_weight)]
 

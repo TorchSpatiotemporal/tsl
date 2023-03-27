@@ -5,6 +5,10 @@ from torch.utils.data import DataLoader
 from ..spatiotemporal_dataset import SpatioTemporalDataset
 
 
+def _dummy_collate(x):
+    return x
+
+
 class StaticGraphLoader(DataLoader):
     r"""A data loader for getting temporal graph signals of type
     :class:`~tsl.data.Batch` on a shared (static) topology.
@@ -39,7 +43,7 @@ class StaticGraphLoader(DataLoader):
                          batch_size=batch_size,
                          shuffle=shuffle,
                          drop_last=drop_last,
-                         collate_fn=lambda x: x,
+                         collate_fn=_dummy_collate,
                          **kwargs)
 
     @property
