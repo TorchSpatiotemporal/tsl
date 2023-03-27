@@ -78,6 +78,7 @@ with initialize(config_path=path_to_yamls, job_name='test_example_forecasting', 
     cfg = compose(config_name='test', overrides=[])
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_example_forecasting():
     ########################################
