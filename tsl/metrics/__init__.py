@@ -1,4 +1,4 @@
-from . import torch, numpy
+from . import numpy, torch
 
 # aliases
 torch_metrics = torch

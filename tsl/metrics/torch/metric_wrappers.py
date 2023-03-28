@@ -2,16 +2,18 @@ from typing import Any
 
 from torch.nn import Identity
 
-from .metric_base import MaskedMetric
 from ...nn.layers import Select
+from .metric_base import MaskedMetric
 
 
 class MaskedMetricWrapper(MaskedMetric):
-    def __init__(self,
-                 metric: MaskedMetric,
-                 input_preprocessing=None,
-                 target_preprocessing=None,
-                 mask_preprocessing=None):
+    def __init__(
+        self,
+        metric: MaskedMetric,
+        input_preprocessing=None,
+        target_preprocessing=None,
+        mask_preprocessing=None,
+    ):
         super(MaskedMetricWrapper, self).__init__(None)
         self.metric = metric
 
@@ -61,7 +63,9 @@ class SelectMetricWrapper(MaskedMetricWrapper):
             mask_preprocessing = Select(dim, mask_idx)
         else:
             mask_preprocessing = None
-        super(SelectMetricWrapper, self).__init__(metric,
-                                                  input_preprocessing=input_preprocessing,
-                                                  target_preprocessing=target_preprocessing,
-                                                  mask_preprocessing=mask_preprocessing)
+        super(SelectMetricWrapper, self).__init__(
+            metric,
+            input_preprocessing=input_preprocessing,
+            target_preprocessing=target_preprocessing,
+            mask_preprocessing=mask_preprocessing,
+        )

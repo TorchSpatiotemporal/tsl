@@ -1,27 +1,39 @@
+from typing import Literal, Optional, Tuple, Union
+
 import torch
-from typing import Literal, Union, Optional, Tuple
 
 import tsl
 from tsl.utils import ensure_list
 
 __all__ = [
-    'mae', 'nmae', 'mape', 'mse', 'rmse', 'nrmse', 'nrmse_2', 'r2', 'mre',
-    'pinball_loss',
-    'multi_quantile_pinball_loss'
+    "mae",
+    "nmae",
+    "mape",
+    "mse",
+    "rmse",
+    "nrmse",
+    "nrmse_2",
+    "r2",
+    "mre",
+    "pinball_loss",
+    "multi_quantile_pinball_loss",
 ]
 
-ReductionType = Literal['mean', 'sum', 'none']
+ReductionType = Literal["mean", "sum", "none"]
 MetricOutputType = Union[float, torch.Tensor]
 
 
-def _masked_reduce(x: torch.Tensor, reduction: ReductionType,
-                   mask: Optional[torch.Tensor] = None,
-                   nan_to_zero: bool = False) -> MetricOutputType:
+def _masked_reduce(
+    x: torch.Tensor,
+    reduction: ReductionType,
+    mask: Optional[torch.Tensor] = None,
+    nan_to_zero: bool = False,
+) -> MetricOutputType:
     if mask is not None and mask.dtype != torch.bool:
         mask = mask.to(torch.bool)
 
     # 'none': return x with x[i] = 0/nan where mask[i] == False
-    if reduction == 'none':
+    if reduction == "none":
         if mask is not None:
             masked_idxs = torch.logical_not(mask)
             x[masked_idxs] = 0 if nan_to_zero else torch.nan
@@ -30,18 +42,24 @@ def _masked_reduce(x: torch.Tensor, reduction: ReductionType,
     # 'mean'/'sum': return mean/sum of x[mask == True]
     if mask is not None:
         x = x[mask]
-    if reduction == 'mean':
+    if reduction == "mean":
         return torch.mean(x)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         return torch.sum(x)
     else:
-        raise ValueError(f"reduction {reduction} not allowed, must be one of "
-                         "['mean', 'sum', 'none'].")
+        raise ValueError(
+            f"reduction {reduction} not allowed, must be one of "
+            "['mean', 'sum', 'none']."
+        )
 
 
-def mae(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None,
-        reduction: ReductionType = 'mean',
-        nan_to_zero: bool = False) -> MetricOutputType:
+def mae(
+    y_hat: torch.Tensor,
+    y: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+    reduction: ReductionType = "mean",
+    nan_to_zero: bool = False,
+) -> MetricOutputType:
     r"""Compute the `Mean Absolute Error (MAE)
     <https://en.wikipedia.org/wiki/Mean_absolute_error>`_ between the estimate
     :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -76,9 +94,13 @@ def mae(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = Non
     return _masked_reduce(err, reduction, mask, nan_to_zero)
 
 
-def nmae(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None,
-         reduction: ReductionType = 'mean',
-         nan_to_zero: bool = False) -> MetricOutputType:
+def nmae(
+    y_hat: torch.Tensor,
+    y: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+    reduction: ReductionType = "mean",
+    nan_to_zero: bool = False,
+) -> MetricOutputType:
     r"""Compute the *Normalized Mean Absolute Error* (NMAE) between the estimate
     :math:`\hat{y}` and the true value :math:`y`. The NMAE is the `Mean Absolute
     Error (MAE) <https://en.wikipedia.org/wiki/Mean_absolute_error>`_ scaled by
@@ -86,7 +108,8 @@ def nmae(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = No
 
     .. math::
 
-        \text{NMAE} = \frac{\frac{1}{N} \sum_{i=1}^n |\hat{y}_i - y_i|}{\max(y) - \min(y)}
+        \text{NMAE} = \frac{\frac{1}{N} \sum_{i=1}^n |\hat{y}_i - y_i|}
+        {\max(y) - \min(y)}
 
     Args:
         y_hat (torch.Tensor): The estimated variable.
@@ -115,9 +138,13 @@ def nmae(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = No
     return _masked_reduce(err, reduction, mask, nan_to_zero)
 
 
-def mape(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None,
-         reduction: ReductionType = 'mean',
-         nan_to_zero: bool = False) -> MetricOutputType:
+def mape(
+    y_hat: torch.Tensor,
+    y: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+    reduction: ReductionType = "mean",
+    nan_to_zero: bool = False,
+) -> MetricOutputType:
     r"""Compute the `Mean Absolute Percentage Error (MAPE).
     <https://en.wikipedia.org/wiki/Mean_absolute_percentage_error>`_ between the
     estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -149,13 +176,17 @@ def mape(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = No
     Returns:
         float | torch.Tensor: The Mean Absolute Percentage Error.
     """
-    err = torch.abs((y_hat - y)/(y + tsl.epsilon))
+    err = torch.abs((y_hat - y) / (y + tsl.epsilon))
     return _masked_reduce(err, reduction, mask, nan_to_zero)
 
 
-def mse(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None,
-        reduction: ReductionType = 'mean',
-        nan_to_zero: bool = False) -> MetricOutputType:
+def mse(
+    y_hat: torch.Tensor,
+    y: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+    reduction: ReductionType = "mean",
+    nan_to_zero: bool = False,
+) -> MetricOutputType:
     r"""Compute the `Mean Squared Error (MSE)
     <https://en.wikipedia.org/wiki/Mean_squared_error>`_ between the
     estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -190,8 +221,12 @@ def mse(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = Non
     return _masked_reduce(err, reduction, mask, nan_to_zero)
 
 
-def rmse(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None,
-         reduction: ReductionType = 'mean') -> MetricOutputType:
+def rmse(
+    y_hat: torch.Tensor,
+    y: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+    reduction: ReductionType = "mean",
+) -> MetricOutputType:
     r"""Compute the `Root Mean Squared Error (RMSE)
     <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
     estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -207,8 +242,10 @@ def rmse(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = No
             the values at valid indices (with :attr:`mask` set to :obj:`True`).
             (default: :obj:`None`)
         reduction (str): Specifies the reduction to apply to the output:
-            ``'mean'`` | ``'sum'``. ``'mean'``: the sum of the output will be divided by the
-            number of elements in the output, ``'sum'``: the output will be
+            ``'mean'`` | ``'sum'``.
+            ``'mean'``: the sum of the output will be divided by the
+            number of elements in the output,
+            ``'sum'``: the output will be
             summed. (default: ``'mean'``)
 
     Returns:
@@ -218,8 +255,12 @@ def rmse(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = No
     return torch.sqrt(_masked_reduce(err, reduction, mask))
 
 
-def nrmse(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None,
-          reduction: ReductionType = 'mean') -> MetricOutputType:
+def nrmse(
+    y_hat: torch.Tensor,
+    y: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+    reduction: ReductionType = "mean",
+) -> MetricOutputType:
     r"""Compute the `Normalized Root Mean Squared Error (NRMSE)
     <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
     estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -227,7 +268,8 @@ def nrmse(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = N
 
     .. math::
 
-        \text{NRMSE} = \frac{\sqrt{\frac{\sum_{i=1}^n (\hat{y}_i - y_i)^2}{n}} }{\max y - \min y}
+        \text{NRMSE} = \frac{\sqrt{\frac{\sum_{i=1}^n (\hat{y}_i - y_i)^2}{n}} }
+        {\max y - \min y}
 
     Args:
         y_hat (torch.Tensor): The estimated variable.
@@ -247,8 +289,12 @@ def nrmse(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = N
     return rmse(y_hat, y, mask, reduction) / delta
 
 
-def nrmse_2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None,
-            reduction: ReductionType = 'mean') -> MetricOutputType:
+def nrmse_2(
+    y_hat: torch.Tensor,
+    y: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+    reduction: ReductionType = "mean",
+) -> MetricOutputType:
     r"""Compute the `Normalized Root Mean Squared Error (NRMSE)
     <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
     estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -282,10 +328,14 @@ def nrmse_2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] =
     return rmse(y_hat, y, mask, reduction) / power_y
 
 
-def r2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None,
-       reduction: ReductionType = 'mean',
-       nan_to_zero: bool = False,
-       mean_axis: Union[int, Tuple] = None) -> MetricOutputType:
+def r2(
+    y_hat: torch.Tensor,
+    y: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+    reduction: ReductionType = "mean",
+    nan_to_zero: bool = False,
+    mean_axis: Union[int, Tuple] = None,
+) -> MetricOutputType:
     r"""Compute the `coefficient of determination
     <https://en.wikipedia.org/wiki/Coefficient_of_determination>`_ :math:`R^2`
     between the estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -326,11 +376,12 @@ def r2(y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None
     mean_val = torch.mean(y, dim=mean_axis, keepdims=True)
 
     variance = mse(mean_val, y, mask, reduction, nan_to_zero)
-    return 1. - (mse_ / variance)
+    return 1.0 - (mse_ / variance)
 
 
-def mre(y_hat: torch.Tensor, y: torch.Tensor,
-        mask: Optional[torch.Tensor] = None) -> float:
+def mre(
+    y_hat: torch.Tensor, y: torch.Tensor, mask: Optional[torch.Tensor] = None
+) -> float:
     r"""Compute the MAE normalized by the L1-norm of the true signal :math:`y`,
     i.e.
 
@@ -355,8 +406,9 @@ def mre(y_hat: torch.Tensor, y: torch.Tensor,
         if mask.dtype != torch.bool:
             mask = mask.to(torch.bool)
         den = torch.abs(y[mask]).sum() + tsl.epsilon
-    err = mae(y_hat, y, mask, reduction='sum')
+    err = mae(y_hat, y, mask, reduction="sum")
     return err / den
+
 
 def pinball_loss(y_hat, y, q):
     err = y - y_hat

@@ -1,5 +1,10 @@
 import numpy as np
-from tsl.ops.graph_generators import build_knn_graph, build_circle_graph, build_line_graph
+
+from tsl.ops.graph_generators import (
+    build_circle_graph,
+    build_knn_graph,
+    build_line_graph,
+)
 
 
 def test_build_knn_graph():
@@ -38,4 +43,3 @@ def test_build_line_graph():
     assert np.all(np.bincount(edge_index[1])[1:] == 1)
     # Check only 1 isolated node
     assert np.unique(edge_index[1]).size == num_nodes - 1
-

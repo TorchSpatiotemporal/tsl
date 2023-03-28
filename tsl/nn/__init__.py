@@ -1,7 +1,4 @@
-from . import layers
-from . import models
-from .blocks import encoders
-from .blocks import decoders
-
+from . import layers, models
+from .blocks import decoders, encoders
 from .functional import *  # noqa
 from .utils import *  # noqa

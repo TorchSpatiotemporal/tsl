@@ -14,7 +14,8 @@ class Dense(nn.Module):
     where :math:`\mathbf{x} \in \mathbb{R}^{d_{in}}, \mathbf{x}^{\prime} \in
     \mathbb{R}^{d_{out}}` are the input and output features, respectively,
     :math:`\boldsymbol{\Theta} \in \mathbb{R}^{d_{out} \times d_{in}} \mathbf{b}
-    \in \mathbb{R}^{d_{out}}` are trainable parameters, and :math:`\sigma` is an activation function.
+    \in \mathbb{R}^{d_{out}}` are trainable parameters,
+    and :math:`\sigma` is an activation function.
 
     Args:
         input_size (int): Number of input features.
@@ -27,13 +28,18 @@ class Dense(nn.Module):
             (default: :obj:`True`)
     """
 
-    def __init__(self, input_size: int, output_size: int,
-                 activation: str = 'relu', dropout: float = 0.,
-                 bias: bool = True):
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int,
+        activation: str = "relu",
+        dropout: float = 0.0,
+        bias: bool = True,
+    ):
         super(Dense, self).__init__()
         self.affinity = nn.Linear(input_size, output_size, bias=bias)
         self.activation = utils.get_layer_activation(activation)()
-        self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
+        self.dropout = nn.Dropout(dropout) if dropout > 0.0 else nn.Identity()
 
     def forward(self, x):
         """"""

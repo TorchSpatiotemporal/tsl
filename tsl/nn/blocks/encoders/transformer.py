@@ -2,7 +2,7 @@ from functools import partial
 from typing import Optional
 
 import torch.nn.functional as F
-from torch import nn, Tensor
+from torch import Tensor, nn
 
 from tsl.nn import utils
 from tsl.nn.layers.base import MultiHeadAttention
@@ -30,23 +30,27 @@ class TransformerLayer(nn.Module):
         dropout (float, optional): Dropout probability.
     """
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 ff_size=None,
-                 n_heads=1,
-                 axis='time',
-                 causal=True,
-                 activation='elu',
-                 dropout=0.):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        ff_size=None,
+        n_heads=1,
+        axis="time",
+        causal=True,
+        activation="elu",
+        dropout=0.0,
+    ):
         super(TransformerLayer, self).__init__()
-        self.att = MultiHeadAttention(embed_dim=hidden_size,
-                                      qdim=input_size,
-                                      kdim=input_size,
-                                      vdim=input_size,
-                                      heads=n_heads,
-                                      axis=axis,
-                                      causal=causal)
+        self.att = MultiHeadAttention(
+            embed_dim=hidden_size,
+            qdim=input_size,
+            kdim=input_size,
+            vdim=input_size,
+            heads=n_heads,
+            axis=axis,
+            causal=causal,
+        )
 
         if input_size != hidden_size:
             self.skip_conn = nn.Linear(input_size, hidden_size)
@@ -61,7 +65,7 @@ class TransformerLayer(nn.Module):
             utils.get_layer_activation(activation)(),
             nn.Dropout(dropout),
             nn.Linear(ff_size, hidden_size),
-            nn.Dropout(dropout)
+            nn.Dropout(dropout),
         )
 
         self.dropout = nn.Dropout(dropout)
@@ -71,8 +75,7 @@ class TransformerLayer(nn.Module):
     def forward(self, x: Tensor, mask: Optional[Tensor] = None):
         """"""
         # x: [batch, steps, nodes, features]
-        x = self.skip_conn(x) + self.dropout(
-            self.att(self.norm1(x), attn_mask=mask)[0])
+        x = self.skip_conn(x) + self.dropout(self.att(self.norm1(x), attn_mask=mask)[0])
         x = x + self.mlp(x)
         return x
 
@@ -94,30 +97,36 @@ class SpatioTemporalTransformerLayer(nn.Module):
         dropout (float, optional): Dropout probability.
     """
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 ff_size=None,
-                 n_heads=1,
-                 causal=True,
-                 activation='elu',
-                 dropout=0.):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        ff_size=None,
+        n_heads=1,
+        causal=True,
+        activation="elu",
+        dropout=0.0,
+    ):
         super(SpatioTemporalTransformerLayer, self).__init__()
-        self.temporal_att = MultiHeadAttention(embed_dim=hidden_size,
-                                               qdim=input_size,
-                                               kdim=input_size,
-                                               vdim=input_size,
-                                               heads=n_heads,
-                                               axis='time',
-                                               causal=causal)
+        self.temporal_att = MultiHeadAttention(
+            embed_dim=hidden_size,
+            qdim=input_size,
+            kdim=input_size,
+            vdim=input_size,
+            heads=n_heads,
+            axis="time",
+            causal=causal,
+        )
 
-        self.spatial_att = MultiHeadAttention(embed_dim=hidden_size,
-                                              qdim=hidden_size,
-                                              kdim=hidden_size,
-                                              vdim=hidden_size,
-                                              heads=n_heads,
-                                              axis='nodes',
-                                              causal=False)
+        self.spatial_att = MultiHeadAttention(
+            embed_dim=hidden_size,
+            qdim=hidden_size,
+            kdim=hidden_size,
+            vdim=hidden_size,
+            heads=n_heads,
+            axis="nodes",
+            causal=False,
+        )
 
         self.skip_conn = nn.Linear(input_size, hidden_size)
 
@@ -130,7 +139,7 @@ class SpatioTemporalTransformerLayer(nn.Module):
             utils.get_layer_activation(activation)(),
             nn.Dropout(dropout),
             nn.Linear(ff_size, hidden_size),
-            nn.Dropout(dropout)
+            nn.Dropout(dropout),
         )
 
         self.dropout = nn.Dropout(dropout)
@@ -139,7 +148,8 @@ class SpatioTemporalTransformerLayer(nn.Module):
         """"""
         # x: [batch, steps, nodes, features]
         x = self.skip_conn(x) + self.dropout(
-            self.temporal_att(self.norm1(x), attn_mask=mask)[0])
+            self.temporal_att(self.norm1(x), attn_mask=mask)[0]
+        )
         x = x + self.dropout(self.spatial_att(self.norm2(x), attn_mask=mask)[0])
         x = x + self.mlp(x)
         return x
@@ -166,47 +176,52 @@ class Transformer(nn.Module):
         dropout (float, optional): Dropout probability.
     """
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 ff_size=None,
-                 output_size=None,
-                 n_layers=1,
-                 n_heads=1,
-                 axis='time',
-                 causal=True,
-                 activation='elu',
-                 dropout=0.):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        ff_size=None,
+        output_size=None,
+        n_layers=1,
+        n_heads=1,
+        axis="time",
+        causal=True,
+        activation="elu",
+        dropout=0.0,
+    ):
         super(Transformer, self).__init__()
         self.f = getattr(F, activation)
 
         if ff_size is None:
             ff_size = hidden_size
 
-        if axis in ['time', 'nodes']:
+        if axis in ["time", "nodes"]:
             transformer_layer = partial(TransformerLayer, axis=axis)
-        elif axis == 'both':
+        elif axis == "both":
             transformer_layer = SpatioTemporalTransformerLayer
         else:
             raise ValueError(f'"{axis}" is not a valid axis.')
 
         layers = []
         for i in range(n_layers):
-            layers.append(transformer_layer(
-                input_size=input_size if i == 0 else hidden_size,
-                hidden_size=hidden_size,
-                ff_size=ff_size,
-                n_heads=n_heads,
-                causal=causal,
-                activation=activation,
-                dropout=dropout))
+            layers.append(
+                transformer_layer(
+                    input_size=input_size if i == 0 else hidden_size,
+                    hidden_size=hidden_size,
+                    ff_size=ff_size,
+                    n_heads=n_heads,
+                    causal=causal,
+                    activation=activation,
+                    dropout=dropout,
+                )
+            )
 
         self.net = nn.Sequential(*layers)
 
         if output_size is not None:
             self.readout = nn.Linear(hidden_size, output_size)
         else:
-            self.register_parameter('readout', None)
+            self.register_parameter("readout", None)
 
     def forward(self, x: Tensor):
         """"""

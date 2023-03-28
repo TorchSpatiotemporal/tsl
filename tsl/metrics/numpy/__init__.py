@@ -1,3 +1,4 @@
+from . import functional
 from .functional import *
 
 metric_functions = functional.__all__

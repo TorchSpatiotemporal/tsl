@@ -4,12 +4,6 @@ from .grad_norm import GradNorm
 from .lambda_module import Lambda
 from .select import Select
 
-__all__ = [
-    'Lambda',
-    'Concatenate',
-    'Select',
-    'GradNorm',
-    'Activation'
-]
+__all__ = ["Lambda", "Concatenate", "Select", "GradNorm", "Activation"]
 
 classes = __all__

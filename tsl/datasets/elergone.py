@@ -1,14 +1,13 @@
+import os
 from typing import Optional
 
-import pandas as pd
 import numpy as np
-import os
+import pandas as pd
 
 import tsl
-from tsl.utils import download_url, extract_zip
-from tsl.datasets.prototypes import casting
-from tsl.datasets.prototypes import DatetimeDataset
+from tsl.datasets.prototypes import DatetimeDataset, casting
 from tsl.ops import similarities as sims
+from tsl.utils import download_url, extract_zip
 
 
 class Elergone(DatetimeDataset):
@@ -41,51 +40,53 @@ class Elergone(DatetimeDataset):
         root: Root folder for data download.
         freq: Resampling frequency.
     """
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00321/LD2011_2014.txt.zip"
 
-    similarity_options = {'correntropy', 'pearson'}
+    url = (
+        "https://archive.ics.uci.edu/ml/machine-learning-databases/"
+        "00321/LD2011_2014.txt.zip"
+    )
 
-    def __init__(self,
-                 root=None,
-                 freq=None):
+    similarity_options = {"correntropy", "pearson"}
+
+    def __init__(self, root=None, freq=None):
         self.root = root
         df, mask = self.load()
-        super().__init__(target=df, mask=mask, freq=freq,
-                         similarity_score='correntropy',
-                         temporal_aggregation='sum',
-                         spatial_aggregation='sum',
-                         name='Electricity')
+        super().__init__(
+            target=df,
+            mask=mask,
+            freq=freq,
+            similarity_score="correntropy",
+            temporal_aggregation="sum",
+            spatial_aggregation="sum",
+            name="Electricity",
+        )
 
     @property
     def raw_file_names(self):
-        return ['LD2011_2014.csv']
+        return ["LD2011_2014.csv"]
 
     @property
     def required_file_names(self):
-        return ['elergone.h5']
+        return ["elergone.h5"]
 
     def download(self) -> None:
         path = download_url(self.url, self.root_dir)
         extract_zip(path, self.root_dir)
         os.unlink(path)
-        path = path.replace('.zip', '')
-        os.rename(path, path.replace('.txt', '.csv'))
+        path = path.replace(".zip", "")
+        os.rename(path, path.replace(".txt", ".csv"))
         self.clean_root_dir()
 
     def build(self):
         # Build dataset
         self.maybe_download()
         tsl.logger.info("Building the electricity dataset...")
-        path = os.path.join(self.root_dir, 'LD2011_2014.csv')
-        df = pd.read_csv(path,
-                         sep=';',
-                         index_col=0,
-                         parse_dates=True,
-                         decimal=',')
+        path = os.path.join(self.root_dir, "LD2011_2014.csv")
+        df = pd.read_csv(path, sep=";", index_col=0, parse_dates=True, decimal=",")
 
         df.index.freq = df.index.inferred_freq
-        path = os.path.join(self.root_dir, 'elergone.h5')
-        df.to_hdf(path, key='raw')
+        path = os.path.join(self.root_dir, "elergone.h5")
+        df.to_hdf(path, key="raw")
         self.clean_downloads()
         return df
 
@@ -96,22 +97,21 @@ class Elergone(DatetimeDataset):
 
     def load(self):
         df = self.load_raw()
-        tsl.logger.info('Loaded raw dataset.')
+        tsl.logger.info("Loaded raw dataset.")
         # idx = sorted(df.index)
         # start, end = idx[0], idx[-1]
         # idx = pd.date_range(start, end, freq='15T')
         # df = df.reindex(index=idx)
-        df /= 4.  # kW -> kWh
+        df /= 4.0  # kW -> kWh
         # drop duplicates
-        df = df[~df.index.duplicated(keep='first')]
-        df = df.fillna(0.)
-        mask = (df.values != 0.).astype('uint8')
+        df = df[~df.index.duplicated(keep="first")]
+        df = df.fillna(0.0)
+        mask = (df.values != 0.0).astype("uint8")
         return df, mask
 
-    def compute_similarity(self,
-                           method: str,
-                           gamma=10,
-                           trainlen=None, **kwargs) -> Optional[np.ndarray]:
+    def compute_similarity(
+        self, method: str, gamma=10, trainlen=None, **kwargs
+    ) -> Optional[np.ndarray]:
         train_df = self.dataframe()
         mask = self.mask
         if trainlen is not None:
@@ -119,8 +119,8 @@ class Elergone(DatetimeDataset):
             mask = mask[:trainlen]
 
         x = np.asarray(train_df) * mask[..., -1]
-        if method == 'correntropy':
-            period = casting.to_pandas_freq('1D').nanos // self.freq.nanos
+        if method == "correntropy":
+            period = casting.to_pandas_freq("1D").nanos // self.freq.nanos
             x = (x - x.mean()) / x.std()
             sim = sims.correntropy(x, period=period, mask=mask, gamma=gamma)
         else:

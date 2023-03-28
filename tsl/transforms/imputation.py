@@ -13,7 +13,8 @@ class MaskInput(BaseTransform):
         mask_key (str): The key in ``Data`` to serve as mask.
             (default: :obj:`'mask_key'`)
     """
-    def __init__(self, input_key: str = 'x', mask_key: str = 'input_mask'):
+
+    def __init__(self, input_key: str = "x", mask_key: str = "input_mask"):
         self.input_key = input_key
         self.mask_key = mask_key
 

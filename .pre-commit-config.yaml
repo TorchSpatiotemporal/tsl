@@ -1,0 +1,35 @@
+ci:
+  autofix_prs: true
+  autoupdate_schedule: quarterly
+
+default_language_version:
+  python: python3
+
+repos:
+   - repo: https://github.com/pycqa/isort
+     rev: 5.12.0
+     hooks:
+       - id: isort
+         name: Sort imports
+         args: ["--profile", "black", "--filter-files"]
+   - repo: https://github.com/psf/black
+     rev: 23.1.0
+     hooks:
+       - id: black
+         name: Format code
+   - repo: https://github.com/pycqa/flake8
+     rev: 6.0.0
+     hooks:
+       - id: flake8
+         name: Check PEP8
+         args: [
+           "--max-line-length=88",
+           "--extend-ignore=E203",
+           "--per-file-ignores=*/__init__.py:F401,F403"
+         ]
+   - repo: https://github.com/regebro/pyroma
+     rev: "4.1"
+     hooks:
+       - id: pyroma
+         name: Check packaging
+         args: [ --min=10, . ]

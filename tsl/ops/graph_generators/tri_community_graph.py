@@ -2,7 +2,7 @@ import numpy as np
 
 
 def _create_community():
-    """
+    r"""
               2
              / \
             1 - 4
@@ -10,9 +10,19 @@ def _create_community():
     ... - 0 - 3 - 5 - ...
     """
     nodes = np.arange(6)
-    edges = np.asarray([[0, 1], [1, 2], [3, 4],  # slashes
-                        [1, 3], [2, 4], [4, 5],  # backslashes
-                        [0, 3], [1, 4], [3, 5]])  # horizontal
+    edges = np.asarray(
+        [
+            [0, 1],
+            [1, 2],
+            [3, 4],  # slashes
+            [1, 3],
+            [2, 4],
+            [4, 5],  # backslashes
+            [0, 3],
+            [1, 4],
+            [3, 5],
+        ]
+    )  # horizontal
     return nodes, edges
 
 
@@ -36,7 +46,8 @@ def build_tri_community_graph(num_communities):
         num_communities (int): number of communities in the created graph.
 
     Returns:
-        tuple: Returns a tuple containing the list of nodes, list of edges and list of edge weights (which is `None`).
+        tuple: Returns a tuple containing the list of nodes,
+            list of edges and list of edge weights (which is `None`).
     """
     nodes = []
     edges = []

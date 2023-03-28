@@ -1,25 +1,18 @@
 import functools
 import os
-from typing import (
-    Union,
-    Optional,
-    Iterable,
-    List,
-    Tuple,
-    Set,
-    Sequence
-)
+from typing import Iterable, List, Optional, Sequence, Set, Tuple, Union
 
 import numpy as np
 from numpy import ndarray
 from pandas import DataFrame, Series
-from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
+from scipy.sparse import coo_matrix, csc_matrix, csr_matrix
 
 import tsl
-from tsl import logger, config
-from ...data.datamodule import splitters, Splitter
+from tsl import config, logger
+
+from ...data.datamodule import Splitter, splitters
 from ...typing import ScipySparseMatrix
-from ...utils.io import save_pickle, load_pickle
+from ...utils.io import load_pickle, save_pickle
 from ...utils.python_utils import ensure_list, files_exist, hash_dict
 
 
@@ -35,22 +28,27 @@ class Dataset(object):
         spatial_aggregation (str): Permutation invariant function (as string)
             used for aggregation along nodes' dimension. (default: :obj:`'sum'`)
     """
+
     root: Optional[str] = None
 
     similarity_options: Optional[Set] = None
 
-    def __init__(self, name: Optional[str] = None,
-                 similarity_score: Optional[str] = None,
-                 temporal_aggregation: str = 'sum',
-                 spatial_aggregation: str = 'sum',
-                 default_splitting_method: str = 'temporal'):
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        similarity_score: Optional[str] = None,
+        temporal_aggregation: str = "sum",
+        spatial_aggregation: str = "sum",
+        default_splitting_method: str = "temporal",
+    ):
         # Set name
         self.name = name if name is not None else self.__class__.__name__
         # Set similarity method
         if self.similarity_options is not None:
             if similarity_score not in self.similarity_options:
-                raise ValueError("{} is not a valid similarity method."
-                                 .format(similarity_score))
+                raise ValueError(
+                    "{} is not a valid similarity method.".format(similarity_score)
+                )
         self.similarity_score = similarity_score
         # Set aggregation methods
         self.temporal_aggregation = temporal_aggregation
@@ -84,8 +82,7 @@ class Dataset(object):
         """
 
         @functools.wraps(fn)
-        def get_splitter(method: Optional[str] = None, *args, **kwargs) \
-                -> Splitter:
+        def get_splitter(method: Optional[str] = None, *args, **kwargs) -> Splitter:
             if method is None:
                 method = obj.default_splitting_method
             splitter = fn(method, *args, **kwargs)
@@ -93,18 +90,19 @@ class Dataset(object):
                 try:
                     splitter = getattr(splitters, method)(*args, **kwargs)
                 except AttributeError:
-                    raise NotImplementedError(f'Splitter option "{method}" '
-                                              f'does not exists.')
+                    raise NotImplementedError(
+                        f'Splitter option "{method}" ' f"does not exists."
+                    )
             return splitter
 
-        if fn.__name__ == 'get_splitter':
+        if fn.__name__ == "get_splitter":
             return get_splitter
 
     def __getstate__(self) -> dict:
         # avoids _pickle.PicklingError: Can't pickle <...>: it's not the same
         # object as <...>
         d = self.__dict__.copy()
-        del d['get_splitter']
+        del d["get_splitter"]
         return d
 
     # Data dimensions
@@ -142,8 +140,9 @@ class Dataset(object):
     #
 
     def __repr__(self):
-        return "{}(length={}, n_nodes={}, n_channels={})" \
-            .format(self.name, self.length, self.n_nodes, self.n_channels)
+        return "{}(length={}, n_nodes={}, n_channels={})".format(
+            self.name, self.length, self.n_nodes, self.n_channels
+        )
 
     def __len__(self):
         """Returns the length -- in terms of time steps -- of the dataset.
@@ -227,6 +226,7 @@ class Dataset(object):
 
     def clean_root_dir(self):
         import shutil
+
         for filename in os.listdir(self.root_dir):
             file_path = os.path.join(self.root_dir, filename)
             if file_path in self.required_files_paths + self.raw_files_paths:
@@ -237,7 +237,7 @@ class Dataset(object):
                 elif os.path.isdir(file_path):
                     shutil.rmtree(file_path)
             except Exception as e:
-                print('Failed to delete %s. Reason: %s' % (file_path, e))
+                print("Failed to delete %s. Reason: %s" % (file_path, e))
 
     # Representations
 
@@ -247,9 +247,11 @@ class Dataset(object):
         has a dynamic structure."""
         raise NotImplementedError
 
-    def numpy(self, return_idx: bool = False) -> \
-            Union[ndarray, List[ndarray],
-                  Tuple[ndarray, Series], Tuple[List[ndarray], Series]]:
+    def numpy(
+        self, return_idx: bool = False
+    ) -> Union[
+        ndarray, List[ndarray], Tuple[ndarray, Series], Tuple[List[ndarray], Series]
+    ]:
         """Returns a numpy representation of the dataset in the form of a
         :class:`~numpy.ndarray`. If :obj:`return_index` is :obj:`True`, it
         returns also a :class:`~pandas.Series` that can be used as index. May
@@ -282,7 +284,7 @@ class Dataset(object):
     # Similarity pipeline: get_adj() → get_similarity() → compute_similarity()
 
     def compute_similarity(self, method: str, **kwargs) -> Optional[np.ndarray]:
-        """Implements the options for the similarity matrix :math:`\mathbf{S}
+        r"""Implements the options for the similarity matrix :math:`\mathbf{S}
         \in \mathbb{R}^{N \\times N}` computation, according to :obj:`method`.
 
         Args:
@@ -294,10 +296,10 @@ class Dataset(object):
         """
         raise NotImplementedError
 
-    def get_similarity(self, method: Optional[str] = None,
-                       save: bool = False,
-                       **kwargs) -> ndarray:
-        """Returns the matrix :math:`\mathbf{S} \in \mathbb{R}^{N \\times N}`,
+    def get_similarity(
+        self, method: Optional[str] = None, save: bool = False, **kwargs
+    ) -> ndarray:
+        r"""Returns the matrix :math:`\mathbf{S} \in \mathbb{R}^{N \\times N}`,
         where :math:`N=`:obj:`self.n_nodes`, with the pairwise similarity
         scores between nodes.
 
@@ -321,10 +323,14 @@ class Dataset(object):
         if method not in self.similarity_options:
             raise ValueError("Similarity method '{}' not valid".format(method))
         if save:
-            enc = hash_dict(dict(method=method,
-                                 class_name=self.__class__.__name__,
-                                 name=self.name,
-                                 **kwargs))
+            enc = hash_dict(
+                dict(
+                    method=method,
+                    class_name=self.__class__.__name__,
+                    name=self.name,
+                    **kwargs,
+                )
+            )
             name = "sim_{}.npy".format(enc)
             path = os.path.join(self.root_dir, name)
             if os.path.exists(path):
@@ -337,15 +343,18 @@ class Dataset(object):
             logger.info(f"Similarity matrix saved at {path}.")
         return sim
 
-    def get_connectivity(self, method: Optional[str] = None,
-                         threshold: Optional[float] = None,
-                         knn: Optional[int] = None,
-                         binary_weights: bool = False,
-                         include_self: bool = True,
-                         force_symmetric: bool = False,
-                         normalize_axis: Optional[int] = None,
-                         layout: str = 'edge_index',
-                         **kwargs) -> Union[ndarray, Tuple, ScipySparseMatrix]:
+    def get_connectivity(
+        self,
+        method: Optional[str] = None,
+        threshold: Optional[float] = None,
+        knn: Optional[int] = None,
+        binary_weights: bool = False,
+        include_self: bool = True,
+        force_symmetric: bool = False,
+        normalize_axis: Optional[int] = None,
+        layout: str = "edge_index",
+        **kwargs,
+    ) -> Union[ndarray, Tuple, ScipySparseMatrix]:
         r"""Returns the weighted adjacency matrix :math:`\mathbf{A} \in
         \mathbb{R}^{N \times N}`, where :math:`N=`:obj:`self.n_nodes`. The
         element :math:`a_{i,j} \in \mathbf{A}` is 0 if there not exists an edge
@@ -393,22 +402,27 @@ class Dataset(object):
         Returns:
             The similarity dense matrix.
         """
-        if 'sparse' in kwargs:
+        if "sparse" in kwargs:
             import warnings
-            warnings.warn("The argument 'sparse' is deprecated and will be "
-                          "removed in future version of tsl. Please use "
-                          "the argument `layout` instead.")
-            layout = 'edge_index' if kwargs['sparse'] else 'dense'
-        if method == 'full':
+
+            warnings.warn(
+                "The argument 'sparse' is deprecated and will be "
+                "removed in future version of tsl. Please use "
+                "the argument `layout` instead."
+            )
+            layout = "edge_index" if kwargs["sparse"] else "dense"
+        if method == "full":
             adj = np.ones((self.n_nodes, self.n_nodes))
-        elif method == 'identity':
+        elif method == "identity":
             adj = np.eye(self.n_nodes)
         else:
             adj = self.get_similarity(method, **kwargs)
         if knn is not None:
             from tsl.ops.similarities import top_k
-            adj = top_k(adj, knn, include_self=include_self,
-                        keep_values=not binary_weights)
+
+            adj = top_k(
+                adj, knn, include_self=include_self, keep_values=not binary_weights
+            )
         elif binary_weights:
             adj = (adj > 0).astype(adj.dtype)
         if threshold is not None:
@@ -419,25 +433,27 @@ class Dataset(object):
             adj = np.maximum.reduce([adj, adj.T])
         if normalize_axis:
             adj = adj / (adj.sum(normalize_axis, keepdims=True) + tsl.epsilon)
-        if layout == 'dense':
+        if layout == "dense":
             return adj
-        elif layout == 'edge_index':
+        elif layout == "edge_index":
             from tsl.ops.connectivity import adj_to_edge_index
+
             return adj_to_edge_index(adj)
-        elif layout in ['coo', 'sparse_matrix']:
+        elif layout in ["coo", "sparse_matrix"]:
             return coo_matrix(adj)
-        elif layout == 'csr':
+        elif layout == "csr":
             return csr_matrix(adj)
-        elif layout == 'csc':
+        elif layout == "csc":
             return csc_matrix(adj)
         else:
-            raise ValueError(f"Invalid format for connectivity: {layout}. Valid"
-                             " options are [dense, edge_index, coo, csr, csc].")
+            raise ValueError(
+                f"Invalid format for connectivity: {layout}. Valid"
+                " options are [dense, edge_index, coo, csr, csc]."
+            )
 
     # Cross-validation splitting options
 
-    def get_splitter(self, method: Optional[str] = None,
-                     *args, **kwargs) -> Splitter:
+    def get_splitter(self, method: Optional[str] = None, *args, **kwargs) -> Splitter:
         """Returns the splitter for a :class:`~tsl.data.SpatioTemporalDataset`.
         A :class:`~tsl.data.preprocessing.Splitter` provides the splits of the
         dataset -- in terms of indices -- for cross validation."""
@@ -457,5 +473,5 @@ class Dataset(object):
 
     def get_config(self) -> dict:
         """Returns the keywords arguments (as dict) for instantiating a
-         :class:`~tsl.data.SpatioTemporalDataset`."""
+        :class:`~tsl.data.SpatioTemporalDataset`."""
         raise NotImplementedError

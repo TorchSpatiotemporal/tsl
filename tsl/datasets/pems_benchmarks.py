@@ -15,7 +15,7 @@ class _PeMS(DatetimeDataset):
 
     url: None
     start_date: None
-    similarity_options = {'distance', 'stcn', 'binary'}
+    similarity_options = {"distance", "stcn", "binary"}
     num_sensors: None
     name: None
 
@@ -25,18 +25,22 @@ class _PeMS(DatetimeDataset):
         self.mask_zeros = mask_zeros
         # load dataset
         flow, occupancy, speed, dist, mask = self.load(mask_zeros)
-        super().__init__(target=flow, mask=mask, freq=freq,
-                         similarity_score="distance",
-                         temporal_aggregation="nearest",
-                         name=self.name)
+        super().__init__(
+            target=flow,
+            mask=mask,
+            freq=freq,
+            similarity_score="distance",
+            temporal_aggregation="nearest",
+            name=self.name,
+        )
         # todo : remove this hack
         if occupancy is not None:
             occupancy.columns = self.target.columns
-            self.add_covariate('occupancy', occupancy, pattern='t n f')
+            self.add_covariate("occupancy", occupancy, pattern="t n f")
         if speed is not None:
             speed.columns = self.target.columns
-            self.add_covariate('speed', speed, pattern='t n f')
-        self.add_covariate('dist', dist, pattern='n n')
+            self.add_covariate("speed", speed, pattern="t n f")
+        self.add_covariate("dist", dist, pattern="n n")
 
     def download(self) -> None:
         path = download_url(self.url, self.root_dir)
@@ -52,30 +56,23 @@ class _PeMS(DatetimeDataset):
     def load_raw(self):
         self.maybe_build()
         fp = np.load(self.raw_files_paths[0])
-        data = fp['data']
+        data = fp["data"]
         fp.close()
-        index = pd.date_range(start=self.start_date, periods=len(data),
-                              freq='5T')
+        index = pd.date_range(start=self.start_date, periods=len(data), freq="5T")
 
-        df_flow = pd.DataFrame(data=data[..., 0],
-                               index=index).astype('float32')
+        df_flow = pd.DataFrame(data=data[..., 0], index=index).astype("float32")
 
         if data.shape[-1] > 1:
-            df_occ = pd.DataFrame(data=data[..., 1],
-                                  index=index).astype('float32')
+            df_occ = pd.DataFrame(data=data[..., 1], index=index).astype("float32")
 
-            df_speed = pd.DataFrame(data=data[..., 2],
-                                    index=index).astype('float32')
+            df_speed = pd.DataFrame(data=data[..., 2], index=index).astype("float32")
         else:
             df_occ = df_speed = None
 
         # load distance matrix
-        path = os.path.join(self.root_dir, 'distance_matrix.npy')
+        path = os.path.join(self.root_dir, "distance_matrix.npy")
         dist = np.load(path)
-        return df_flow, \
-            df_occ, \
-            df_speed, \
-            dist
+        return df_flow, df_occ, df_speed, dist
 
     def load(self, mask_zeros: bool = True):
         *dfs, dist = self.load_raw()
@@ -85,28 +82,28 @@ class _PeMS(DatetimeDataset):
         return *dfs, dist, mask
 
     def build_distance_matrix(self, num_sensors):
-        logger.info('Building distance matrix...')
+        logger.info("Building distance matrix...")
         distances = pd.read_csv(self.raw_files_paths[1])
         dist = np.ones((num_sensors, num_sensors), dtype=np.float32) * np.inf
         # Fills cells in the matrix with distances.
         for row in distances.values:
             dist[int(row[0]), int(row[1])] = row[2]
         # Save to built directory
-        path = os.path.join(self.root_dir, 'distance_matrix.npy')
+        path = os.path.join(self.root_dir, "distance_matrix.npy")
         np.save(path, dist)
         return dist
 
     def compute_similarity(self, method: str, **kwargs):
-        if method == 'distance':
+        if method == "distance":
             finite_dist = self.dist.reshape(-1)
             finite_dist = finite_dist[~np.isinf(finite_dist)]
             sigma = finite_dist.std()
             return gaussian_kernel(self.dist, sigma)
-        elif method == 'stcn':
+        elif method == "stcn":
             sigma = 10
             return gaussian_kernel(self.dist, sigma)
-        elif method == 'binary':
-            return (~ np.isinf(self.dist)).astype('float32')
+        elif method == "binary":
+            return (~np.isinf(self.dist)).astype("float32")
 
 
 class PeMS03(_PeMS):
@@ -129,32 +126,31 @@ class PeMS03(_PeMS):
     Static attributes:
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
-    name = 'PeMS03'
-    start_date = '09-01-2018 00:00'
+    name = "PeMS03"
+    start_date = "09-01-2018 00:00"
     num_sensors = 358
-    url = 'https://drive.switch.ch/index.php/s/B5xDMtNs4M7pzsn/download'
+    url = "https://drive.switch.ch/index.php/s/B5xDMtNs4M7pzsn/download"
 
     @property
     def raw_file_names(self):
-        return ['pems03.npz', 'distances.csv', 'index.txt']
+        return ["pems03.npz", "distances.csv", "index.txt"]
 
     @property
     def required_file_names(self):
-        return ['pems03.npz', 'distance_matrix.npy', 'index.txt']
+        return ["pems03.npz", "distance_matrix.npy", "index.txt"]
 
     def build_distance_matrix(self, num_sensors):
-        logger.info('Building distance matrix...')
+        logger.info("Building distance matrix...")
         raw_dist_path = os.path.join(self.root_dir, self.raw_files_paths[1])
         distances = pd.read_csv(raw_dist_path)
-        ids = Path(
-            os.path.join(self.root_dir, 'index.txt')).read_text().splitlines()
+        ids = Path(os.path.join(self.root_dir, "index.txt")).read_text().splitlines()
         dist = np.ones((num_sensors, num_sensors), dtype=np.float32) * np.inf
         sensor_to_idx = {int(sensor_id): i for i, sensor_id in enumerate(ids)}
         for row in distances.values:
             if row[0] not in sensor_to_idx or row[1] not in sensor_to_idx:
                 continue
             dist[sensor_to_idx[row[0]], sensor_to_idx[row[1]]] = row[2]
-        path = os.path.join(self.root_dir, 'distance_matrix.npy')
+        path = os.path.join(self.root_dir, "distance_matrix.npy")
         np.save(path, dist)
         return dist
 
@@ -188,18 +184,18 @@ class PeMS04(_PeMS):
     Static attributes:
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
-    name = 'PeMS04'
-    start_date = '01-01-2018 00:00'
+    name = "PeMS04"
+    start_date = "01-01-2018 00:00"
     num_sensors = 307
-    url = 'https://drive.switch.ch/index.php/s/swNbaB5rPrBmAZQ/download'
+    url = "https://drive.switch.ch/index.php/s/swNbaB5rPrBmAZQ/download"
 
     @property
     def raw_file_names(self):
-        return ['pems04.npz', 'distance.csv']
+        return ["pems04.npz", "distance.csv"]
 
     @property
     def required_file_names(self):
-        return ['pems04.npz', 'distance_matrix.npy']
+        return ["pems04.npz", "distance_matrix.npy"]
 
 
 class PeMS07(_PeMS):
@@ -222,18 +218,18 @@ class PeMS07(_PeMS):
     Static attributes:
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
-    name = 'PeMS07'
-    start_date = '05-01-2017 00:00'
+    name = "PeMS07"
+    start_date = "05-01-2017 00:00"
     num_sensors = 883
-    url = 'https://drive.switch.ch/index.php/s/VcyirewUufrN57h/download'
+    url = "https://drive.switch.ch/index.php/s/VcyirewUufrN57h/download"
 
     @property
     def raw_file_names(self):
-        return ['pems07.npz', 'distance.csv']
+        return ["pems07.npz", "distance.csv"]
 
     @property
     def required_file_names(self):
-        return ['pems07.npz', 'distance_matrix.npy']
+        return ["pems07.npz", "distance_matrix.npy"]
 
 
 class PeMS08(_PeMS):
@@ -263,15 +259,15 @@ class PeMS08(_PeMS):
     Static attributes:
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
-    name = 'PeMS08'
-    start_date = '07-01-2016 00:00'
+    name = "PeMS08"
+    start_date = "07-01-2016 00:00"
     num_sensors = 170
-    url = 'https://drive.switch.ch/index.php/s/AUGNn9Rx9zMz3vg/download'
+    url = "https://drive.switch.ch/index.php/s/AUGNn9Rx9zMz3vg/download"
 
     @property
     def raw_file_names(self):
-        return ['pems08.npz', 'distance.csv']
+        return ["pems08.npz", "distance.csv"]
 
     @property
     def required_file_names(self):
-        return ['pems08.npz', 'distance_matrix.npy']
+        return ["pems08.npz", "distance_matrix.npy"]

@@ -7,29 +7,25 @@ from torch.nn import functional as F
 
 from tsl.nn.functional import expand_then_cat
 
-__all__ = [
-    'get_layer_activation',
-    'get_functional_activation',
-    'maybe_cat_exog'
-]
+__all__ = ["get_layer_activation", "get_functional_activation", "maybe_cat_exog"]
 
 _torch_activations_dict = {
-    'elu': 'ELU',
-    'leaky_relu': 'LeakyReLU',
-    'prelu': 'PReLU',
-    'relu': 'ReLU',
-    'rrelu': 'RReLU',
-    'selu': 'SELU',
-    'celu': 'CELU',
-    'gelu': 'GELU',
-    'glu': 'GLU',
-    'mish': 'Mish',
-    'sigmoid': 'Sigmoid',
-    'softplus': 'Softplus',
-    'tanh': 'Tanh',
-    'silu': 'SiLU',
-    'swish': 'SiLU',
-    'linear': 'Identity'
+    "elu": "ELU",
+    "leaky_relu": "LeakyReLU",
+    "prelu": "PReLU",
+    "relu": "ReLU",
+    "rrelu": "RReLU",
+    "selu": "SELU",
+    "celu": "CELU",
+    "gelu": "GELU",
+    "glu": "GLU",
+    "mish": "Mish",
+    "sigmoid": "Sigmoid",
+    "softplus": "Softplus",
+    "tanh": "Tanh",
+    "silu": "SiLU",
+    "swish": "SiLU",
+    "linear": "Identity",
 }
 
 
@@ -41,9 +37,9 @@ def get_functional_activation(activation: Optional[str] = None):
     if activation is None:
         return _identity
     activation = activation.lower()
-    if activation == 'linear':
+    if activation == "linear":
         return _identity
-    if activation in ['tanh', 'sigmoid']:
+    if activation in ["tanh", "sigmoid"]:
         return getattr(torch, activation)
     if activation in _torch_activations_dict:
         return getattr(F, activation)
@@ -76,6 +72,6 @@ def maybe_cat_exog(x, u, dim=-1):
     """
     if u is not None:
         if u.dim() == 3:
-            u = rearrange(u, 'b s f -> b s 1 f')
+            u = rearrange(u, "b s f -> b s 1 f")
         x = expand_then_cat([x, u], dim)
     return x

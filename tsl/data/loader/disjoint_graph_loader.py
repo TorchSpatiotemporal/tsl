@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Union, List
+from typing import List, Union
 
 from torch.utils import data
 
@@ -31,14 +31,16 @@ class DisjointGraphLoader(data.DataLoader):
             :class:`torch.utils.data.DataLoader`, such as :obj:`num_workers`.
     """
 
-    def __init__(self, dataset: Union[SpatioTemporalDataset, List[Data]],
-                 batch_size: int = 1,
-                 shuffle: bool = False,
-                 force_batch: bool = False,
-                 follow_batch: List[str] = None,
-                 exclude_keys: List[str] = None,
-                 **kwargs):
-
+    def __init__(
+        self,
+        dataset: Union[SpatioTemporalDataset, List[Data]],
+        batch_size: int = 1,
+        shuffle: bool = False,
+        force_batch: bool = False,
+        follow_batch: List[str] = None,
+        exclude_keys: List[str] = None,
+        **kwargs
+    ):
         if follow_batch is None:
             follow_batch = []
 
@@ -52,13 +54,17 @@ class DisjointGraphLoader(data.DataLoader):
         self.follow_batch = follow_batch
         self.exclude_keys = exclude_keys
 
-        collate_fn = partial(DisjointBatch.from_data_list,
-                             force_batch=force_batch,
-                             follow_batch=follow_batch,
-                             exclude_keys=exclude_keys)
+        collate_fn = partial(
+            DisjointBatch.from_data_list,
+            force_batch=force_batch,
+            follow_batch=follow_batch,
+            exclude_keys=exclude_keys,
+        )
 
-        super().__init__(dataset,
-                         shuffle=shuffle,
-                         batch_size=batch_size,
-                         collate_fn=collate_fn,
-                         **kwargs)
+        super().__init__(
+            dataset,
+            shuffle=shuffle,
+            batch_size=batch_size,
+            collate_fn=collate_fn,
+            **kwargs
+        )

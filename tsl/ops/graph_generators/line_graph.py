@@ -15,4 +15,3 @@ def build_line_graph(num_nodes):
     col = np.arange(1, num_nodes)
     edge_index = np.stack((row, col))
     return row, edge_index, None
-

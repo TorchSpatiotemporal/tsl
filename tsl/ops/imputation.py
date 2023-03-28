@@ -9,9 +9,15 @@ from tsl.datasets.prototypes.mixin import MissingValuesMixin
 from tsl.utils.python_utils import ensure_list
 
 
-def sample_mask(shape, p: float = 0.002, p_noise: float = 0.,
-                max_seq: int = 1, min_seq: int = 1,
-                rng: np.random.Generator = None, verbose: bool = True):
+def sample_mask(
+    shape,
+    p: float = 0.002,
+    p_noise: float = 0.0,
+    max_seq: int = 1,
+    min_seq: int = 1,
+    rng: np.random.Generator = None,
+    verbose: bool = True,
+):
     if rng is None:
         rand = np.random.random
         randint = np.random.randint
@@ -19,7 +25,7 @@ def sample_mask(shape, p: float = 0.002, p_noise: float = 0.,
         rand = rng.random
         randint = rng.integers
     if verbose:
-        logger.info(f'Generating mask with base p={p}')
+        logger.info(f"Generating mask with base p={p}")
     mask = rand(shape) < p
     for col in range(mask.shape[1]):
         idxs = np.flatnonzero(mask[:, col])
@@ -33,25 +39,29 @@ def sample_mask(shape, p: float = 0.002, p_noise: float = 0.,
         idxs = np.clip(idxs, 0, shape[0] - 1)
         mask[idxs, col] = True
     mask = mask | (rand(mask.shape) < p_noise)
-    return mask.astype('uint8')
+    return mask.astype("uint8")
 
 
 def missing_val_lens(mask):
-    m = np.concatenate([np.zeros((1, mask.shape[1])),
-                        (~mask.astype('bool')).astype('int'),
-                        np.zeros((1, mask.shape[1]))])
+    m = np.concatenate(
+        [
+            np.zeros((1, mask.shape[1])),
+            (~mask.astype("bool")).astype("int"),
+            np.zeros((1, mask.shape[1])),
+        ]
+    )
     mdiff = np.diff(m, axis=0)
     lens = []
     for c in range(m.shape[1]):
-        mj, = mdiff[:, c].nonzero()
+        (mj,) = mdiff[:, c].nonzero()
         diff = np.diff(mj)[::2]
         lens.extend(list(diff))
     return lens
 
 
-def to_missing_values_dataset(dataset: DatetimeDataset,
-                              eval_mask: np.ndarray,
-                              inplace: bool = True):
+def to_missing_values_dataset(
+    dataset: DatetimeDataset, eval_mask: np.ndarray, inplace: bool = True
+):
     assert isinstance(dataset, DatetimeDataset)
     if not inplace:
         dataset = deepcopy(dataset)
@@ -68,13 +78,15 @@ def to_missing_values_dataset(dataset: DatetimeDataset,
     return dataset
 
 
-def add_missing_values(dataset: DatetimeDataset,
-                       p_noise=0.05,
-                       p_fault=0.01,
-                       min_seq=1,
-                       max_seq=10,
-                       seed=None,
-                       inplace=True):
+def add_missing_values(
+    dataset: DatetimeDataset,
+    p_noise=0.05,
+    p_fault=0.01,
+    min_seq=1,
+    max_seq=10,
+    seed=None,
+    inplace=True,
+):
     if seed is None:
         seed = np.random.randint(1e9)
     # Fix seed for random mask generation
@@ -82,12 +94,9 @@ def add_missing_values(dataset: DatetimeDataset,
 
     # Compute evaluation mask
     shape = (dataset.length, dataset.n_nodes, dataset.n_channels)
-    eval_mask = sample_mask(shape,
-                            p=p_fault,
-                            p_noise=p_noise,
-                            min_seq=min_seq,
-                            max_seq=max_seq,
-                            rng=random)
+    eval_mask = sample_mask(
+        shape, p=p_fault, p_noise=p_noise, min_seq=min_seq, max_seq=max_seq, rng=random
+    )
 
     # Convert to missing values dataset
     dataset = to_missing_values_dataset(dataset, eval_mask, inplace)
@@ -103,40 +112,52 @@ def add_missing_values(dataset: DatetimeDataset,
     return dataset
 
 
-def prediction_dataframe(y, index, columns=None, aggregate_by='mean'):
+def prediction_dataframe(y, index, columns=None, aggregate_by="mean"):
     """Aggregate batched predictions in a single DataFrame.
 
     @param (list or np.ndarray) y: the list of predictions.
-    @param (list or np.ndarray) index: the list of time indexes coupled with the predictions.
+    @param (list or np.ndarray) index: the list of time indexes
+    coupled with the predictions.
     @param (list or pd.Index) columns: the columns of the returned DataFrame.
-    @param (str or list) aggregate_by: how to aggregate the predictions in case there are more than one for a step.
-    - `mean`: take the mean of the predictions
-    - `central`: take the prediction at the central position, assuming that the predictions are ordered chronologically
-    - `smooth_central`: average the predictions weighted by a gaussian signal with std=1
+    @param (str or list) aggregate_by: how to aggregate the predictions
+        in case there are more than one for a step.
+        - `mean`: take the mean of the predictions
+        - `central`: take the prediction at the central position,
+            assuming that the predictions are ordered chronologically
+        - `smooth_central`: average the predictions weighted by a gaussian signal
+            with std=1
     @return: pd.DataFrame df: the evaluation mask for the DataFrame
     """
-    dfs = [pd.DataFrame(data=data.reshape(data.shape[:2]), index=idx,
-                        columns=columns) for data, idx in zip(y, index)]
+    dfs = [
+        pd.DataFrame(data=data.reshape(data.shape[:2]), index=idx, columns=columns)
+        for data, idx in zip(y, index)
+    ]
     df = pd.concat(dfs)
     preds_by_step = df.groupby(df.index)
     # aggregate according passed methods
     aggr_methods = ensure_list(aggregate_by)
     dfs = []
     for aggr_by in aggr_methods:
-        if aggr_by == 'mean':
+        if aggr_by == "mean":
             dfs.append(preds_by_step.mean())
-        elif aggr_by == 'central':
+        elif aggr_by == "central":
             dfs.append(preds_by_step.aggregate(lambda x: x[int(len(x) // 2)]))
-        elif aggr_by == 'smooth_central':
+        elif aggr_by == "smooth_central":
             from scipy.signal import gaussian
-            dfs.append(preds_by_step.aggregate(
-                lambda x: np.average(x, weights=gaussian(len(x), 1))))
-        elif aggr_by == 'last':
+
+            dfs.append(
+                preds_by_step.aggregate(
+                    lambda x: np.average(x, weights=gaussian(len(x), 1))
+                )
+            )
+        elif aggr_by == "last":
             # first imputation has missing value in last position
             dfs.append(preds_by_step.aggregate(lambda x: x[0]))
         else:
-            raise ValueError('aggregate_by can only be one of %s' %
-                             ['mean', 'central', 'smooth_central', 'last'])
+            raise ValueError(
+                "aggregate_by can only be one of "
+                "'mean', 'central', 'smooth_central', 'last'."
+            )
     if isinstance(aggregate_by, str):
         return dfs[0]
     return dfs

@@ -14,26 +14,42 @@ class AGCRNCell(GraphGRUCellBase):
         num_nodes: Number of nodes in the input graph.
     """
 
-    def __init__(self, input_size: int, emb_size: int, hidden_size: int,
-                 num_nodes: int,
-                 bias: bool = True):
+    def __init__(
+        self,
+        input_size: int,
+        emb_size: int,
+        hidden_size: int,
+        num_nodes: int,
+        bias: bool = True,
+    ):
         self.input_size = input_size
         self.emb_size = emb_size
         self.num_nodes = num_nodes
         # instantiate gates
-        forget_gate = AdaptiveGraphConv(input_size + hidden_size, emb_size,
-                                        output_size=hidden_size,
-                                        num_nodes=num_nodes,
-                                        bias=bias)
-        update_gate = AdaptiveGraphConv(input_size + hidden_size, emb_size,
-                                        output_size=hidden_size,
-                                        num_nodes=num_nodes,
-                                        bias=bias)
-        candidate_gate = AdaptiveGraphConv(input_size + hidden_size, emb_size,
-                                           output_size=hidden_size,
-                                           num_nodes=num_nodes,
-                                           bias=bias)
-        super(AGCRNCell, self).__init__(hidden_size=hidden_size,
-                                        forget_gate=forget_gate,
-                                        update_gate=update_gate,
-                                        candidate_gate=candidate_gate)
+        forget_gate = AdaptiveGraphConv(
+            input_size + hidden_size,
+            emb_size,
+            output_size=hidden_size,
+            num_nodes=num_nodes,
+            bias=bias,
+        )
+        update_gate = AdaptiveGraphConv(
+            input_size + hidden_size,
+            emb_size,
+            output_size=hidden_size,
+            num_nodes=num_nodes,
+            bias=bias,
+        )
+        candidate_gate = AdaptiveGraphConv(
+            input_size + hidden_size,
+            emb_size,
+            output_size=hidden_size,
+            num_nodes=num_nodes,
+            bias=bias,
+        )
+        super(AGCRNCell, self).__init__(
+            hidden_size=hidden_size,
+            forget_gate=forget_gate,
+            update_gate=update_gate,
+            candidate_gate=candidate_gate,
+        )

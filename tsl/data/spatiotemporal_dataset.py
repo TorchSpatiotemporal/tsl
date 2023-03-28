@@ -1,7 +1,6 @@
 from contextlib import contextmanager
 from copy import deepcopy
-from typing import Optional, Mapping, List, Union, Iterable, Tuple, Literal, \
-    Callable
+from typing import Callable, Iterable, List, Literal, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -12,24 +11,31 @@ from torch.utils.data import Dataset
 from torch_geometric.typing import Adj
 from torch_sparse import SparseTensor
 
-from tsl.typing import DataArray, TemporalIndex, IndexSlice, TensArray, \
-    SparseTensArray
+from tsl.typing import DataArray, IndexSlice, SparseTensArray, TemporalIndex, TensArray
+
+from ..ops.connectivity import reduce_graph
+from ..ops.pattern import broadcast, check_pattern, outer_pattern, take
+from ..utils.casting import parse_index
 from . import StaticBatch
 from .batch_map import BatchMap, BatchMapItem
 from .data import Data
 from .mixin import DataParsingMixin
 from .preprocessing.scalers import Scaler, ScalerModule
-from .synch_mode import SynchMode, WINDOW, HORIZON, STATIC
-from ..ops.connectivity import reduce_graph
-from ..ops.pattern import outer_pattern, broadcast, take, check_pattern
-from ..utils.casting import parse_index
+from .synch_mode import HORIZON, STATIC, WINDOW, SynchMode
 
 _WINDOWING_ = {
-    'window': ['window', 'window_lag'],
-    'horizon': ['window', 'delay', 'horizon', 'horizon_lag'],
-    'indices': ['target', 'window', 'delay', 'horizon', 'stride'],
-    'all': ['target', 'window', 'delay', 'horizon', 'stride',
-            'horizon_lag', 'window_lag']
+    "window": ["window", "window_lag"],
+    "horizon": ["window", "delay", "horizon", "horizon_lag"],
+    "indices": ["target", "window", "delay", "horizon", "stride"],
+    "all": [
+        "target",
+        "window",
+        "delay",
+        "horizon",
+        "stride",
+        "horizon_lag",
+        "window_lag",
+    ],
 }
 
 
@@ -111,26 +117,28 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         name (str, optional): The (optional) name of the dataset.
     """
 
-    def __init__(self, target: DataArray,
-                 index: Optional[TemporalIndex] = None,
-                 mask: Optional[DataArray] = None,
-                 connectivity: Optional[
-                     Union[SparseTensArray, Tuple[DataArray]]] = None,
-                 covariates: Optional[Mapping[str, DataArray]] = None,
-                 input_map: Optional[Union[Mapping, BatchMap]] = None,
-                 target_map: Optional[Union[Mapping, BatchMap]] = None,
-                 auxiliary_map: Optional[Union[Mapping, BatchMap]] = None,
-                 scalers: Optional[Mapping[str, Scaler]] = None,
-                 trend: Optional[DataArray] = None,
-                 transform: Optional[Callable] = None,
-                 window: int = 12,
-                 horizon: int = 1,
-                 delay: int = 0,
-                 stride: int = 1,
-                 window_lag: int = 1,
-                 horizon_lag: int = 1,
-                 precision: Union[int, str] = 32,
-                 name: Optional[str] = None):
+    def __init__(
+        self,
+        target: DataArray,
+        index: Optional[TemporalIndex] = None,
+        mask: Optional[DataArray] = None,
+        connectivity: Optional[Union[SparseTensArray, Tuple[DataArray]]] = None,
+        covariates: Optional[Mapping[str, DataArray]] = None,
+        input_map: Optional[Union[Mapping, BatchMap]] = None,
+        target_map: Optional[Union[Mapping, BatchMap]] = None,
+        auxiliary_map: Optional[Union[Mapping, BatchMap]] = None,
+        scalers: Optional[Mapping[str, Scaler]] = None,
+        trend: Optional[DataArray] = None,
+        transform: Optional[Callable] = None,
+        window: int = 12,
+        horizon: int = 1,
+        delay: int = 0,
+        stride: int = 1,
+        window_lag: int = 1,
+        horizon_lag: int = 1,
+        precision: Union[int, str] = 32,
+        name: Optional[str] = None,
+    ):
         super(SpatioTemporalDataset, self).__init__()
 
         # Set info
@@ -204,7 +212,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # Updated auxiliary map (i.e., how to map data, exogenous and attribute
         # inside item)
         if auxiliary_map is not None:
-            self._update_batch_map('auxiliary', auxiliary_map)
+            self._update_batch_map("auxiliary", auxiliary_map)
 
         # A scaler is a module that transforms data with a linear operation
         if scalers is not None:
@@ -217,8 +225,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             self.set_trend(trend)
 
     def __repr__(self):
-        return "{}(n_samples={}, n_nodes={}, n_channels={})" \
-            .format(self.name, self.n_samples, self.n_nodes, self.n_channels)
+        return "{}(n_samples={}, n_nodes={}, n_channels={})".format(
+            self.name, self.n_samples, self.n_nodes, self.n_channels
+        )
 
     def __getitem__(self, item) -> Data:
         if isinstance(item, int) and item < 0:
@@ -226,7 +235,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             item = self._indices.size(0) + item
         else:
             # convert slice to indexes
-            item = parse_index(item, length=self.n_samples, layout='index')
+            item = parse_index(item, length=self.n_samples, layout="index")
         item = self.get(item)
         if self.transform is not None:
             item = self.transform(item)
@@ -239,35 +248,41 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         return self.n_samples
 
     def __getattr__(self, item):
-        if '_covariates' in self.__dict__ and item in self._covariates:
-            return self._covariates[item]['value']
-        if 'input_map' in self.__dict__ and item in self.input_map:
+        if "_covariates" in self.__dict__ and item in self._covariates:
+            return self._covariates[item]["value"]
+        if "input_map" in self.__dict__ and item in self.input_map:
             return self.collate_item_elem(item)[0]
-        raise AttributeError(f"'{self.__class__.__name__}' object has no "
-                             f"attribute '{item}'")
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no " f"attribute '{item}'"
+        )
 
     def __setattr__(self, key, value):
         super(SpatioTemporalDataset, self).__setattr__(key, value)
-        if key in _WINDOWING_['window'] and \
-                all([hasattr(self, attr) for attr in _WINDOWING_['window']]):
+        if key in _WINDOWING_["window"] and all(
+            [hasattr(self, attr) for attr in _WINDOWING_["window"]]
+        ):
             self._window_range = torch.arange(0, self.window, self.window_lag)
-        if key in _WINDOWING_['horizon'] and \
-                all([hasattr(self, attr) for attr in _WINDOWING_['horizon']]):
-            self._horizon_range = torch.arange(self.horizon_offset,
-                                               self.horizon_offset +
-                                               self.horizon,
-                                               self.horizon_lag)
-        if key in _WINDOWING_['indices'] and \
-                all([hasattr(self, attr) for attr in _WINDOWING_['indices']]):
-            self._indices = torch.arange(0, self.n_steps - self.sample_span + 1,
-                                         self.stride)
+        if key in _WINDOWING_["horizon"] and all(
+            [hasattr(self, attr) for attr in _WINDOWING_["horizon"]]
+        ):
+            self._horizon_range = torch.arange(
+                self.horizon_offset,
+                self.horizon_offset + self.horizon,
+                self.horizon_lag,
+            )
+        if key in _WINDOWING_["indices"] and all(
+            [hasattr(self, attr) for attr in _WINDOWING_["indices"]]
+        ):
+            self._indices = torch.arange(
+                0, self.n_steps - self.sample_span + 1, self.stride
+            )
 
     def __delattr__(self, item):
-        if item in _WINDOWING_['all']:
+        if item in _WINDOWING_["all"]:
             raise AttributeError(f"Cannot delete attribute '{item}'.")
-        elif item == 'mask':
+        elif item == "mask":
             self.set_mask(None)
-        elif item == 'trend':
+        elif item == "trend":
             self.set_trend(None)
         elif item in self._covariates:
             self.remove_covariate(item)
@@ -317,19 +332,21 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         * 'f' stands for “number of features” (per node)
         * 'e' stands for “number edges”
         """
-        patterns = {'target': 't n f'}
+        patterns = {"target": "t n f"}
         # add mask pattern
         if self.mask is not None:
-            patterns['mask'] = 't n f'
+            patterns["mask"] = "t n f"
         # add connectivity patterns
         if self.edge_index is not None:
-            patterns['edge_index'] = '2 e' if isinstance(self.edge_index,
-                                                         Tensor) else 'n n'
+            patterns["edge_index"] = (
+                "2 e" if isinstance(self.edge_index, Tensor) else "n n"
+            )
             if self.edge_weight is not None:
-                patterns['edge_weight'] = 'e'
+                patterns["edge_weight"] = "e"
         # add covariates patterns
-        patterns.update({name: attr['pattern']
-                         for name, attr in self._covariates.items()})
+        patterns.update(
+            {name: attr["pattern"] for name, attr in self._covariates.items()}
+        )
         return patterns
 
     @property
@@ -345,20 +362,19 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         * 'e' stands for “number edges”
         """
         # add input map patterns
-        patterns = {name: attr.pattern
-                    for name, attr in self.input_map.items()}
+        patterns = {name: attr.pattern for name, attr in self.input_map.items()}
         # add mask pattern
         if self.mask is not None:
-            patterns['mask'] = 't n f'
+            patterns["mask"] = "t n f"
         # add connectivity patterns
         if self.edge_index is not None:
-            patterns['edge_index'] = '2 e' if isinstance(self.edge_index,
-                                                         Tensor) else 'n n'
+            patterns["edge_index"] = (
+                "2 e" if isinstance(self.edge_index, Tensor) else "n n"
+            )
             if self.edge_weight is not None:
-                patterns['edge_weight'] = 'e'
+                patterns["edge_weight"] = "e"
         # add target map patterns
-        patterns.update({name: attr.pattern
-                         for name, attr in self.target_map.items()})
+        patterns.update({name: attr.pattern for name, attr in self.target_map.items()})
         return patterns
 
     @property
@@ -404,19 +420,25 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     @property
     def covariates(self) -> dict:
         """Mapping of dataset's covariates."""
-        return {name: attr['value'] for name, attr in self._covariates.items()}
+        return {name: attr["value"] for name, attr in self._covariates.items()}
 
     @property
     def exogenous(self) -> dict:
         """Time-varying covariates of the dataset's target."""
-        return {name: attr['value'] for name, attr in self._covariates.items()
-                if 't' in attr['pattern']}
+        return {
+            name: attr["value"]
+            for name, attr in self._covariates.items()
+            if "t" in attr["pattern"]
+        }
 
     @property
     def attributes(self) -> dict:
         """Static features related to the dataset."""
-        return {name: attr['value'] for name, attr in self._covariates.items()
-                if 't' not in attr['pattern']}
+        return {
+            name: attr["value"]
+            for name, attr in self._covariates.items()
+            if "t" not in attr["pattern"]
+        }
 
     @property
     def n_covariates(self) -> int:
@@ -447,47 +469,59 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         return self.target_map
 
     def reset_input_map(self):
-        self._clear_batch_map('input')
-        self.input_map['x'] = BatchMapItem('target', SynchMode.WINDOW,
-                                           preprocess=True, cat_dim=None,
-                                           pattern='t n f',
-                                           shape=self.shape)
+        self._clear_batch_map("input")
+        self.input_map["x"] = BatchMapItem(
+            "target",
+            SynchMode.WINDOW,
+            preprocess=True,
+            cat_dim=None,
+            pattern="t n f",
+            shape=self.shape,
+        )
         for name, attr in self._covariates.items():
-            self.input_map[name] = BatchMapItem(name, SynchMode.WINDOW,
-                                                preprocess=True, cat_dim=None,
-                                                pattern=attr['pattern'],
-                                                shape=attr['value'].size())
+            self.input_map[name] = BatchMapItem(
+                name,
+                SynchMode.WINDOW,
+                preprocess=True,
+                cat_dim=None,
+                pattern=attr["pattern"],
+                shape=attr["value"].size(),
+            )
 
     def reset_target_map(self):
-        self._clear_batch_map('target')
-        self.target_map['y'] = BatchMapItem('target', SynchMode.HORIZON,
-                                            preprocess=False, cat_dim=None,
-                                            pattern='t n f',
-                                            shape=self.shape)
+        self._clear_batch_map("target")
+        self.target_map["y"] = BatchMapItem(
+            "target",
+            SynchMode.HORIZON,
+            preprocess=False,
+            cat_dim=None,
+            pattern="t n f",
+            shape=self.shape,
+        )
 
     def reset_auxiliary(self):
-        self._clear_batch_map('auxiliary')
+        self._clear_batch_map("auxiliary")
 
     def set_input_map(self, input_map=None, **kwargs):
-        self._clear_batch_map('input')
+        self._clear_batch_map("input")
         self.update_input_map(input_map, **kwargs)
 
     def set_target_map(self, target_map=None, **kwargs):
-        self._clear_batch_map('target')
+        self._clear_batch_map("target")
         self.update_target_map(target_map, **kwargs)
 
     def set_auxiliary_map(self, auxiliary_map=None, **kwargs):
-        self._clear_batch_map('auxiliary')
+        self._clear_batch_map("auxiliary")
         self.update_auxiliary_map(auxiliary_map, **kwargs)
 
     def update_input_map(self, input_map=None, **kwargs):
-        self._update_batch_map('input', input_map, **kwargs)
+        self._update_batch_map("input", input_map, **kwargs)
 
     def update_target_map(self, target_map=None, **kwargs):
-        self._update_batch_map('target', target_map, **kwargs)
+        self._update_batch_map("target", target_map, **kwargs)
 
     def update_auxiliary_map(self, auxiliary_map=None, **kwargs):
-        self._update_batch_map('auxiliary', auxiliary_map, **kwargs)
+        self._update_batch_map("auxiliary", auxiliary_map, **kwargs)
 
     def _clear_batch_map(self, endpoint):
         batch_map = getattr(self, f"{endpoint}_map")
@@ -501,8 +535,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         if batch_map is None:
             batch_map = BatchMap()
         elif not isinstance(batch_map, Mapping):
-            raise TypeError(f"Type {type(batch_map)} is not valid for "
-                            f"`{endpoint}_map` (must be a mapping).")
+            raise TypeError(
+                f"Type {type(batch_map)} is not valid for "
+                f"`{endpoint}_map` (must be a mapping)."
+            )
         # update from kwargs
         batch_map.update(**kwargs)
         # update endpoint_map
@@ -514,9 +550,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             # keys sanity check and compute pattern and shape
             keys = item.keys
             if len(keys) > 1:
-                tensor, scaler, pattern = self.collate_keys(keys,
-                                                            cat_dim=item.cat_dim,
-                                                            return_pattern=True)
+                tensor, scaler, pattern = self.collate_keys(
+                    keys, cat_dim=item.cat_dim, return_pattern=True
+                )
                 item.shape, item.pattern = tuple(tensor.size()), pattern
                 if scaler is not None:
                     self._batch_scalers[name] = scaler
@@ -527,14 +563,15 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     # Getters #################################################################
 
     def get(self, item):
-
         # check if item is scalar or vector
         ndim = item.ndim if isinstance(item, Tensor) else 0
         if ndim == 0:  # get a single item
             sample = Data(pattern=self.batch_patterns)
         elif ndim == 1:  # get batch of items
-            pattern = {name: ('b ' + pattern) if 't' in pattern else pattern
-                       for name, pattern in self.batch_patterns.items()}
+            pattern = {
+                name: ("b " + pattern) if "t" in pattern else pattern
+                for name, pattern in self.batch_patterns.items()
+            }
             sample = StaticBatch(pattern=pattern, size=item.size(0))
         else:
             raise RuntimeError(f"Too many dimensions for index ({ndim}).")
@@ -542,27 +579,26 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # get input synchronized with window
         if self.window > 0:
             wdw_idxs = self.get_window_indices(item)
-            self._add_to_sample(sample, WINDOW, 'input', time_index=wdw_idxs)
-            self._add_to_sample(sample, WINDOW, 'target', time_index=wdw_idxs)
-            self._add_to_sample(sample, WINDOW, 'auxiliary',
-                                time_index=wdw_idxs)
+            self._add_to_sample(sample, WINDOW, "input", time_index=wdw_idxs)
+            self._add_to_sample(sample, WINDOW, "target", time_index=wdw_idxs)
+            self._add_to_sample(sample, WINDOW, "auxiliary", time_index=wdw_idxs)
 
         # get input synchronized with horizon
         hrz_idxs = self.get_horizon_indices(item)
-        self._add_to_sample(sample, HORIZON, 'input', time_index=hrz_idxs)
-        self._add_to_sample(sample, HORIZON, 'target', time_index=hrz_idxs)
-        self._add_to_sample(sample, HORIZON, 'auxiliary', time_index=hrz_idxs)
+        self._add_to_sample(sample, HORIZON, "input", time_index=hrz_idxs)
+        self._add_to_sample(sample, HORIZON, "target", time_index=hrz_idxs)
+        self._add_to_sample(sample, HORIZON, "auxiliary", time_index=hrz_idxs)
 
         # get static data
-        self._add_to_sample(sample, STATIC, 'input')
-        self._add_to_sample(sample, STATIC, 'target')
-        self._add_to_sample(sample, STATIC, 'auxiliary')
+        self._add_to_sample(sample, STATIC, "input")
+        self._add_to_sample(sample, STATIC, "target")
+        self._add_to_sample(sample, STATIC, "auxiliary")
 
         # get connectivity
         if self.edge_index is not None:
-            sample.input['edge_index'] = self.edge_index
+            sample.input["edge_index"] = self.edge_index
             if self.edge_weight is not None:
-                sample.input['edge_weight'] = self.edge_weight
+                sample.input["edge_weight"] = self.edge_weight
 
         # get mask (if any)
         if self.mask is not None:
@@ -570,68 +606,101 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
         return sample
 
-    def expand_scaler(self, key: str, pattern: Optional[str] = None,
-                      time_index: Union[List, Tensor] = None,
-                      node_index: Union[List, Tensor] = None) \
-            -> Optional[ScalerModule]:
+    def expand_scaler(
+        self,
+        key: str,
+        pattern: Optional[str] = None,
+        time_index: Union[List, Tensor] = None,
+        node_index: Union[List, Tensor] = None,
+    ) -> Optional[ScalerModule]:
         # check if there is a scaler
         if key not in self.keys:
             raise KeyError(f"{key} not in {self.name}.")
         elif key not in self.scalers:
             return None
         # convert indices
-        time_index = self._get_time_index(time_index, layout='index')
-        node_index = self._get_time_index(node_index, layout='index')
+        time_index = self._get_time_index(time_index, layout="index")
+        node_index = self._get_time_index(node_index, layout="index")
         # get params
         if pattern is None:
             return self.scalers[key]
         # if there is an out-pattern, create new scaler
         scaler = ScalerModule(self.scalers[key], pattern=pattern)
-        pattern = self.patterns[key] + ' -> ' + pattern
-        scaler.bias = broadcast(scaler.bias, pattern, backend=torch,
-                                time_index=time_index,
-                                node_index=node_index)
-        scaler.scale = broadcast(scaler.scale, pattern, backend=torch,
-                                 time_index=time_index,
-                                 node_index=node_index)
+        pattern = self.patterns[key] + " -> " + pattern
+        scaler.bias = broadcast(
+            scaler.bias,
+            pattern,
+            backend=torch,
+            time_index=time_index,
+            node_index=node_index,
+        )
+        scaler.scale = broadcast(
+            scaler.scale,
+            pattern,
+            backend=torch,
+            time_index=time_index,
+            node_index=node_index,
+        )
         return scaler
 
-    def expand_tensor(self, key: str, pattern: str,
-                      time_index: Union[List, Tensor] = None,
-                      node_index: Union[List, Tensor] = None):
+    def expand_tensor(
+        self,
+        key: str,
+        pattern: str,
+        time_index: Union[List, Tensor] = None,
+        node_index: Union[List, Tensor] = None,
+    ):
         x = getattr(self, key)
-        pattern = self.patterns[key] + ' -> ' + pattern
-        x = broadcast(x, pattern, t=self.n_steps, n=self.n_nodes, backend=torch,
-                      time_index=time_index, node_index=node_index)
+        pattern = self.patterns[key] + " -> " + pattern
+        x = broadcast(
+            x,
+            pattern,
+            t=self.n_steps,
+            n=self.n_nodes,
+            backend=torch,
+            time_index=time_index,
+            node_index=node_index,
+        )
         return x
 
-    def get_tensor(self, key: str, preprocess: bool = False,
-                   time_index: Union[List, Tensor] = None,
-                   node_index: Union[List, Tensor] = None) \
-            -> Tuple[Tensor, Optional[ScalerModule]]:
+    def get_tensor(
+        self,
+        key: str,
+        preprocess: bool = False,
+        time_index: Union[List, Tensor] = None,
+        node_index: Union[List, Tensor] = None,
+    ) -> Tuple[Tensor, Optional[ScalerModule]]:
         # get dataset item
         if key not in self.keys:
             raise KeyError(f"{key} not in dataset {self.name}.")
 
         # convert indices
-        time_index = self._get_time_index(time_index, layout='index')
-        node_index = self._get_time_index(node_index, layout='index')
-        x = take(getattr(self, key), self.patterns[key], backend=torch,
-                 time_index=time_index, node_index=node_index)
+        time_index = self._get_time_index(time_index, layout="index")
+        node_index = self._get_time_index(node_index, layout="index")
+        x = take(
+            getattr(self, key),
+            self.patterns[key],
+            backend=torch,
+            time_index=time_index,
+            node_index=node_index,
+        )
 
         # get scaler (if any)
         scaler = None
         if key in self.scalers is not None:
-            scaler = self.scalers[key].slice(time_index=time_index,
-                                             node_index=node_index)
+            scaler = self.scalers[key].slice(
+                time_index=time_index, node_index=node_index
+            )
             if preprocess:  # transform tensor
                 x = scaler.transform(x)
         return x, scaler
 
-    def collate_item_elem(self, key: str,
-                          time_index: Union[List, Tensor] = None,
-                          node_index: Union[List, Tensor] = None) \
-            -> Tuple[Tensor, Optional[ScalerModule]]:
+    def collate_item_elem(
+        self,
+        key: str,
+        time_index: Union[List, Tensor] = None,
+        node_index: Union[List, Tensor] = None,
+    ) -> Tuple[Tensor, Optional[ScalerModule]]:
         # get batch item
         if key in self.input_map:
             itm = self.input_map[key]
@@ -641,24 +710,33 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             raise KeyError(f"{key} not in any batch map of {self.name}.")
 
         # expand and concatenate tensors
-        x = torch.cat([self.expand_tensor(k, itm.pattern,
-                                          time_index, node_index)
-                       for k in itm.keys], dim=itm.cat_dim)
+        x = torch.cat(
+            [
+                self.expand_tensor(k, itm.pattern, time_index, node_index)
+                for k in itm.keys
+            ],
+            dim=itm.cat_dim,
+        )
 
         # get scaler (if any)
         scaler = None
         if key in self._batch_scalers:
-            scaler = self._batch_scalers[key].slice(time_index=time_index,
-                                                    node_index=node_index)
+            scaler = self._batch_scalers[key].slice(
+                time_index=time_index, node_index=node_index
+            )
             if itm.preprocess:  # transform tensor
                 x = scaler.transform(x)
         return x, scaler
 
-    def collate_keys(self, keys: Iterable, preprocess: bool = False,
-                     time_index: Union[List, Tensor] = None,
-                     node_index: Union[List, Tensor] = None,
-                     cat_dim: Optional[int] = None,
-                     return_pattern: bool = False):
+    def collate_keys(
+        self,
+        keys: Iterable,
+        preprocess: bool = False,
+        time_index: Union[List, Tensor] = None,
+        node_index: Union[List, Tensor] = None,
+        cat_dim: Optional[int] = None,
+        return_pattern: bool = False,
+    ):
         if any([key not in self.keys for key in keys]):
             unmatch = set(keys).difference(self.keys)
             raise KeyError(f"{unmatch} not in {self.name}.")
@@ -676,8 +754,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                 return tensors[0], scalers[0], pattern
             return tensors[0], scalers[0]
         if cat_dim is not None:
-            scalers = ScalerModule.cat(scalers, dim=cat_dim,
-                                       sizes=[t.size() for t in tensors])
+            scalers = ScalerModule.cat(
+                scalers, dim=cat_dim, sizes=[t.size() for t in tensors]
+            )
             tensors = torch.cat(tensors, dim=cat_dim)
         if return_pattern:
             return tensors, scalers, pattern
@@ -686,34 +765,43 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     def get_mask(self, dtype: Union[type, str, np.dtype] = None) -> Tensor:
         mask = self.mask if self.has_mask else ~torch.isnan(self.target)
         if dtype is not None:
-            assert dtype in ['bool', 'uint8', bool, torch.bool, torch.uint8]
+            assert dtype in ["bool", "uint8", bool, torch.bool, torch.uint8]
             mask = mask.to(dtype)
         return mask
 
     # Getters helpers
 
-    def _get_time_index(self, time_index: IndexSlice = None,
-                        layout: Literal['index', 'slice', 'mask'] = 'index'):
+    def _get_time_index(
+        self,
+        time_index: IndexSlice = None,
+        layout: Literal["index", "slice", "mask"] = "index",
+    ):
         return parse_index(time_index, length=self.n_steps, layout=layout)
 
-    def _get_node_index(self, node_index: IndexSlice = None,
-                        layout: Literal['index', 'slice', 'mask'] = 'index'):
+    def _get_node_index(
+        self,
+        node_index: IndexSlice = None,
+        layout: Literal["index", "slice", "mask"] = "index",
+    ):
         return parse_index(node_index, length=self.n_nodes, layout=layout)
 
-    def _add_to_sample(self, out, synch_mode, endpoint='input',
-                       time_index=None, node_index=None):
+    def _add_to_sample(
+        self, out, synch_mode, endpoint="input", time_index=None, node_index=None
+    ):
         batch_map = getattr(self, f"{endpoint}_map")
         for key, item in batch_map.by_synch_mode(synch_mode).items():
             if len(item.keys) > 1:
-                tensor, scaler = self.collate_item_elem(key,
-                                                        time_index=time_index,
-                                                        node_index=node_index)
+                tensor, scaler = self.collate_item_elem(
+                    key, time_index=time_index, node_index=node_index
+                )
             else:
-                tensor, scaler = self.get_tensor(item.keys[0],
-                                                 preprocess=item.preprocess,
-                                                 time_index=time_index,
-                                                 node_index=node_index)
-            if endpoint == 'auxiliary':
+                tensor, scaler = self.get_tensor(
+                    item.keys[0],
+                    preprocess=item.preprocess,
+                    time_index=time_index,
+                    node_index=node_index,
+                )
+            if endpoint == "auxiliary":
                 out[key] = tensor
             else:
                 getattr(out, endpoint)[key] = tensor
@@ -733,21 +821,27 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         if mask is not None:
             mask = self._parse_target(mask)
             if mask.dtype not in [torch.bool, torch.uint8]:
-                raise RuntimeError("Mask is not boolean, accepted types are "
-                                   f"{[torch.bool, torch.uint8]}.")
+                raise RuntimeError(
+                    "Mask is not boolean, accepted types are "
+                    f"{[torch.bool, torch.uint8]}."
+                )
             # check mask length is equal to target's length
-            self._check_same_dim(mask.size(0), 'n_steps', 'mask')
+            self._check_same_dim(mask.size(0), "n_steps", "mask")
             # check mask nodes/features are broadcastable to
             # target's nodes/features
-            self._check_same_dim(mask.size(1), 'n_nodes', 'mask',
-                                 allow_broadcasting=True)
-            self._check_same_dim(mask.size(-1), 'n_channels', 'mask',
-                                 allow_broadcasting=True)
+            self._check_same_dim(
+                mask.size(1), "n_nodes", "mask", allow_broadcasting=True
+            )
+            self._check_same_dim(
+                mask.size(-1), "n_channels", "mask", allow_broadcasting=True
+            )
         self.mask = mask
 
-    def set_connectivity(self,
-                         connectivity: Union[SparseTensArray, Tuple[DataArray]],
-                         target_layout: Optional[str] = None):
+    def set_connectivity(
+        self,
+        connectivity: Union[SparseTensArray, Tuple[DataArray]],
+        target_layout: Optional[str] = None,
+    ):
         r"""Set dataset connectivity.
 
         The input can be either a
@@ -770,17 +864,21 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                 (default: :obj:`None`)
         """
         self.edge_index, self.edge_weight = self._parse_connectivity(
-            connectivity,
-            target_layout)
+            connectivity, target_layout
+        )
 
     # Setter for covariates
 
-    def add_covariate(self, name: str, value: DataArray,
-                      pattern: Optional[str] = None,
-                      add_to_input_map: bool = True,
-                      synch_mode: Optional[SynchMode] = None,
-                      preprocess: bool = True,
-                      convert_precision: bool = True):
+    def add_covariate(
+        self,
+        name: str,
+        value: DataArray,
+        pattern: Optional[str] = None,
+        add_to_input_map: bool = True,
+        synch_mode: Optional[SynchMode] = None,
+        preprocess: bool = True,
+        convert_precision: bool = True,
+    ):
         r"""Add covariate to the dataset. Examples of covariate are
         exogenous signals (in the form of dynamic multidimensional data) or
         static attributes (e.g., graph/node metadata). Parameter :obj:`pattern`
@@ -826,18 +924,28 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # validate name. name cannot be an attribute of self, but allow override
         self._check_name(name)
         value, pattern = self._parse_covariate(
-            value, pattern, name=name, convert_precision=convert_precision)
+            value, pattern, name=name, convert_precision=convert_precision
+        )
         self._covariates[name] = dict(value=value, pattern=pattern)
         if add_to_input_map:
-            self.input_map[name] = BatchMapItem(name, synch_mode, preprocess,
-                                                cat_dim=None, pattern=pattern,
-                                                shape=value.size())
+            self.input_map[name] = BatchMapItem(
+                name,
+                synch_mode,
+                preprocess,
+                cat_dim=None,
+                pattern=pattern,
+                shape=value.size(),
+            )
 
-    def update_covariate(self, name: str, value: Optional[DataArray] = None,
-                         pattern: Optional[str] = None,
-                         add_to_input_map: bool = True,
-                         synch_mode: Optional[SynchMode] = None,
-                         preprocess: bool = None):
+    def update_covariate(
+        self,
+        name: str,
+        value: Optional[DataArray] = None,
+        pattern: Optional[str] = None,
+        add_to_input_map: bool = True,
+        synch_mode: Optional[SynchMode] = None,
+        preprocess: bool = None,
+    ):
         r"""Update a covariate already in the dataset.
 
         Args:
@@ -869,8 +977,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         """
         # validate name. name cannot be an attribute of self, but allow override
         if name not in self._covariates:
-            raise RuntimeError(f"There is not a covariate named {name} in "
-                               f"{self.__class__.__name__}")
+            raise RuntimeError(
+                f"There is not a covariate named {name} in "
+                f"{self.__class__.__name__}"
+            )
         # override value (with or without explicit pattern)
         if value is not None:
             value, pattern = self._parse_covariate(value, pattern, name=name)
@@ -878,26 +988,30 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         elif pattern is not None:
             pattern = check_pattern(pattern, ndim=value.ndim)
             from einops import rearrange
-            old_value = self._covariates[name]['value']
-            old_pattern = self._covariates[name]['pattern']
-            value = rearrange(old_value, f'{old_pattern} -> {pattern}')
+
+            old_value = self._covariates[name]["value"]
+            old_pattern = self._covariates[name]["pattern"]
+            value = rearrange(old_value, f"{old_pattern} -> {pattern}")
         # update the covariate
         self._covariates[name] = dict(value=value, pattern=pattern)
         # update input map
         if add_to_input_map:
             if name in self.input_map:
-                kwargs = dict(synch_mode=self.input_map[name].synch_mode,
-                              preprocess=self.input_map[name].preprocess)
+                kwargs = dict(
+                    synch_mode=self.input_map[name].synch_mode,
+                    preprocess=self.input_map[name].preprocess,
+                )
             else:
                 kwargs = dict(synch_mode=None, preprocess=True)
             if preprocess is not None:
-                kwargs['preprocess'] = preprocess
+                kwargs["preprocess"] = preprocess
             if synch_mode is not None:
-                kwargs['synch_mode'] = synch_mode
-            shape = tuple(self._covariates[name]['value'].size())
-            pattern = self._covariates[name]['pattern']
-            self.input_map[name] = BatchMapItem(name, **kwargs, cat_dim=None,
-                                                pattern=pattern, shape=shape)
+                kwargs["synch_mode"] = synch_mode
+            shape = tuple(self._covariates[name]["value"].size())
+            pattern = self._covariates[name]["pattern"]
+            self.input_map[name] = BatchMapItem(
+                name, **kwargs, cat_dim=None, pattern=pattern, shape=shape
+            )
 
     def remove_covariate(self, name: str):
         r"""Delete covariate from the dataset.
@@ -919,11 +1033,15 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         except Exception as e:
             raise e
 
-    def add_exogenous(self, name: str, value: DataArray,
-                      node_level: bool = True,
-                      add_to_input_map: bool = True,
-                      synch_mode: SynchMode = WINDOW,
-                      preprocess: bool = True):
+    def add_exogenous(
+        self,
+        name: str,
+        value: DataArray,
+        node_level: bool = True,
+        add_to_input_map: bool = True,
+        synch_mode: SynchMode = WINDOW,
+        preprocess: bool = True,
+    ):
         r"""Shortcut method to add a time-varying covariate.
 
         Exogenous variables are time-varying covariates of the dataset's target.
@@ -957,13 +1075,18 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         Returns:
             SpatioTemporalDataset: the dataset with added exogenous.
         """
-        if name.startswith('global_'):
+        if name.startswith("global_"):
             name = name[7:]
             node_level = False
-        pattern = 't n f' if node_level else 't f'
-        self.add_covariate(name, value, pattern, synch_mode=synch_mode,
-                           add_to_input_map=add_to_input_map,
-                           preprocess=preprocess)
+        pattern = "t n f" if node_level else "t f"
+        self.add_covariate(
+            name,
+            value,
+            pattern,
+            synch_mode=synch_mode,
+            add_to_input_map=add_to_input_map,
+            preprocess=preprocess,
+        )
 
     # Setters for preprocessing
 
@@ -972,20 +1095,22 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         if trend is not None:
             trend = self._parse_target(trend)
             # check trend length is equal to target's length
-            self._check_same_dim(trend.size(0), 'n_steps', 'mask')
+            self._check_same_dim(trend.size(0), "n_steps", "mask")
             # check trend nodes/features are broadcastable to
             # target's nodes/features
-            self._check_same_dim(trend.size(1), 'n_nodes', 'mask',
-                                 allow_broadcasting=True)
-            self._check_same_dim(trend.size(-1), 'n_channels', 'mask',
-                                 allow_broadcasting=True)
-            if 'target' in self.scalers:
+            self._check_same_dim(
+                trend.size(1), "n_nodes", "mask", allow_broadcasting=True
+            )
+            self._check_same_dim(
+                trend.size(-1), "n_channels", "mask", allow_broadcasting=True
+            )
+            if "target" in self.scalers:
                 if self.__target_bias is None:
-                    self.__target_bias = self.scalers['target'].bias
-                self.scalers['target'].bias = trend
+                    self.__target_bias = self.scalers["target"].bias
+                self.scalers["target"].bias = trend
         else:
-            if 'target' in self.scalers:
-                self.scalers['target'].bias = self.__target_bias
+            if "target" in self.scalers:
+                self.scalers["target"].bias = self.__target_bias
                 # refresh maps
                 self.update_input_map(self.input_map)
                 self.update_target_map(self.target_map)
@@ -1005,11 +1130,13 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         # copy to ScalerModule
         scaler = ScalerModule(scaler)
         pattern = self.patterns[key]
-        self._check_pattern(scaler.bias, pattern,
-                            name=f"scaler ({key})", allow_broadcasting=True)
-        self._check_pattern(scaler.scale, pattern,
-                            name=f"scaler ({key})", allow_broadcasting=True)
-        if key == 'target' and self.trend is not None:
+        self._check_pattern(
+            scaler.bias, pattern, name=f"scaler ({key})", allow_broadcasting=True
+        )
+        self._check_pattern(
+            scaler.scale, pattern, name=f"scaler ({key})", allow_broadcasting=True
+        )
+        if key == "target" and self.trend is not None:
             self.__target_bias = scaler.bias
             scaler.bias = scaler.bias + self.trend
         scaler.pattern = pattern
@@ -1018,15 +1145,18 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         for bm in [self.input_map, self.target_map, self.auxiliary_map]:
             for bm_key, bm_item in bm.items():
                 if key in bm_item.keys and len(bm_item.keys) > 1:
-                    tensor, scaler = self.collate_keys(bm_item.keys,
-                                                       cat_dim=bm_item.cat_dim,
-                                                       return_pattern=False)
+                    tensor, scaler = self.collate_keys(
+                        bm_item.keys, cat_dim=bm_item.cat_dim, return_pattern=False
+                    )
                     self._batch_scalers[bm_key] = scaler
 
     # Dataset trimming ########################################################
 
-    def reduce(self, time_index: Optional[IndexSlice] = None,
-               node_index: Optional[IndexSlice] = None):
+    def reduce(
+        self,
+        time_index: Optional[IndexSlice] = None,
+        node_index: Optional[IndexSlice] = None,
+    ):
         """Reduce the dataset in terms of number of steps and nodes. Returns a
         copy of the reduced dataset.
 
@@ -1043,8 +1173,11 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         """
         return deepcopy(self).reduce_(time_index, node_index)
 
-    def reduce_(self, time_index: Optional[IndexSlice] = None,
-                node_index: Optional[IndexSlice] = None):
+    def reduce_(
+        self,
+        time_index: Optional[IndexSlice] = None,
+        node_index: Optional[IndexSlice] = None,
+    ):
         """Reduce the dataset in terms of number of steps and nodes. This is an
         inplace operation.
 
@@ -1060,16 +1193,19 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                 (default: :obj:`None`)
         """
         # use slice to reduce known tensor
-        time_slice = self._get_time_index(time_index, layout='slice')
-        node_slice = self._get_node_index(node_index, layout='slice')
+        time_slice = self._get_time_index(time_index, layout="slice")
+        node_slice = self._get_node_index(node_index, layout="slice")
         # use index to reduce using index-fed functions
-        time_index = self._get_time_index(time_index, layout='index')
-        node_index = self._get_node_index(node_index, layout='index')
+        time_index = self._get_time_index(time_index, layout="index")
+        node_index = self._get_node_index(node_index, layout="index")
         try:
             if self.edge_index is not None and node_index is not None:
                 self.edge_index, self.edge_weight = reduce_graph(
-                    node_index, self.edge_index, self.edge_weight,
-                    num_nodes=self.n_nodes)
+                    node_index,
+                    self.edge_index,
+                    self.edge_weight,
+                    num_nodes=self.n_nodes,
+                )
             self.target = self.target[time_slice, node_slice]
             if self.index is not None:
                 self.index = self.index[time_index.numpy()]
@@ -1078,9 +1214,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             if self.trend is not None:
                 self.trend = self.trend[time_slice, node_slice]
             for name, attr in self._covariates.items():
-                x, scaler = self.get_tensor(name, time_index=time_index,
-                                            node_index=node_index)
-                attr['value'] = x
+                x, scaler = self.get_tensor(
+                    name, time_index=time_index, node_index=node_index
+                )
+                attr["value"] = x
                 if scaler is not None:
                     self.scalers[name] = scaler
         except Exception as e:
@@ -1091,7 +1228,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     def change_windowing(self, **kwargs):
         default, indices = dict(), self._indices
         try:
-            assert all([k in _WINDOWING_['all'][1:] for k in kwargs])
+            assert all([k in _WINDOWING_["all"][1:] for k in kwargs])
             for k, v in kwargs.items():
                 default[k] = getattr(self, k)
                 setattr(self, k, v)
@@ -1120,8 +1257,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
     def set_indices(self, indices: TensArray):
         indices = torch.as_tensor(indices, dtype=torch.long)
         max_index = self.n_steps - self.sample_span
-        assert all((indices >= 0) & (indices <= max_index)), \
-            f"indices must be in the range [0, {max_index}] for {self.name}."
+        assert all(
+            (indices >= 0) & (indices <= max_index)
+        ), f"indices must be in the range [0, {max_index}] for {self.name}."
         self._indices = indices
 
     def expand_indices(self, indices=None, unique=False, merge=False):
@@ -1129,28 +1267,29 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
         ds_indices = dict()
         if self.window > 0:
-            ds_indices['window'] = self.get_window_indices(indices)
-        ds_indices['horizon'] = self.get_horizon_indices(indices)
+            ds_indices["window"] = self.get_window_indices(indices)
+        ds_indices["horizon"] = self.get_horizon_indices(indices)
 
         if merge:
-            return torch.unique(torch.cat([v.contiguous().view(-1)
-                                           for v in ds_indices.values()]))
+            return torch.unique(
+                torch.cat([v.contiguous().view(-1) for v in ds_indices.values()])
+            )
 
         if unique:
             ds_indices = {k: torch.unique(v) for k, v in ds_indices.items()}
 
         return ds_indices
 
-    def overlapping_indices(self, idxs1, idxs2,
-                            synch_mode: Union[SynchMode, str] = WINDOW,
-                            as_mask=False):
+    def overlapping_indices(
+        self, idxs1, idxs2, synch_mode: Union[SynchMode, str] = WINDOW, as_mask=False
+    ):
         if isinstance(synch_mode, SynchMode):
             synch_mode = synch_mode.name
         idxs1, idxs2 = np.asarray(idxs1), np.asarray(idxs2)
         ts1 = self.expand_indices(idxs1)[synch_mode.lower()].numpy()
         ts2 = self.expand_indices(idxs2)[synch_mode.lower()].numpy()
         common_ts = np.intersect1d(ts1, ts2)
-        is_overlapping = lambda sample: np.any(np.in1d(sample, common_ts))
+        is_overlapping = lambda sample: np.any(np.in1d(sample, common_ts))  # noqa
         m1 = np.apply_along_axis(is_overlapping, 1, ts1)
         m2 = np.apply_along_axis(is_overlapping, 1, ts2)
         if as_mask:
@@ -1171,9 +1310,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         return np.asarray(self.target)
 
     def dataframe(self):
-        columns = pd.MultiIndex.from_product([range(self.n_nodes),
-                                              range(self.n_channels)],
-                                             names=['nodes', 'channels'])
+        columns = pd.MultiIndex.from_product(
+            [range(self.n_nodes), range(self.n_channels)], names=["nodes", "channels"]
+        )
         data = self.numpy().reshape((-1, self.n_nodes * self.n_channels))
         return pd.DataFrame(data=data, index=self.index, columns=columns)
 
@@ -1200,38 +1339,42 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         return obj
 
     @classmethod
-    def from_dataset(cls, dataset,
-                     connectivity: Optional[
-                         Union[SparseTensArray, Tuple[DataArray]]] = None,
-                     input_map: Optional[Union[Mapping, BatchMap]] = None,
-                     target_map: Optional[Union[Mapping, BatchMap]] = None,
-                     auxiliary_map: Optional[Union[Mapping, BatchMap]] = None,
-                     scalers: Optional[Mapping[str, Scaler]] = None,
-                     trend: Optional[DataArray] = None,
-                     window: int = 12,
-                     horizon: int = 1,
-                     delay: int = 0,
-                     stride: int = 1,
-                     window_lag: int = 1,
-                     horizon_lag: int = 1) -> "SpatioTemporalDataset":
+    def from_dataset(
+        cls,
+        dataset,
+        connectivity: Optional[Union[SparseTensArray, Tuple[DataArray]]] = None,
+        input_map: Optional[Union[Mapping, BatchMap]] = None,
+        target_map: Optional[Union[Mapping, BatchMap]] = None,
+        auxiliary_map: Optional[Union[Mapping, BatchMap]] = None,
+        scalers: Optional[Mapping[str, Scaler]] = None,
+        trend: Optional[DataArray] = None,
+        window: int = 12,
+        horizon: int = 1,
+        delay: int = 0,
+        stride: int = 1,
+        window_lag: int = 1,
+        horizon_lag: int = 1,
+    ) -> "SpatioTemporalDataset":
         """Create a :class:`~tsl.data.SpatioTemporalDataset` from a
         :class:`~tsl.datasets.prototypes.TabularDataset`.
         """
-        return cls(target=dataset.target,
-                   index=dataset.index,
-                   mask=dataset.mask,
-                   covariates=dataset._covariates,
-                   name=dataset.name,
-                   precision=dataset.precision,
-                   connectivity=connectivity,
-                   input_map=input_map,
-                   target_map=target_map,
-                   auxiliary_map=auxiliary_map,
-                   scalers=scalers,
-                   trend=trend,
-                   window=window,
-                   horizon=horizon,
-                   delay=delay,
-                   stride=stride,
-                   window_lag=window_lag,
-                   horizon_lag=horizon_lag)
+        return cls(
+            target=dataset.target,
+            index=dataset.index,
+            mask=dataset.mask,
+            covariates=dataset._covariates,
+            name=dataset.name,
+            precision=dataset.precision,
+            connectivity=connectivity,
+            input_map=input_map,
+            target_map=target_map,
+            auxiliary_map=auxiliary_map,
+            scalers=scalers,
+            trend=trend,
+            window=window,
+            horizon=horizon,
+            delay=delay,
+            stride=stride,
+            window_lag=window_lag,
+            horizon_lag=horizon_lag,
+        )

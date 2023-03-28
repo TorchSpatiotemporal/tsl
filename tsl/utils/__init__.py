@@ -1,11 +1,15 @@
-from .io import (extract_zip,
-                 extract_tar,
-                 download_url,
-                 save_pickle,
-                 load_pickle,
-                 save_figure)
-from .python_utils import (ensure_list,
-                           foo_signature,
-                           files_exist,
-                           precision_stoi,
-                           remove_files)
+from .io import (
+    download_url,
+    extract_tar,
+    extract_zip,
+    load_pickle,
+    save_figure,
+    save_pickle,
+)
+from .python_utils import (
+    ensure_list,
+    files_exist,
+    foo_signature,
+    precision_stoi,
+    remove_files,
+)

@@ -1,6 +1,7 @@
-from torch import nn, Tensor
+from torch import Tensor, nn
 
 from tsl.nn.utils import get_layer_activation
+
 from .linear import MultiLinear
 
 
@@ -36,23 +37,36 @@ class MultiDense(MultiLinear):
             (default: :obj:`None`)
     """
 
-    def __init__(self, in_channels: int, out_channels: int, n_instances: int,
-                 activation: str = 'relu',
-                 dropout: float = 0.,
-                 *,
-                 ndim: int = None, pattern: str = None,
-                 instance_dim: int = -2,
-                 channel_dim: int = -1,
-                 bias: bool = True,
-                 device=None, dtype=None) -> None:
-        super(MultiDense, self).__init__(in_channels, out_channels,
-                                         n_instances=n_instances,
-                                         ndim=ndim, pattern=pattern,
-                                         instance_dim=instance_dim,
-                                         channel_dim=channel_dim, bias=bias,
-                                         device=device, dtype=dtype)
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        n_instances: int,
+        activation: str = "relu",
+        dropout: float = 0.0,
+        *,
+        ndim: int = None,
+        pattern: str = None,
+        instance_dim: int = -2,
+        channel_dim: int = -1,
+        bias: bool = True,
+        device=None,
+        dtype=None
+    ) -> None:
+        super(MultiDense, self).__init__(
+            in_channels,
+            out_channels,
+            n_instances=n_instances,
+            ndim=ndim,
+            pattern=pattern,
+            instance_dim=instance_dim,
+            channel_dim=channel_dim,
+            bias=bias,
+            device=device,
+            dtype=dtype,
+        )
         self.activation = get_layer_activation(activation)()
-        self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
+        self.dropout = nn.Dropout(dropout) if dropout > 0.0 else nn.Identity()
 
     def forward(self, input: Tensor) -> Tensor:
         r"""Compute :math:`\mathbf{X}^{\prime} = \left[\sigma\left(\boldsymbol{

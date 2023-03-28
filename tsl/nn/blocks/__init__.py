@@ -7,7 +7,4 @@ decoder_classes = decoders.classes
 
 classes = encoder_classes + decoder_classes
 
-__all__ = [
-    'encoders',
-    'decoders'
-]
+__all__ = ["encoders", "decoders"]

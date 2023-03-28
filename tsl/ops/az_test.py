@@ -3,7 +3,7 @@ from collections import namedtuple
 import numpy as np
 import scipy.stats
 
-from tsl.typing import TensArray, OptTensArray, Optional, Union, Tuple
+from tsl.typing import Optional, OptTensArray, TensArray, Tuple, Union
 
 
 def _twosided_std_gaussian_pval(stat: float):
@@ -24,15 +24,15 @@ def _to_numpy(o: Union[TensArray, list, int, float, None]):
     if o is None:
         return o
     import torch
+
     if isinstance(o, torch.Tensor):
         return o.numpy()
     raise NotImplementedError(f"I don't know how to convert {type(o)} to numpy")
 
 
-def _to_undirected_no_selfloops(edge_index: np.ndarray,
-                                edge_weight: Optional[
-                                    Union[np.ndarray, int, float]]
-                                ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+def _to_undirected_no_selfloops(
+    edge_index: np.ndarray, edge_weight: Optional[Union[np.ndarray, int, float]]
+) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     """Remove self-loops, make the graph undirected, remove duplicated edges,
     and sum the weights corresponding to duplicated edges; it works with
     `numpy.ndarray`."""
@@ -61,43 +61,42 @@ def _to_undirected_no_selfloops(edge_index: np.ndarray,
     # Mask of unique edges (or the first of the duplicates) and non self-loops
     unique_mask = np.any(edge_index_[:, 1:] != edge_index_[:, :-1], axis=0)
     unique_mask = np.append(True, unique_mask)
-    unique_mask_inds, = np.nonzero(unique_mask)
+    (unique_mask_inds,) = np.nonzero(unique_mask)
     # edges
     edge_index_ = edge_index_[:, unique_mask]
     # weights
     if edge_weight_ is not None:
-        edge_weight_ = np.add.reduceat(edge_weight_, unique_mask_inds,
-                                       dtype=edge_weight_.dtype)
+        edge_weight_ = np.add.reduceat(
+            edge_weight_, unique_mask_inds, dtype=edge_weight_.dtype
+        )
 
     return edge_index_, edge_weight_
 
 
-AZWhitenessTestResult = namedtuple('AZWhitenessTestResult',
-                                   ('statistic', 'pvalue'))
+AZWhitenessTestResult = namedtuple("AZWhitenessTestResult", ("statistic", "pvalue"))
 AZWhitenessMultiTestResult = namedtuple(
-    'AZWhitenessMultiTestResult',
-    ('statistic', 'pvalue', 'componentwise_tests')
+    "AZWhitenessMultiTestResult", ("statistic", "pvalue", "componentwise_tests")
 )
 
 
-def az_whiteness_test(x: TensArray,
-                      edge_index: TensArray,
-                      mask: OptTensArray = None,
-                      pattern: str = "t n f",
-                      edge_weight: Optional[Union[TensArray, float]] = None,
-                      edge_weight_temporal: Optional[float] = None,
-                      lamb: float = 0.5,
-                      multivariate: bool = False,
-                      remove_median: bool = False
-                      ) -> Union[
-    AZWhitenessTestResult, AZWhitenessMultiTestResult]:
+def az_whiteness_test(
+    x: TensArray,
+    edge_index: TensArray,
+    mask: OptTensArray = None,
+    pattern: str = "t n f",
+    edge_weight: Optional[Union[TensArray, float]] = None,
+    edge_weight_temporal: Optional[float] = None,
+    lamb: float = 0.5,
+    multivariate: bool = False,
+    remove_median: bool = False,
+) -> Union[AZWhitenessTestResult, AZWhitenessMultiTestResult]:
     """Implementation of the AZ-whiteness test from the paper `"AZ-whiteness
     test: a test for uncorrelated noise on spatio-temporal graphs"
     <https://arxiv.org/abs/2204.11135>`_ (D. Zambon and C. Alippi,
     NeurIPS 2022).
 
     Args:
-        x (TensArray): graph signal, typically with pattern "t n f" and 
+        x (TensArray): graph signal, typically with pattern "t n f" and
             representing the prediction residuals.
         edge_index (TensArray): indices of the spatial edges with shape (2, E).
             Current implementation supports only a static topology.
@@ -138,7 +137,7 @@ def az_whiteness_test(x: TensArray,
     """
 
     # retrieve pattern
-    dims = pattern.strip().split(' ')
+    dims = pattern.strip().split(" ")
     T_DIM, N_DIM, F_DIM = dims.index("t"), dims.index("n"), dims.index("f")
 
     # data to numpy.ndarray
@@ -158,10 +157,15 @@ def az_whiteness_test(x: TensArray,
     if F == 1:
         multivariate = True
 
-    az_test_args = dict(x=x, mask=mask, pattern=pattern,
-                        edge_index_spatial=edge_index_spatial,
-                        edge_weight_spatial=edge_weight_spatial,
-                        edge_weight_temporal=edge_weight_temporal, lamb=lamb)
+    az_test_args = dict(
+        x=x,
+        mask=mask,
+        pattern=pattern,
+        edge_index_spatial=edge_index_spatial,
+        edge_weight_spatial=edge_weight_spatial,
+        edge_weight_temporal=edge_weight_temporal,
+        lamb=lamb,
+    )
 
     if multivariate:
         # Single test with edge statistic: `sign( (xu * xv).sum() )`.
@@ -171,11 +175,11 @@ def az_whiteness_test(x: TensArray,
         # for each feature dimension.
         res = []
         for f in range(F):
-            x_ = x[..., f:f + 1]
+            x_ = x[..., f : f + 1]
             if mask is None:
                 mask_ = None
             else:
-                mask_ = mask[..., f:f + 1]
+                mask_ = mask[..., f : f + 1]
             az_test_args["x"] = x_
             az_test_args["mask"] = mask_
             res.append(_az_whiteness_test(**az_test_args))
@@ -184,40 +188,46 @@ def az_whiteness_test(x: TensArray,
         return AZWhitenessMultiTestResult(C_multi, pval, res)
 
 
-def _az_whiteness_test(x, mask, pattern,
-                       edge_index_spatial, edge_weight_spatial,
-                       edge_weight_temporal, lamb):
+def _az_whiteness_test(
+    x,
+    mask,
+    pattern,
+    edge_index_spatial,
+    edge_weight_spatial,
+    edge_weight_temporal,
+    lamb,
+):
     """Core computation of the AZ-whiteness test.
 
     All parameters are assumed to be `numpy.ndarray` or `float`.
     """
 
     # retrieve pattern
-    dims = pattern.strip().split(' ')
+    dims = pattern.strip().split(" ")
     T_DIM, N_DIM, F_DIM = dims.index("t"), dims.index("n"), dims.index("f")
-    T, N, F = x.shape[T_DIM], x.shape[N_DIM], x.shape[F_DIM]
+    T, N = x.shape[T_DIM], x.shape[N_DIM]
 
     # --- Spatial edges and weight ---
 
     # Parse weight
     if edge_weight_spatial is None:
         edge_weight_spatial = 1.0
-    if isinstance(edge_weight_spatial, int) or isinstance(edge_weight_spatial,
-                                                          float):
-        edge_weight_spatial = edge_weight_spatial * np.ones(
-            edge_index_spatial.shape[1])
+    if isinstance(edge_weight_spatial, int) or isinstance(edge_weight_spatial, float):
+        edge_weight_spatial = edge_weight_spatial * np.ones(edge_index_spatial.shape[1])
 
     # Check dims
-    assert edge_weight_spatial.shape[0] == edge_index_spatial.shape[
-        1], "Dimension mismatch between edge_weight and edge_index."
+    assert (
+        edge_weight_spatial.shape[0] == edge_index_spatial.shape[1]
+    ), "Dimension mismatch between edge_weight and edge_index."
     assert np.all(edge_weight_spatial > 0), "Edge weights are not all positive."
-    assert N == edge_index_spatial.max() + 1, \
-        "Is the input signal given with pattern (T, N, F)?"
+    assert (
+        N == edge_index_spatial.max() + 1
+    ), "Is the input signal given with pattern (T, N, F)?"
 
     # Make the graph undirected and without self-loops
     edge_index_spatial, edge_weight_spatial = _to_undirected_no_selfloops(
-        edge_index=edge_index_spatial,
-        edge_weight=edge_weight_spatial)
+        edge_index=edge_index_spatial, edge_weight=edge_weight_spatial
+    )
 
     # Node mask
     if mask is None:
@@ -231,9 +241,11 @@ def _az_whiteness_test(x, mask, pattern,
     #  - repeat node mask for every source node
     #  - repeat node mask for every target node
     #  - compare the two
-    mask_edge_spatial = np.where(np.logical_and(
-        mask_node[:, edge_index_spatial[0]],
-        mask_node[:, edge_index_spatial[1]]))
+    mask_edge_spatial = np.where(
+        np.logical_and(
+            mask_node[:, edge_index_spatial[0]], mask_node[:, edge_index_spatial[1]]
+        )
+    )
 
     # Spatial normalization factor
     # sums over all unmasked edges (it considers already the dynamic graph
@@ -254,11 +266,12 @@ def _az_whiteness_test(x, mask, pattern,
         if edge_weight_temporal == "auto" or edge_weight_temporal is None:
             edge_weight_temporal = np.sqrt(W_spatial / num_temporal_edge_masked)
     assert isinstance(edge_weight_temporal, int) or isinstance(
-        edge_weight_temporal, float)
+        edge_weight_temporal, float
+    )
     assert edge_weight_temporal > 0
 
     # Temporal normalization factor
-    W_temporal = (edge_weight_temporal ** 2) * num_temporal_edge_masked
+    W_temporal = (edge_weight_temporal**2) * num_temporal_edge_masked
 
     # --- Test statistics ---
 
@@ -283,7 +296,7 @@ def _az_whiteness_test(x, mask, pattern,
     # Normalize Ctilde: C
     assert 0 <= lamb <= 1
     Ctilde = lamb * Ctilde_spatial + (1 - lamb) * Ctilde_temporal
-    W = (lamb ** 2) * W_spatial + ((1 - lamb) ** 2) * W_temporal
+    W = (lamb**2) * W_spatial + ((1 - lamb) ** 2) * W_temporal
     C = Ctilde / np.sqrt(W)
 
     # p-value
