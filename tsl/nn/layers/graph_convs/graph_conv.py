@@ -40,16 +40,14 @@ class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
             (default :obj:`False`)
     """
 
-    def __init__(
-        self,
-        input_size: int,
-        output_size: int,
-        bias: bool = True,
-        norm: str = "mean",
-        root_weight: bool = True,
-        activation: str = None,
-        cached: bool = False,
-    ):
+    def __init__(self,
+                 input_size: int,
+                 output_size: int,
+                 bias: bool = True,
+                 norm: str = 'mean',
+                 root_weight: bool = True,
+                 activation: str = None,
+                 cached: bool = False):
         super(GraphConv, self).__init__(aggr="add", node_dim=-2)
 
         self.in_channels = input_size
@@ -63,12 +61,12 @@ class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
         if root_weight:
             self.root_lin = nn.Linear(input_size, output_size, bias=False)
         else:
-            self.register_parameter("root_lin", None)
+            self.register_parameter('root_lin', None)
 
         if bias:
             self.bias = Parameter(torch.Tensor(output_size))
         else:
-            self.register_parameter("bias", None)
+            self.register_parameter('bias', None)
 
         self.reset_parameters()
 
@@ -79,15 +77,18 @@ class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
         if self.bias is not None:
             torch.nn.init.zeros_(self.bias)
 
-    def forward(
-        self, x: Tensor, edge_index: Adj, edge_weight: OptTensor = None
-    ) -> Tensor:
+    def forward(self,
+                x: Tensor,
+                edge_index: Adj,
+                edge_weight: OptTensor = None) -> Tensor:
         """"""
         out = self.lin(x)
 
         edge_index, edge_weight = self.normalize_edge_index(
-            x, edge_index=edge_index, edge_weight=edge_weight, use_cached=self.cached
-        )
+            x,
+            edge_index=edge_index,
+            edge_weight=edge_weight,
+            use_cached=self.cached)
 
         out = self.propagate(edge_index, x=out, edge_weight=edge_weight)
 

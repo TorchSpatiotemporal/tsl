@@ -24,14 +24,15 @@ def _to_numpy(o: Union[TensArray, list, int, float, None]):
     if o is None:
         return o
     import torch
-
     if isinstance(o, torch.Tensor):
         return o.numpy()
-    raise NotImplementedError(f"I don't know how to convert {type(o)} to numpy")
+    raise NotImplementedError(
+        f"I don't know how to convert {type(o)} to numpy")
 
 
 def _to_undirected_no_selfloops(
-    edge_index: np.ndarray, edge_weight: Optional[Union[np.ndarray, int, float]]
+    edge_index: np.ndarray, edge_weight: Optional[Union[np.ndarray, int,
+                                                        float]]
 ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     """Remove self-loops, make the graph undirected, remove duplicated edges,
     and sum the weights corresponding to duplicated edges; it works with
@@ -61,22 +62,23 @@ def _to_undirected_no_selfloops(
     # Mask of unique edges (or the first of the duplicates) and non self-loops
     unique_mask = np.any(edge_index_[:, 1:] != edge_index_[:, :-1], axis=0)
     unique_mask = np.append(True, unique_mask)
-    (unique_mask_inds,) = np.nonzero(unique_mask)
+    unique_mask_inds, = np.nonzero(unique_mask)
     # edges
     edge_index_ = edge_index_[:, unique_mask]
     # weights
     if edge_weight_ is not None:
-        edge_weight_ = np.add.reduceat(
-            edge_weight_, unique_mask_inds, dtype=edge_weight_.dtype
-        )
+        edge_weight_ = np.add.reduceat(edge_weight_,
+                                       unique_mask_inds,
+                                       dtype=edge_weight_.dtype)
 
     return edge_index_, edge_weight_
 
 
-AZWhitenessTestResult = namedtuple("AZWhitenessTestResult", ("statistic", "pvalue"))
+AZWhitenessTestResult = namedtuple('AZWhitenessTestResult',
+                                   ('statistic', 'pvalue'))
 AZWhitenessMultiTestResult = namedtuple(
-    "AZWhitenessMultiTestResult", ("statistic", "pvalue", "componentwise_tests")
-)
+    'AZWhitenessMultiTestResult',
+    ('statistic', 'pvalue', 'componentwise_tests'))
 
 
 def az_whiteness_test(
@@ -88,7 +90,7 @@ def az_whiteness_test(
     edge_weight_temporal: Optional[float] = None,
     lamb: float = 0.5,
     multivariate: bool = False,
-    remove_median: bool = False,
+    remove_median: bool = False
 ) -> Union[AZWhitenessTestResult, AZWhitenessMultiTestResult]:
     """Implementation of the AZ-whiteness test from the paper `"AZ-whiteness
     test: a test for uncorrelated noise on spatio-temporal graphs"
@@ -133,11 +135,12 @@ def az_whiteness_test(
             (default: :obj:`False`)
 
     Returns:
-        AZWhitenessTestResult or AZWhitenessMultiTestResult: The test statistics.
+        AZWhitenessTestResult or AZWhitenessMultiTestResult: The test
+        statistics.
     """
 
     # retrieve pattern
-    dims = pattern.strip().split(" ")
+    dims = pattern.strip().split(' ')
     T_DIM, N_DIM, F_DIM = dims.index("t"), dims.index("n"), dims.index("f")
 
     # data to numpy.ndarray
@@ -157,15 +160,13 @@ def az_whiteness_test(
     if F == 1:
         multivariate = True
 
-    az_test_args = dict(
-        x=x,
-        mask=mask,
-        pattern=pattern,
-        edge_index_spatial=edge_index_spatial,
-        edge_weight_spatial=edge_weight_spatial,
-        edge_weight_temporal=edge_weight_temporal,
-        lamb=lamb,
-    )
+    az_test_args = dict(x=x,
+                        mask=mask,
+                        pattern=pattern,
+                        edge_index_spatial=edge_index_spatial,
+                        edge_weight_spatial=edge_weight_spatial,
+                        edge_weight_temporal=edge_weight_temporal,
+                        lamb=lamb)
 
     if multivariate:
         # Single test with edge statistic: `sign( (xu * xv).sum() )`.
@@ -175,11 +176,11 @@ def az_whiteness_test(
         # for each feature dimension.
         res = []
         for f in range(F):
-            x_ = x[..., f : f + 1]
+            x_ = x[..., f:f + 1]
             if mask is None:
                 mask_ = None
             else:
-                mask_ = mask[..., f : f + 1]
+                mask_ = mask[..., f:f + 1]
             az_test_args["x"] = x_
             az_test_args["mask"] = mask_
             res.append(_az_whiteness_test(**az_test_args))
@@ -188,22 +189,15 @@ def az_whiteness_test(
         return AZWhitenessMultiTestResult(C_multi, pval, res)
 
 
-def _az_whiteness_test(
-    x,
-    mask,
-    pattern,
-    edge_index_spatial,
-    edge_weight_spatial,
-    edge_weight_temporal,
-    lamb,
-):
+def _az_whiteness_test(x, mask, pattern, edge_index_spatial,
+                       edge_weight_spatial, edge_weight_temporal, lamb):
     """Core computation of the AZ-whiteness test.
 
     All parameters are assumed to be `numpy.ndarray` or `float`.
     """
 
     # retrieve pattern
-    dims = pattern.strip().split(" ")
+    dims = pattern.strip().split(' ')
     T_DIM, N_DIM, F_DIM = dims.index("t"), dims.index("n"), dims.index("f")
     T, N = x.shape[T_DIM], x.shape[N_DIM]
 
@@ -212,22 +206,22 @@ def _az_whiteness_test(
     # Parse weight
     if edge_weight_spatial is None:
         edge_weight_spatial = 1.0
-    if isinstance(edge_weight_spatial, int) or isinstance(edge_weight_spatial, float):
-        edge_weight_spatial = edge_weight_spatial * np.ones(edge_index_spatial.shape[1])
+    if (isinstance(edge_weight_spatial, int)
+            or isinstance(edge_weight_spatial, float)):
+        edge_weight_spatial = edge_weight_spatial * np.ones(
+            edge_index_spatial.shape[1])
 
     # Check dims
-    assert (
-        edge_weight_spatial.shape[0] == edge_index_spatial.shape[1]
-    ), "Dimension mismatch between edge_weight and edge_index."
-    assert np.all(edge_weight_spatial > 0), "Edge weights are not all positive."
-    assert (
-        N == edge_index_spatial.max() + 1
-    ), "Is the input signal given with pattern (T, N, F)?"
+    assert edge_weight_spatial.shape[0] == edge_index_spatial.shape[
+        1], "Dimension mismatch between edge_weight and edge_index."
+    assert np.all(edge_weight_spatial > 0), \
+        "Edge weights are not all positive."
+    assert N == edge_index_spatial.max() + 1, \
+        "Is the input signal given with pattern (T, N, F)?"
 
     # Make the graph undirected and without self-loops
     edge_index_spatial, edge_weight_spatial = _to_undirected_no_selfloops(
-        edge_index=edge_index_spatial, edge_weight=edge_weight_spatial
-    )
+        edge_index=edge_index_spatial, edge_weight=edge_weight_spatial)
 
     # Node mask
     if mask is None:
@@ -242,15 +236,13 @@ def _az_whiteness_test(
     #  - repeat node mask for every target node
     #  - compare the two
     mask_edge_spatial = np.where(
-        np.logical_and(
-            mask_node[:, edge_index_spatial[0]], mask_node[:, edge_index_spatial[1]]
-        )
-    )
+        np.logical_and(mask_node[:, edge_index_spatial[0]],
+                       mask_node[:, edge_index_spatial[1]]))
 
     # Spatial normalization factor
     # sums over all unmasked edges (it considers already the dynamic graph
     # with all "repeated" edges)
-    W_spatial = np.sum(edge_weight_spatial[mask_edge_spatial[1]] ** 2)
+    W_spatial = np.sum(edge_weight_spatial[mask_edge_spatial[1]]**2)
 
     # --- Temporal edges and weight ---
 
@@ -264,10 +256,10 @@ def _az_whiteness_test(
         num_temporal_edge_masked = (mask[1:] * mask[:-1]).sum()
         # default temporal weight
         if edge_weight_temporal == "auto" or edge_weight_temporal is None:
-            edge_weight_temporal = np.sqrt(W_spatial / num_temporal_edge_masked)
+            edge_weight_temporal = np.sqrt(W_spatial /
+                                           num_temporal_edge_masked)
     assert isinstance(edge_weight_temporal, int) or isinstance(
-        edge_weight_temporal, float
-    )
+        edge_weight_temporal, float)
     assert edge_weight_temporal > 0
 
     # Temporal normalization factor
@@ -296,7 +288,7 @@ def _az_whiteness_test(
     # Normalize Ctilde: C
     assert 0 <= lamb <= 1
     Ctilde = lamb * Ctilde_spatial + (1 - lamb) * Ctilde_temporal
-    W = (lamb**2) * W_spatial + ((1 - lamb) ** 2) * W_temporal
+    W = (lamb**2) * W_spatial + ((1 - lamb)**2) * W_temporal
     C = Ctilde / np.sqrt(W)
 
     # p-value

@@ -20,7 +20,8 @@ class Concatenate(nn.Module):
         super(Concatenate, self).__init__()
         self.dim = dim
 
-    def forward(self, tensors: Union[Tuple[Tensor, ...], List[Tensor]]) -> Tensor:
+    def forward(self, tensors: Union[Tuple[Tensor, ...], List[Tensor]]) \
+            -> Tensor:
         """Returns :func:`~tsl.nn.functional.expand_then_cat` on input
         tensors."""
         return expand_then_cat(tensors, self.dim)

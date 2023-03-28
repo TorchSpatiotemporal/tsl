@@ -2,9 +2,9 @@ from enum import Enum
 
 
 class SynchMode(Enum):
-    WINDOW = "window"
-    HORIZON = "horizon"
-    STATIC = "static"
+    WINDOW = 'window'
+    HORIZON = 'horizon'
+    STATIC = 'static'
 
 
 # Aliases

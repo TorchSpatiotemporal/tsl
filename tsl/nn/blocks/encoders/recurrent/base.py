@@ -10,12 +10,10 @@ from tsl.utils import ensure_list
 class RNNBase(nn.Module):
     r"""Base class for implementing recurrent neural networks (RNNs)."""
 
-    def __init__(
-        self,
-        cells: Union[RNNCellBase, List[RNNCellBase], nn.ModuleList],
-        cat_states_layers: bool = False,
-        return_only_last_state: bool = False,
-    ):
+    def __init__(self,
+                 cells: Union[RNNCellBase, List[RNNCellBase], nn.ModuleList],
+                 cat_states_layers: bool = False,
+                 return_only_last_state: bool = False):
         super().__init__()
         self.cat_states_layers = cat_states_layers
         self.return_only_last_state = return_only_last_state
@@ -26,8 +24,8 @@ class RNNBase(nn.Module):
 
     def __repr__(self) -> str:
         args = [
-            f"cell={self.cells[0].__class__.__name__}",
-            f"return_only_last_state={self.return_only_last_state}",
+            f'cell={self.cells[0].__class__.__name__}',
+            f'return_only_last_state={self.return_only_last_state}'
         ]
         return f"{self.__class__.__name__}({', '.join(args)})"
 
@@ -38,9 +36,8 @@ class RNNBase(nn.Module):
     def initialize_state(self, x: Tensor) -> List[StateType]:
         return [cell.initialize_state(x) for cell in self.cells]
 
-    def single_pass(
-        self, x: Tensor, h: List[StateType], *args, **kwargs
-    ) -> List[StateType]:
+    def single_pass(self, x: Tensor, h: List[StateType], *args,
+                    **kwargs) -> List[StateType]:
         # x: [batch, *, channels]
         # h[i]: [batch, *, channels]
         out = []
@@ -52,9 +49,11 @@ class RNNBase(nn.Module):
             out.append(h_new)
         return out
 
-    def forward(
-        self, x: Tensor, *args, h: Optional[List[StateType]] = None, **kwargs
-    ) -> Tuple[Tensor, List[StateType]]:
+    def forward(self,
+                x: Tensor,
+                *args,
+                h: Optional[List[StateType]] = None,
+                **kwargs) -> Tuple[Tensor, List[StateType]]:
         """"""
         # x: [batch, time, *, features]
         if h is None:
@@ -88,15 +87,15 @@ class RNNIBase(RNNBase):
     r"""Base class for implementing recurrent neural networks (RNNs) for
     sequences with missing data."""
 
-    def __init__(
-        self,
-        cells: Union[RNNCellBase, List[RNNCellBase], nn.ModuleList],
-        detach_input: bool = False,
-        concat_mask: bool = False,
-        flip_time: bool = False,
-        cat_states_layers: bool = False,
-    ):
-        super().__init__(cells, cat_states_layers, return_only_last_state=False)
+    def __init__(self,
+                 cells: Union[RNNCellBase, List[RNNCellBase], nn.ModuleList],
+                 detach_input: bool = False,
+                 concat_mask: bool = False,
+                 flip_time: bool = False,
+                 cat_states_layers: bool = False):
+        super().__init__(cells,
+                         cat_states_layers,
+                         return_only_last_state=False)
         self.detach_input = detach_input
         self.concat_mask = concat_mask
         self.flip_time = flip_time
@@ -104,16 +103,14 @@ class RNNIBase(RNNBase):
     def state_readout(self, h: List[StateType]):
         raise NotImplementedError
 
-    def preprocess_input(
-        self,
-        x: Tensor,
-        x_hat: Tensor,
-        input_mask: Tensor,
-        step: int,
-        *args,
-        h: Optional[List[StateType]] = None,
-        **kwargs,
-    ):
+    def preprocess_input(self,
+                         x: Tensor,
+                         x_hat: Tensor,
+                         input_mask: Tensor,
+                         step: int,
+                         *args,
+                         h: Optional[List[StateType]] = None,
+                         **kwargs):
         if self.detach_input:
             x_hat = x_hat.detach()
         x_t = torch.where(input_mask, x, x_hat)
@@ -131,14 +128,12 @@ class RNNIBase(RNNBase):
             h = h[-1]
         return h
 
-    def forward(
-        self,
-        x: Tensor,
-        input_mask: Tensor,
-        *args,
-        h: Optional[List[StateType]] = None,
-        **kwargs,
-    ) -> Tuple[Tensor, Tensor, List[StateType]]:
+    def forward(self,
+                x: Tensor,
+                input_mask: Tensor,
+                *args,
+                h: Optional[List[StateType]] = None,
+                **kwargs) -> Tuple[Tensor, Tensor, List[StateType]]:
         """"""
         # x: [batch, time, *, features]
         if h is None:
@@ -148,16 +143,16 @@ class RNNIBase(RNNBase):
         # temporal conv
         h_out, x_out = [], []
         steps = x.size(1)
-        steps = range(steps) if not self.flip_time else range(steps - 1, -1, -1)
+        steps = range(steps) if not self.flip_time else range(
+            steps - 1, -1, -1)
         for step in steps:
             # readout phase
             x_hat = self.state_readout(h)
             x_out.append(x_hat)
             h_out.append(self.postprocess_state(h))
             # preprocess input to rnn's cell given readout
-            x_t = self.preprocess_input(
-                x[:, step], x_hat, input_mask[:, step], step, *args, **kwargs
-            )
+            x_t = self.preprocess_input(x[:, step], x_hat, input_mask[:, step],
+                                        step, *args, **kwargs)
             h = self.single_pass(x_t, h, *args, **kwargs)
 
         if self.flip_time:

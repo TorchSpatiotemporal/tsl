@@ -18,7 +18,8 @@ class StaticGraphLoader(DataLoader):
     by using a :class:`torch.utils.data.BatchSampler`.
 
     Args:
-        dataset (SpatioTemporalDataset): The dataset from which to load the data.
+        dataset (SpatioTemporalDataset): The dataset from which to load the
+            data.
         batch_size (int, optional): How many samples per batch to load.
             (default: :obj:`1`)
         shuffle (bool, optional): If :obj:`True`, then data will be
@@ -32,24 +33,20 @@ class StaticGraphLoader(DataLoader):
             :class:`torch.utils.data.DataLoader`.
     """
 
-    def __init__(
-        self,
-        dataset: SpatioTemporalDataset,
-        batch_size: Optional[int] = 1,
-        shuffle: bool = False,
-        drop_last: bool = False,
-        **kwargs
-    ):
-        if "collate_fn" in kwargs:
-            del kwargs["collate_fn"]
-        super().__init__(
-            dataset,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            drop_last=drop_last,
-            collate_fn=_dummy_collate,
-            **kwargs
-        )
+    def __init__(self,
+                 dataset: SpatioTemporalDataset,
+                 batch_size: Optional[int] = 1,
+                 shuffle: bool = False,
+                 drop_last: bool = False,
+                 **kwargs):
+        if 'collate_fn' in kwargs:
+            del kwargs['collate_fn']
+        super().__init__(dataset,
+                         batch_size=batch_size,
+                         shuffle=shuffle,
+                         drop_last=drop_last,
+                         collate_fn=_dummy_collate,
+                         **kwargs)
 
     @property
     def _auto_collation(self):

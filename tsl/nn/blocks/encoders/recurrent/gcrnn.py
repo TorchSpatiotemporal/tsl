@@ -44,44 +44,38 @@ class GraphConvRNN(RNNBase):
             :class:`torch_geometric.nn.conv.MessagePassing`.
     """
 
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: int,
-        n_layers: int = 1,
-        cat_states_layers: bool = False,
-        return_only_last_state: bool = False,
-        cell: str = "gru",
-        bias: bool = True,
-        asymmetric_norm: bool = True,
-        root_weight: bool = True,
-        activation: str = None,
-        cached: bool = False,
-        **kwargs,
-    ):
+    def __init__(self,
+                 input_size: int,
+                 hidden_size: int,
+                 n_layers: int = 1,
+                 cat_states_layers: bool = False,
+                 return_only_last_state: bool = False,
+                 cell: str = 'gru',
+                 bias: bool = True,
+                 asymmetric_norm: bool = True,
+                 root_weight: bool = True,
+                 activation: str = None,
+                 cached: bool = False,
+                 **kwargs):
         self.input_size = input_size
         self.hidden_size = hidden_size
 
-        if cell == "gru":
+        if cell == 'gru':
             cell = GraphConvGRUCell
-        elif cell == "lstm":
+        elif cell == 'lstm':
             cell = GraphConvLSTMCell
         else:
             raise NotImplementedError(f'"{cell}" cell not implemented.')
 
         rnn_cells = [
-            cell(
-                input_size if i == 0 else hidden_size,
-                hidden_size,
-                asymmetric_norm=asymmetric_norm,
-                root_weight=root_weight,
-                activation=activation,
-                bias=bias,
-                cached=cached,
-                **kwargs,
-            )
-            for i in range(n_layers)
+            cell(input_size if i == 0 else hidden_size,
+                 hidden_size,
+                 asymmetric_norm=asymmetric_norm,
+                 root_weight=root_weight,
+                 activation=activation,
+                 bias=bias,
+                 cached=cached,
+                 **kwargs) for i in range(n_layers)
         ]
-        super(GraphConvRNN, self).__init__(
-            rnn_cells, cat_states_layers, return_only_last_state
-        )
+        super(GraphConvRNN, self).__init__(rnn_cells, cat_states_layers,
+                                           return_only_last_state)

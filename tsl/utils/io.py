@@ -21,7 +21,7 @@ def extract_zip(path: str, folder: str, log: bool = True):
     """
     if log:
         logger.info(f"Extracting {path}")
-    with zipfile.ZipFile(path, "r") as f:
+    with zipfile.ZipFile(path, 'r') as f:
         f.extractall(folder)
 
 
@@ -36,8 +36,9 @@ def extract_tar(path: str, folder: str, log: bool = True):
     """
     if log:
         logger.info(f"Extracting {path}")
-    with tarfile.open(path, "r") as tar:
-        for member in tqdm(iterable=tar.getmembers(), total=len(tar.getmembers())):
+    with tarfile.open(path, 'r') as tar:
+        for member in tqdm(iterable=tar.getmembers(),
+                           total=len(tar.getmembers())):
             tar.extract(member=member, path=folder)
 
 
@@ -54,7 +55,7 @@ def save_pickle(obj: Any, filename: str) -> str:
     abspath = os.path.abspath(filename)
     directory = os.path.dirname(abspath)
     os.makedirs(directory, exist_ok=True)
-    with open(abspath, "wb") as fp:
+    with open(abspath, 'wb') as fp:
         pickle.dump(obj, fp)
     return abspath
 
@@ -68,29 +69,27 @@ def load_pickle(filename: str) -> Any:
     Returns:
         data (any): The loaded object.
     """
-    with open(filename, "rb") as fp:
+    with open(filename, 'rb') as fp:
         data = pickle.load(fp)
     return data
 
 
 def save_figure(fig, filename: str, as_html=False, as_pickle=False):
-    if filename.endswith(".html"):
+    if filename.endswith('.html'):
         as_html = True
         filename = filename[:-5]
-    elif filename.endswith(".pkl"):
+    elif filename.endswith('.pkl'):
         as_pickle = True
         filename = filename[:-4]
     if not (as_html or as_pickle):
         as_html = False  # save as html if nothing is specified
     if as_html:
         import mpld3
-
-        with open(filename + ".html", "w") as fp:
+        with open(filename + '.html', 'w') as fp:
             mpld3.save_html(fig, fp)
     if as_pickle:
         import pickle
-
-        with open(filename + ".pkl", "wb") as fp:
+        with open(filename + '.pkl', 'wb') as fp:
             pickle.dump(fig, fp)
 
 
@@ -102,9 +101,10 @@ class DownloadProgressBar(tqdm):
         self.update(b * bsize - self.n)
 
 
-def download_url(
-    url: str, folder: str, filename: Optional[str] = None, log: bool = True
-):
+def download_url(url: str,
+                 folder: str,
+                 filename: Optional[str] = None,
+                 log: bool = True):
     r"""Downloads the content of an URL to a specific folder.
 
     Args:
@@ -116,22 +116,23 @@ def download_url(
             (default: :obj:`True`)
     """
     if filename is None:
-        filename = url.rpartition("/")[2].split("?")[0]
+        filename = url.rpartition('/')[2].split('?')[0]
     path = os.path.join(folder, filename)
 
     if os.path.exists(path):
         if log:
-            logger.warning(f"Using existing file {filename}")
+            logger.warning(f'Using existing file {filename}')
         return path
 
     if log:
-        logger.info(f"Downloading {url}")
+        logger.info(f'Downloading {url}')
 
     os.makedirs(folder, exist_ok=True)
 
     # From https://stackoverflow.com/a/53877507
-    with DownloadProgressBar(
-        unit="B", unit_scale=True, miniters=1, desc=url.split("/")[-1]
-    ) as t:
+    with DownloadProgressBar(unit='B',
+                             unit_scale=True,
+                             miniters=1,
+                             desc=url.split('/')[-1]) as t:
         urllib.request.urlretrieve(url, filename=path, reporthook=t.update_to)
     return path

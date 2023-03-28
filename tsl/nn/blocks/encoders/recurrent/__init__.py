@@ -7,15 +7,15 @@ from .gcrnn import GraphConvRNN
 from .rnn import RNN, RNNI
 
 __all__ = [
-    "RNNBase",
-    "RNNIBase",
-    "RNN",
-    "RNNI",
-    "GraphConvRNN",
-    "DCRNN",
-    "DenseDCRNN",
-    "AGCRN",
-    "EvolveGCN",
+    'RNNBase',
+    'RNNIBase',
+    'RNN',
+    'RNNI',
+    'GraphConvRNN',
+    'DCRNN',
+    'DenseDCRNN',
+    'AGCRN',
+    'EvolveGCN',
 ]
 
 classes = __all__

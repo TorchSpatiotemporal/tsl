@@ -16,22 +16,24 @@ class Imputer(Predictor):
 
     Args:
         model (torch.nn.Module, optional): Model implementing the imputer.
-            Ignored if argument `model_class` is not null.
-            This argument should mainly be used for inference.
+            Ignored if argument `model_class` is not null. This argument should
+            mainly be used for inference.
             (default: :obj:`None`)
-        model_class (type, optional): Class of :obj:`~torch.nn.Module` implementing the
-            imputer. If not `None`, argument `model` will be ignored.
+        model_class (type, optional): Class of :obj:`~torch.nn.Module`
+            implementing the imputer. If not `None`, argument `model` will be
+            ignored.
             (default: :obj:`None`)
-        model_kwargs (mapping, optional): Dictionary of arguments to be forwarded to
-            :obj:`model_class` at instantiation.
+        model_kwargs (mapping, optional): Dictionary of arguments to be
+            forwarded to :obj:`model_class` at instantiation.
             (default: :obj:`None`)
         optim_class (type, optional): Class of :obj:`~torch.optim.Optimizer`
             implementing the optimizer to be used for training the model.
             (default: :obj:`None`)
-        optim_kwargs (mapping, optional): Dictionary of arguments to be forwarded to
-            :obj:`optim_class` at instantiation.
+        optim_kwargs (mapping, optional): Dictionary of arguments to be
+            forwarded to :obj:`optim_class` at instantiation.
             (default: :obj:`None`)
-        loss_fn (callable, optional): Loss function to be used for training the model.
+        loss_fn (callable, optional): Loss function to be used for training the
+            model.
             (default: :obj:`None`)
         scale_target (bool): Whether to scale target before evaluating the loss.
             The metrics instead will always be evaluated in the original range.
@@ -49,14 +51,16 @@ class Imputer(Predictor):
 
             where :math:`\ell(\bar{y}, y, m)` is the imputation loss,
             :math:`\ell(\bar{y}_i, y, m)` is the forecasting error of prediction
-            :math:`\bar{y}_i`, and :math:`\lambda` is :obj:`prediction_loss_weight`.
+            :math:`\bar{y}_i`, and :math:`\lambda` is
+            :obj:`prediction_loss_weight`.
             (default: :obj:`1.0`)
         impute_only_missing (bool): Whether to impute only missing values in
             inference all the whole sequence.
             (default: :obj:`True`)
         warm_up_steps (int, tuple): Number of steps to be considered as warm up
             stage at the beginning of the sequence. If a tuple is provided, the
-            padding is applied both at the beginning and the end of the sequence.
+            padding is applied both at the beginning and the end of the
+            sequence.
             (default: :obj:`0`)
         metrics (mapping, optional): Set of metrics to be logged during
             train, val and test steps. The metric's name will be automatically
@@ -64,8 +68,9 @@ class Imputer(Predictor):
             :obj:`mae` will be logged as :obj:`train_mae` when evaluated during
             training).
             (default: :obj:`None`)
-        scheduler_class (type): Class of :obj:`~torch.optim.lr_scheduler._LRScheduler`
-            implementing the learning rate scheduler to be used during training.
+        scheduler_class (type): Class of
+            :obj:`~torch.optim.lr_scheduler._LRScheduler` implementing the
+            learning rate scheduler to be used during training.
             (default: :obj:`None`)
         scheduler_kwargs (mapping): Dictionary of arguments to be forwarded to
             :obj:`scheduler_class` at instantiation.
@@ -90,18 +95,16 @@ class Imputer(Predictor):
         scheduler_class: Optional = None,
         scheduler_kwargs: Optional[Mapping] = None,
     ):
-        super(Imputer, self).__init__(
-            model=model,
-            model_class=model_class,
-            model_kwargs=model_kwargs,
-            optim_class=optim_class,
-            optim_kwargs=optim_kwargs,
-            loss_fn=loss_fn,
-            scale_target=scale_target,
-            metrics=metrics,
-            scheduler_class=scheduler_class,
-            scheduler_kwargs=scheduler_kwargs,
-        )
+        super(Imputer, self).__init__(model=model,
+                                      model_class=model_class,
+                                      model_kwargs=model_kwargs,
+                                      optim_class=optim_class,
+                                      optim_kwargs=optim_kwargs,
+                                      loss_fn=loss_fn,
+                                      scale_target=scale_target,
+                                      metrics=metrics,
+                                      scheduler_class=scheduler_class,
+                                      scheduler_kwargs=scheduler_kwargs)
 
         if isinstance(whiten_prob, (list, tuple)):
             self.whiten_prob = torch.tensor(whiten_prob)
@@ -120,8 +123,7 @@ class Imputer(Predictor):
                 "'warm_up_steps' must be an int of time steps to "
                 "be cut at the beginning of the sequence or a "
                 "pair of int if the sequence must be trimmed in a "
-                "bidirectional way."
-            )
+                "bidirectional way.")
 
     def trim_warm_up(self, *args):
         """Trim all tensors in :obj:`args` removing a number of first and last
@@ -129,7 +131,7 @@ class Imputer(Predictor):
         respectively."""
         left, right = self.warm_up_steps
         # assume time in second dimension (after batch dim)
-        trim = lambda s: s[:, left : s.size(1) - right]  # noqa
+        trim = lambda s: s[:, left:s.size(1) - right]  # noqa
         args = recursive_apply(args, trim)
         if len(args) == 1:
             return args[0]
@@ -152,7 +154,7 @@ class Imputer(Predictor):
             whiten_mask = torch.rand(mask.size(), device=mask.device) > p
             batch.input_mask = mask & whiten_mask
             # whiten missing values
-            if "x" in batch.input:
+            if 'x' in batch.input:
                 batch.input.x = batch.input.x * batch.input_mask
 
     # Imputation data hooks ###################################################
@@ -161,7 +163,7 @@ class Imputer(Predictor):
         # Make predictions
         y_hat = self.predict(**batch.input)
         # Rescale outputs
-        trans = batch.transform.get("y")
+        trans = batch.transform.get('y')
         if trans is not None:
             y_hat = trans.inverse_transform(y_hat)
         # fill missing values in target data
@@ -174,12 +176,11 @@ class Imputer(Predictor):
     def shared_step(self, batch, mask):
         y = y_loss = batch.y
         y_hat = y_hat_loss = self.predict_batch(
-            batch, preprocess=False, postprocess=not self.scale_target
-        )
+            batch, preprocess=False, postprocess=not self.scale_target)
 
         if self.scale_target:
-            y_loss = batch.transform["y"].transform(y)
-            y_hat = batch.transform["y"].inverse_transform(y_hat)
+            y_loss = batch.transform['y'].transform(y)
+            y_hat = batch.transform['y'].inverse_transform(y_hat)
 
         y_hat_loss, y_loss, mask = self.trim_warm_up(y_hat_loss, y_loss, mask)
 
@@ -197,26 +198,28 @@ class Imputer(Predictor):
         return y_hat.detach(), y, loss
 
     def training_step(self, batch, batch_idx):
+
         y_hat, y, loss = self.shared_step(batch, batch.original_mask)
 
         # Logging
         self.train_metrics.update(y_hat, y, batch.mask)
         self.log_metrics(self.train_metrics, batch_size=batch.batch_size)
-        self.log_loss("train", loss, batch_size=batch.batch_size)
+        self.log_loss('train', loss, batch_size=batch.batch_size)
         return loss
 
     def validation_step(self, batch, batch_idx):
+
         y_hat, y, val_loss = self.shared_step(batch, batch.input_mask)
 
         # Logging
         self.val_metrics.update(y_hat, y, batch.mask)
         self.log_metrics(self.val_metrics, batch_size=batch.batch_size)
-        self.log_loss("val", val_loss, batch_size=batch.batch_size)
+        self.log_loss('val', val_loss, batch_size=batch.batch_size)
         return val_loss
 
     def test_step(self, batch, batch_idx):
         # Compute outputs and rescale
-        y_hat = self.predict_step(batch, batch_idx)["y_hat"]
+        y_hat = self.predict_step(batch, batch_idx)['y_hat']
 
         # reconstruction loss
         test_loss = self.loss_fn(y_hat, batch.y, batch.input_mask)
@@ -224,5 +227,5 @@ class Imputer(Predictor):
         # Logging
         self.test_metrics.update(y_hat.detach(), batch.y, batch.mask)
         self.log_metrics(self.test_metrics, batch_size=batch.batch_size)
-        self.log_loss("test", test_loss, batch_size=batch.batch_size)
+        self.log_loss('test', test_loss, batch_size=batch.batch_size)
         return test_loss

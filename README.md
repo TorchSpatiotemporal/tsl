@@ -16,7 +16,7 @@
     </p>
 </div>
 
-<p><img src="./docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> <b>tsl</b> <em>(Torch Spatiotemporal)</em> is a library built to accelerate research on neural spatiotemporal data processing 
+<p><img src="./docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> <b>tsl</b> <em>(Torch Spatiotemporal)</em> is a library built to accelerate research on neural spatiotemporal data processing
 methods, with a focus on Graph Neural Networks.</p>
 
 <p><img src="./docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl is built on several libraries of the <b>Python</b> scientific computing ecosystem, with the final objective of providing a straightforward process that goes from data preprocessing to model prototyping.
@@ -73,7 +73,7 @@ If you use Torch Spatiotemporal for your research, please consider citing the li
 
 By [Andrea Cini](https://andreacini.github.io/) and [Ivan Marisca](https://marshka.github.io/).
 
-Thanks to all contributors! Check the [Contributing guidelines](https://github.com/TorchSpatiotemporal/tsl/blob/dev/.github/CONTRIBUTING.md) and help us build a better <img src="./docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl. 
+Thanks to all contributors! Check the [Contributing guidelines](https://github.com/TorchSpatiotemporal/tsl/blob/dev/.github/CONTRIBUTING.md) and help us build a better <img src="./docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl.
 
 <a href="https://github.com/TorchSpatiotemporal/tsl/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=TorchSpatiotemporal/tsl" />

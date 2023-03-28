@@ -9,7 +9,8 @@ from pandas import Index
 
 from tsl import logger
 from tsl.ops.framearray import aggregate, fill_nan, framearray_to_numpy, reduce
-from tsl.typing import FillOptions, FrameArray, OptFrameArray, Scalar, TemporalIndex
+from tsl.typing import (FillOptions, FrameArray, OptFrameArray, Scalar,
+                        TemporalIndex)
 from tsl.utils.python_utils import ensure_list
 
 from ...ops.pattern import broadcast, outer_pattern
@@ -76,26 +77,23 @@ class TabularDataset(Dataset, TabularParsingMixin):
             (default: :obj:`32`)
     """
 
-    def __init__(
-        self,
-        target: FrameArray,
-        mask: OptFrameArray = None,
-        covariates: Optional[Mapping[str, Union[FrameArray, Mapping, Tuple]]] = None,
-        similarity_score: Optional[str] = None,
-        temporal_aggregation: str = "sum",
-        spatial_aggregation: str = "sum",
-        default_splitting_method: Optional[str] = "temporal",
-        force_synchronization: bool = True,
-        name: str = None,
-        precision: Union[int, str] = 32,
-    ):
-        super().__init__(
-            name=name,
-            similarity_score=similarity_score,
-            temporal_aggregation=temporal_aggregation,
-            spatial_aggregation=spatial_aggregation,
-            default_splitting_method=default_splitting_method,
-        )
+    def __init__(self,
+                 target: FrameArray,
+                 mask: OptFrameArray = None,
+                 covariates: Optional[Mapping[str, Union[FrameArray, Mapping,
+                                                         Tuple]]] = None,
+                 similarity_score: Optional[str] = None,
+                 temporal_aggregation: str = 'sum',
+                 spatial_aggregation: str = 'sum',
+                 default_splitting_method: Optional[str] = 'temporal',
+                 force_synchronization: bool = True,
+                 name: str = None,
+                 precision: Union[int, str] = 32):
+        super().__init__(name=name,
+                         similarity_score=similarity_score,
+                         temporal_aggregation=temporal_aggregation,
+                         spatial_aggregation=spatial_aggregation,
+                         default_splitting_method=default_splitting_method)
         # Set data precision before parsing objects
         self.precision = precision
         self.force_synchronization = force_synchronization
@@ -104,14 +102,11 @@ class TabularDataset(Dataset, TabularParsingMixin):
         self.target = self._parse_target(target)
 
         from .datetime_dataset import DatetimeDataset
-
-        if not isinstance(self, DatetimeDataset) and casting.is_datetime_like_index(
-            self.index
-        ):
+        if not isinstance(self, DatetimeDataset) \
+                and casting.is_datetime_like_index(self.index):
             logger.warn(
                 "It seems you have timestamped data. You may "
-                "consider to use tsl.datasets.DatetimeDataset instead."
-            )
+                "consider to use tsl.datasets.DatetimeDataset instead.")
 
         self.mask: Optional[np.ndarray] = None
         self.set_mask(mask)
@@ -123,14 +118,13 @@ class TabularDataset(Dataset, TabularParsingMixin):
                 self.add_covariate(name, **self._value_to_kwargs(value))
 
     def __getattr__(self, item):
-        if "_covariates" in self.__dict__ and item in self._covariates:
-            return self._covariates[item]["value"]
-        raise AttributeError(
-            "'{}' object has no attribute '{}'".format(self.__class__.__name__, item)
-        )
+        if '_covariates' in self.__dict__ and item in self._covariates:
+            return self._covariates[item]['value']
+        raise AttributeError("'{}' object has no attribute '{}'".format(
+            self.__class__.__name__, item))
 
     def __delattr__(self, item):
-        if item == "mask":
+        if item == 'mask':
             self.set_mask(None)
         elif item in self._covariates:
             del self._covariates[item]
@@ -192,36 +186,36 @@ class TabularDataset(Dataset, TabularParsingMixin):
           * 'n' stands for “number of nodes”
           * 'f' stands for “number of features” (per node)
         """
-        patterns = {"target": "t n f"}
+        patterns = {'target': 't n f'}
         if self.mask is not None:
-            patterns["mask"] = "t n f"
+            patterns['mask'] = 't n f'
         patterns.update(
-            {name: attr["pattern"] for name, attr in self._covariates.items()}
-        )
+            {name: attr['pattern']
+             for name, attr in self._covariates.items()})
         return patterns
 
     # Covariates properties
 
     @property
     def covariates(self) -> dict:
-        return {name: attr["value"] for name, attr in self._covariates.items()}
+        return {name: attr['value'] for name, attr in self._covariates.items()}
 
     @property
     def exogenous(self):
         """Time-varying covariates of the dataset's target."""
         return {
-            name: attr["value"]
+            name: attr['value']
             for name, attr in self._covariates.items()
-            if "t" in attr["pattern"]
+            if 't' in attr['pattern']
         }
 
     @property
     def attributes(self):
         """Static features related to the dataset."""
         return {
-            name: attr["value"]
+            name: attr['value']
             for name, attr in self._covariates.items()
-            if "t" not in attr["pattern"]
+            if 't' not in attr['pattern']
         }
 
     @property
@@ -254,24 +248,23 @@ class TabularDataset(Dataset, TabularParsingMixin):
         step, feature) triplet denoting if corresponding value in target is
         observed (obj:`True`) or not (obj:`False`)."""
         if mask is not None:
-            mask = self._parse_target(mask).astype("bool")
+            mask = self._parse_target(mask).astype('bool')
             with self.synchronize(True):
-                mask, _ = self._parse_covariate(mask, "t n f")
+                mask, _ = self._parse_covariate(mask, 't n f')
             mask = framearray_to_numpy(mask)
             # check mask features are broadcastable to target's features
             if mask.shape[-1] not in [1, self.n_channels]:
-                raise RuntimeError(
-                    f"Mask features ({mask.shape[-1]}) cannot "
-                    "be broadcasted to target's number of "
-                    f"features {self.n_channels}."
-                )
+                raise RuntimeError(f"Mask features ({mask.shape[-1]}) cannot "
+                                   "be broadcasted to target's number of "
+                                   f"features {self.n_channels}.")
         self.mask = mask
 
     # Setters for covariates
 
-    def add_covariate(
-        self, name: str, value: FrameArray, pattern: Optional[str] = None
-    ):
+    def add_covariate(self,
+                      name: str,
+                      value: FrameArray,
+                      pattern: Optional[str] = None):
         r"""Add covariate to the dataset. Examples of covariate are
         exogenous signals (in the form of dynamic multidimensional data) or
         static attributes (e.g., graph/node metadata). Parameter :obj:`pattern`
@@ -301,57 +294,55 @@ class TabularDataset(Dataset, TabularParsingMixin):
         # name cannot be an attribute of self, but allow override
         invalid_names = set(dir(self))
         if name in invalid_names:
-            raise ValueError(
-                f"Cannot add object with name '{name}', "
-                f"{self.__class__.__name__} contains already an "
-                f"attribute named '{name}'."
-            )
+            raise ValueError(f"Cannot add object with name '{name}', "
+                             f"{self.__class__.__name__} contains already an "
+                             f"attribute named '{name}'.")
         value, pattern = self._parse_covariate(value, pattern)
         self._covariates[name] = dict(value=value, pattern=pattern)
 
-    def add_exogenous(self, name: str, value: FrameArray, node_level: bool = True):
+    def add_exogenous(self,
+                      name: str,
+                      value: FrameArray,
+                      node_level: bool = True):
         """Shortcut method to add a time-varying covariate."""
-        if name.startswith("global_"):
+        if name.startswith('global_'):
             name = name[7:]
             node_level = False
-        pattern = "t n f" if node_level else "t f"
+        pattern = 't n f' if node_level else 't f'
         self.add_covariate(name, value, pattern)
 
     # Getters #################################################################
 
-    def get_mask(
-        self, dtype: Union[type, str, np.dtype] = None, as_dataframe: bool = False
-    ) -> FrameArray:
+    def get_mask(self,
+                 dtype: Union[type, str, np.dtype] = None,
+                 as_dataframe: bool = False) -> FrameArray:
         mask = self.mask if self.has_mask else ~np.isnan(self.numpy())
         if dtype is not None:
-            assert dtype in ["bool", "uint8", bool, np.bool, np.uint8]
+            assert dtype in ['bool', 'uint8', bool, np.bool, np.uint8]
             mask = mask.astype(dtype)
         if as_dataframe:
             assert self.is_target_dataframe
             data = mask.reshape(self.length, -1)
-            mask = pd.DataFrame(
-                data, index=self.index, columns=self._columns_multiindex()
-            )
+            mask = pd.DataFrame(data,
+                                index=self.index,
+                                columns=self._columns_multiindex())
         return mask
 
-    def expand_frame(
-        self,
-        key: str,
-        pattern: str,
-        time_index: Union[List, np.ndarray] = None,
-        node_index: Union[List, np.ndarray] = None,
-        channel_index: Union[List, np.ndarray] = None,
-    ) -> np.ndarray:
+    def expand_frame(self, key: str, pattern: str,
+                     time_index: Union[List, np.ndarray] = None,
+                     node_index: Union[List, np.ndarray] = None,
+                     channel_index: Union[List, np.ndarray] = None) \
+            -> np.ndarray:
         obj = getattr(self, key)
         x = framearray_to_numpy(obj)
         in_pattern = self.patterns[key]
         if channel_index is not None:
-            assert in_pattern.count("f") == 1, (
-                "Can select channels only in frames with just one " "channel dimension."
-            )
-            dim = in_pattern.strip().split(" ").index("f")
+            assert in_pattern.count('f') == 1, \
+                "Can select channels only in frames with just one " \
+                "channel dimension."
+            dim = in_pattern.strip().split(' ').index('f')
             if isinstance(obj, pd.DataFrame):
-                axis = "columns" if dim > 0 else "index"
+                axis = 'columns' if dim > 0 else 'index'
                 level = dim - 1 if dim > 0 else 0
                 channels = getattr(obj, axis).unique(level)
                 channel_indexer = channels.get_indexer(channel_index)
@@ -360,26 +351,24 @@ class TabularDataset(Dataset, TabularParsingMixin):
                     raise KeyError(f"Channels {unmatch} not in {key}.")
                 channel_index = channel_indexer
             x = x.take(channel_index, dim)
-        pattern = in_pattern + " -> " + pattern
-        x = broadcast(
-            x,
-            pattern,
-            t=self.length,
-            n=self.n_nodes,
-            time_index=time_index,
-            node_index=node_index,
-        )
+        pattern = in_pattern + ' -> ' + pattern
+        x = broadcast(x,
+                      pattern,
+                      t=self.length,
+                      n=self.n_nodes,
+                      time_index=time_index,
+                      node_index=node_index)
         return x
 
-    def get_frame(
-        self,
-        channels: Union[str, List, Dict[str, Union[str, int, List, None]]] = None,
-        node_index: Union[List, np.ndarray] = None,
-        time_index: Union[List, np.ndarray] = None,
-        cat_dim: Optional[int] = -1,
-        return_pattern: bool = True,
-        as_numpy: bool = True,
-    ):
+    def get_frame(self,
+                  channels: Union[str, List, Dict[str, Union[str, int, List,
+                                                             None]]] = None,
+                  node_index: Union[List, np.ndarray] = None,
+                  time_index: Union[List, np.ndarray] = None,
+                  cat_dim: Optional[int] = -1,
+                  return_pattern: bool = True,
+                  as_numpy: bool = True):
+
         # parse channels
         if channels is None:
             # defaults to all data
@@ -398,9 +387,11 @@ class TabularDataset(Dataset, TabularParsingMixin):
 
         pattern = outer_pattern([self.patterns[key] for key in channels])
         frames = [
-            self.expand_frame(
-                key, pattern, time_index, node_index, channel_index=channel_index
-            )
+            self.expand_frame(key,
+                              pattern,
+                              time_index,
+                              node_index,
+                              channel_index=channel_index)
             for key, channel_index in channels.items()
         ]
 
@@ -412,33 +403,33 @@ class TabularDataset(Dataset, TabularParsingMixin):
             node_index = self._get_node_index(node_index, layout="slice")
             assert self.is_target_dataframe
             idxs, names = [], []
-            for dim in pattern.replace(" ", ""):
-                if dim == "t":
+            for dim in pattern.replace(' ', ''):
+                if dim == 't':
                     idxs.append(self.index[time_index])
-                    names.append("index")
-                elif dim == "n":
+                    names.append('index')
+                elif dim == 'n':
                     idxs.append(self.nodes[node_index])
-                    names.append("nodes")
+                    names.append('nodes')
                 else:  # dim = 'f'
                     channel_index = []
                     for key, chn in channels.items():
                         if chn is None:
                             obj = getattr(self, key)
-                            dim = self.patterns[key].split(" ").index("f")
+                            dim = self.patterns[key].split(' ').index('f')
                             if isinstance(obj, pd.DataFrame):
-                                axis = "columns" if dim > 0 else "index"
+                                axis = 'columns' if dim > 0 else 'index'
                                 level = dim - 1 if dim > 0 else 0
                                 chn = getattr(obj, axis).unique(level)
                             else:
                                 chn = np.arange(obj.shape[dim])
                         channel_index.extend([f"{key}/{c}" for c in chn])
                     idxs.append(channel_index)
-                    names.append("nodes")
+                    names.append('nodes')
             index = pd.Index(idxs.pop(0), name=names.pop(0))
             columns = pd.MultiIndex.from_product(idxs, names=names)
-            frames = pd.DataFrame(
-                frames.reshape(frames.shape[0], -1), index=index, columns=columns
-            )
+            frames = pd.DataFrame(frames.reshape(frames.shape[0], -1),
+                                  index=index,
+                                  columns=columns)
 
         if return_pattern:
             return frames, pattern
@@ -446,17 +437,16 @@ class TabularDataset(Dataset, TabularParsingMixin):
 
     # Private getters #########################################################
 
-    def _get_time_index(self, time_index=None, layout="index"):
+    def _get_time_index(self, time_index=None, layout='index'):
         if time_index is None:
-            return slice(None) if layout == "slice" else None
+            return slice(None) if layout == 'slice' else None
         if isinstance(time_index, slice):
-            if layout == "slice":
+            if layout == 'slice':
                 return time_index
             time_index = np.arange(
                 max(time_index.start or 0, 0),
-                min(time_index.stop or len(self), len(self)),
-                time_index.step or 1,
-            )
+                min(time_index.stop or len(self), len(self)), time_index.step
+                or 1)
         elif isinstance(time_index, pd.Index):
             assert self.is_target_dataframe
             time_indexer = self.index.get_indexer(time_index)
@@ -465,23 +455,22 @@ class TabularDataset(Dataset, TabularParsingMixin):
                 raise KeyError(f"Indices {unmatch} not in index.")
             time_index = time_indexer
         time_index = np.asarray(time_index)
-        if layout == "mask":
+        if layout == 'mask':
             mask = np.zeros_like(self.index, dtype=bool)
             mask[time_index] = True
             return mask
         return time_index
 
-    def _get_node_index(self, node_index=None, layout="index"):
+    def _get_node_index(self, node_index=None, layout='index'):
         if node_index is None:
-            return slice(None) if layout == "slice" else None
+            return slice(None) if layout == 'slice' else None
         if isinstance(node_index, slice):
-            if layout == "slice":
+            if layout == 'slice':
                 return node_index
             node_index = np.arange(
                 max(node_index.start or 0, 0),
                 min(node_index.stop or self.n_nodes, self.n_nodes),
-                node_index.step or 1,
-            )
+                node_index.step or 1)
         elif isinstance(node_index, pd.Index):
             assert self.is_target_dataframe
             node_indexer = self.nodes.get_indexer(node_index)
@@ -490,7 +479,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
                 raise KeyError(f"Indices {unmatch} not in nodes.")
             node_index = node_indexer
         node_index = np.asarray(node_index)
-        if layout == "mask":
+        if layout == 'mask':
             mask = np.zeros_like(self.nodes, dtype=bool)
             mask[node_index] = True
             return mask
@@ -498,12 +487,11 @@ class TabularDataset(Dataset, TabularParsingMixin):
 
     # Aggregation methods #####################################################
 
-    def aggregate_(
-        self,
-        node_index: Optional[Union[Index, Mapping]] = None,
-        aggr: str = None,
-        mask_tolerance: float = 0.0,
-    ):
+    def aggregate_(self,
+                   node_index: Optional[Union[Index, Mapping]] = None,
+                   aggr: str = None,
+                   mask_tolerance: float = 0.):
+
         # get aggregation function among numpy functions
         aggr = aggr if aggr is not None else self.spatial_aggregation
         aggr_fn = getattr(np, aggr)
@@ -536,33 +524,35 @@ class TabularDataset(Dataset, TabularParsingMixin):
         # aggregate mask (if node-wise) and threshold aggregated value
         if self.has_mask:
             mask = aggregate(self.mask, node_index, np.mean)
-            mask = mask >= (1.0 - mask_tolerance)
+            mask = mask >= (1. - mask_tolerance)
             self.set_mask(mask)
 
         # aggregate all node-level exogenous
         for name, attr in self._covariates.items():
-            value, pattern = attr["value"], attr["pattern"]
-            dims = pattern.strip().split(" ")
-            if dims[0] == "n":
+            value, pattern = attr['value'], attr['pattern']
+            dims = pattern.strip().split(' ')
+            if dims[0] == 'n':
                 value = aggregate(value, node_index, aggr_fn, axis=0)
             for lvl, dim in enumerate(dims[1:]):
-                if dim == "n":
-                    value = aggregate(value, node_index, aggr_fn, axis=1, level=lvl)
-            self._covariates[name]["value"] = value
+                if dim == 'n':
+                    value = aggregate(value,
+                                      node_index,
+                                      aggr_fn,
+                                      axis=1,
+                                      level=lvl)
+            self._covariates[name]['value'] = value
 
-    def aggregate(
-        self,
-        node_index: Optional[Union[Index, Mapping]] = None,
-        aggr: str = None,
-        mask_tolerance: float = 0.0,
-    ):
+    def aggregate(self,
+                  node_index: Optional[Union[Index, Mapping]] = None,
+                  aggr: str = None,
+                  mask_tolerance: float = 0.):
         ds = deepcopy(self)
         ds.aggregate_(node_index, aggr, mask_tolerance)
         return ds
 
     def reduce_(self, time_index=None, node_index=None):
-        time_index = self._get_time_index(time_index, layout="mask")
-        node_index = self._get_node_index(node_index, layout="mask")
+        time_index = self._get_time_index(time_index, layout='mask')
+        node_index = self._get_node_index(node_index, layout='mask')
         try:
             self.target = reduce(self.target, time_index, axis=0)
             self.target = reduce(self.target, node_index, axis=1, level=0)
@@ -571,18 +561,18 @@ class TabularDataset(Dataset, TabularParsingMixin):
                 self.mask = reduce(self.mask, node_index, axis=1, level=0)
 
             for name, attr in self._covariates.items():
-                value, pattern = attr["value"], attr["pattern"]
-                dims = pattern.strip().split(" ")
-                if dims[0] == "t":
+                value, pattern = attr['value'], attr['pattern']
+                dims = pattern.strip().split(' ')
+                if dims[0] == 't':
                     value = reduce(value, time_index, axis=0)
-                elif dims[0] == "n":
+                elif dims[0] == 'n':
                     value = reduce(value, node_index, axis=0)
                 for lvl, dim in enumerate(dims[1:]):
-                    if dim == "t":
+                    if dim == 't':
                         value = reduce(value, time_index, axis=1, level=lvl)
-                    elif dim == "n":
+                    elif dim == 'n':
                         value = reduce(value, node_index, axis=1, level=lvl)
-                self._covariates[name]["value"] = value
+                self._covariates[name]['value'] = value
         except Exception as e:
             raise e
         return self
@@ -601,12 +591,10 @@ class TabularDataset(Dataset, TabularParsingMixin):
 
     # Preprocessing
 
-    def fill_nan_(
-        self,
-        value: Optional[Union[Scalar, FrameArray]] = None,
-        method: FillOptions = None,
-        axis: int = 0,
-    ):
+    def fill_nan_(self,
+                  value: Optional[Union[Scalar, FrameArray]] = None,
+                  method: FillOptions = None,
+                  axis: int = 0):
         self.target = fill_nan(self.target, value, method, axis)
 
     # Representations
@@ -625,5 +613,5 @@ class TabularDataset(Dataset, TabularParsingMixin):
             return self.dataframe().values.reshape(self.shape)
         return self.target
 
-    def copy(self) -> "TabularDataset":
+    def copy(self) -> 'TabularDataset':
         return deepcopy(self)

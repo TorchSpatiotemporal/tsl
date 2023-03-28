@@ -20,12 +20,12 @@ def test_temporal_splitter():
     idxs = splitter.split(dataset)
     # check that the split is correct
     assert len(dataset) == n_samples
-    assert len(idxs["train"]) == 69 - 3
-    assert len(idxs["val"]) == 7 - 3
-    assert len(idxs["test"]) == 19
+    assert len(idxs['train']) == 69 - 3
+    assert len(idxs['val']) == 7 - 3
+    assert len(idxs['test']) == 19
     # repeat using integer val/test len
     splitter = TemporalSplitter(val_len=8, test_len=20)
     idxs = splitter.split(dataset)
-    assert len(idxs["train"]) == 67 - 3
-    assert len(idxs["val"]) == 8 - 3
-    assert len(idxs["test"]) == 20
+    assert len(idxs['train']) == 67 - 3
+    assert len(idxs['val']) == 8 - 3
+    assert len(idxs['test']) == 20

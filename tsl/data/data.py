@@ -1,16 +1,6 @@
 import copy
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import (Any, Callable, Dict, Iterable, Iterator, List, Mapping,
+                    Optional, Tuple, Union)
 
 import torch
 from einops import rearrange
@@ -33,22 +23,23 @@ def get_size(x: Union[Tensor, SparseTensor]) -> Tuple:
         return tuple(x.sizes())
 
 
-def pattern_size_repr(key: str, x: Union[Tensor, SparseTensor], pattern: str = None):
+def pattern_size_repr(key: str,
+                      x: Union[Tensor, SparseTensor],
+                      pattern: str = None):
     if pattern is not None:
-        pattern = pattern.replace(" ", "")
-        out = str(
-            [
-                f"{token}={size}" if not token.isnumeric() else str(size)
-                for token, size in zip(pattern, get_size(x))
-            ]
-        )
+        pattern = pattern.replace(' ', '')
+        out = str([
+            f'{token}={size}' if not token.isnumeric() else str(size)
+            for token, size in zip(pattern, get_size(x))
+        ])
     else:
         out = str(list(get_size(x)))
-    out = f"{key}={out}".replace("'", "")
+    out = f"{key}={out}".replace("'", '')
     return out
 
 
 class StorageView(BaseStorage):
+
     def __init__(self, store, keys: Optional[Iterable] = None):
         self.__keys = tuple()
         super(StorageView, self).__init__()
@@ -61,10 +52,10 @@ class StorageView(BaseStorage):
     def __repr__(self) -> str:
         cls = self.__class__.__name__
         info = [pattern_size_repr(k, v) for k, v in self.items()]
-        return "{}({})".format(cls, ", ".join(info))
+        return '{}({})'.format(cls, ', '.join(info))
 
     def __setattr__(self, key, value):
-        if key == "_keys":
+        if key == '_keys':
             if value is None:
                 keys = []
             else:
@@ -164,8 +155,8 @@ class Data(PyGData):
         input (Mapping, optional): Named mapping of :class:`~torch.Tensor` to be
             used as input to the model.
             (default: :obj:`None`)
-        target (Mapping, optional): Named mapping of :class:`~torch.Tensor` to be
-            used as target of the task.
+        target (Mapping, optional): Named mapping of :class:`~torch.Tensor` to
+            be used as target of the task.
             (default: :obj:`None`)
         edge_index (Adj, optional): Graph connectivity either in COO
             format (a :class:`~torch.Tensor` of shape :obj:`[2, E]`) or as a
@@ -192,69 +183,70 @@ class Data(PyGData):
     target: StorageView
     pattern: dict
 
-    def __init__(
-        self,
-        input: Optional[Mapping] = None,
-        target: Optional[Mapping] = None,
-        edge_index: Optional[Adj] = None,
-        edge_weight: Optional[Tensor] = None,
-        mask: Optional[Tensor] = None,
-        transform: Optional[Mapping] = None,
-        pattern: Optional[Mapping] = None,
-        **kwargs,
-    ):
+    def __init__(self,
+                 input: Optional[Mapping] = None,
+                 target: Optional[Mapping] = None,
+                 edge_index: Optional[Adj] = None,
+                 edge_weight: Optional[Tensor] = None,
+                 mask: Optional[Tensor] = None,
+                 transform: Optional[Mapping] = None,
+                 pattern: Optional[Mapping] = None,
+                 **kwargs):
         input = input if input is not None else dict()
         target = target if target is not None else dict()
-        super(Data, self).__init__(
-            **input, **target, edge_index=edge_index, edge_weight=edge_weight, **kwargs
-        )
+        super(Data, self).__init__(**input,
+                                   **target,
+                                   edge_index=edge_index,
+                                   edge_weight=edge_weight,
+                                   **kwargs)
         # Set 'input' as view on input keys
-        self.__dict__["input"] = StorageView(self._store, input.keys())
+        self.__dict__['input'] = StorageView(self._store, input.keys())
         # Set 'target' as view on target keys
-        self.__dict__["target"] = StorageView(self._store, target.keys())
+        self.__dict__['target'] = StorageView(self._store, target.keys())
         # Add mask
         self.mask = mask  # noqa
         # Add transform modules
         transform = transform if transform is not None else dict()
         self.transform: dict = transform  # noqa
         # Add patterns
-        self.__dict__["pattern"] = dict()
+        self.__dict__['pattern'] = dict()
         if pattern is not None:
             self.pattern.update(pattern)
 
     def __repr__(self) -> str:
         cls = self.__class__.__name__
         inputs = [
-            pattern_size_repr(k, v, self.pattern.get(k)) for k, v in self.input.items()
+            pattern_size_repr(k, v, self.pattern.get(k))
+            for k, v in self.input.items()
         ]
-        inputs = "input=({})".format(", ".join(inputs))
+        inputs = 'input=({})'.format(', '.join(inputs))
         targets = [
-            pattern_size_repr(k, v, self.pattern.get(k)) for k, v in self.target.items()
+            pattern_size_repr(k, v, self.pattern.get(k))
+            for k, v in self.target.items()
         ]
-        targets = "target=({})".format(", ".join(targets))
+        targets = 'target=({})'.format(', '.join(targets))
         info = [inputs, targets, "has_mask={}".format(self.has_mask)]
         if self.has_transform:
-            info += ["transform=[{}]".format(", ".join(self.transform.keys()))]
-        return "{}(\n  {}\n)".format(cls, ",\n  ".join(info))
+            info += ["transform=[{}]".format(', '.join(self.transform.keys()))]
+        return '{}(\n  {}\n)'.format(cls, ',\n  '.join(info))
 
     def __cat_dim__(self, key: str, value: Any, *args, **kwargs) -> Any:
         if key in self.pattern:
-            if "n" in self.pattern[key]:  # cat along node dimension
+            if 'n' in self.pattern[key]:  # cat along node dimension
                 if isinstance(value, SparseTensor):
                     # allow for multi-dim cat for SparseTensor (e.g., adj)
                     return tuple(
                         dim
-                        for dim, tkn in enumerate(self.pattern[key].split(" "))
-                        if tkn == "n"
-                    )
-                return self.pattern[key].split(" ").index("n")
-            elif "e" in self.pattern[key]:  # cat along edge dimension
-                return self.pattern[key].split(" ").index("e")
+                        for dim, tkn in enumerate(self.pattern[key].split(' '))
+                        if tkn == 'n')
+                return self.pattern[key].split(' ').index('n')
+            elif 'e' in self.pattern[key]:  # cat along edge dimension
+                return self.pattern[key].split(' ').index('e')
             else:  # stack on batch dimension
                 return None
         return super(Data, self).__cat_dim__(key, value, *args, **kwargs)
 
-    def stores_as(self, data: "Data"):
+    def stores_as(self, data: 'Data'):
         # copy input and target keys in self with no check that keys are in self
         # used when batching Data objects
         self.input._keys = data.input._keys  # noqa
@@ -265,23 +257,23 @@ class Data(PyGData):
 
     @property
     def edge_weight(self) -> Any:
-        return self["edge_weight"] if "edge_weight" in self._store else None
+        return self['edge_weight'] if 'edge_weight' in self._store else None
 
     @property
     def mask(self) -> Any:
-        return self["mask"] if "mask" in self._store else None
+        return self['mask'] if 'mask' in self._store else None
 
     @property
     def transform(self) -> Any:
-        return self["transform"] if "transform" in self._store else None
+        return self['transform'] if 'transform' in self._store else None
 
     @property
     def has_transform(self):
-        return "transform" in self._store and len(self.transform) > 0
+        return 'transform' in self._store and len(self.transform) > 0
 
     @property
     def has_mask(self):
-        return self["mask"] is not None if "mask" in self._store else False
+        return self['mask'] is not None if 'mask' in self._store else False
 
     def numpy(self, *args: List[str]):
         r"""Transform all tensors to numpy arrays, either for all
@@ -291,20 +283,19 @@ class Data(PyGData):
 
     def rearrange_element(self, key: str, pattern: str, **axes_lengths):
         r"""Rearrange key in Data according to the provided patter
-        using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
+         using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
         key_pattern = self.pattern[key]
-        if "->" in pattern:
-            start_pattern, end_pattern = pattern.split("->")
+        if '->' in pattern:
+            start_pattern, end_pattern = pattern.split('->')
             start_pattern = start_pattern.strip()
             end_pattern = end_pattern.strip()
             if key_pattern != start_pattern:
                 raise RuntimeError(
                     f"Starting pattern {start_pattern} does not "
-                    f"match with key patter {key_pattern}."
-                )
+                    f"match with key patter {key_pattern}.")
         else:
             end_pattern = pattern
-            pattern = key_pattern + " -> " + pattern
+            pattern = key_pattern + ' -> ' + pattern
         self[key] = rearrange(self[key], pattern, **axes_lengths)
         self.pattern[key] = end_pattern
         if key in self.transform:
@@ -312,15 +303,15 @@ class Data(PyGData):
 
     def rearrange(self, patterns: Mapping):
         r"""Rearrange all keys in Data according to the provided pattern
-        using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
+         using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
         for key, pattern in patterns.items():
             self.rearrange_element(key, pattern)
         return self
 
     def subgraph_(self, subset: Tensor):
-        edge_index, edge_mask = reduce_graph(
-            subset, edge_index=self.edge_index, num_nodes=self.num_nodes
-        )
+        edge_index, edge_mask = reduce_graph(subset,
+                                             edge_index=self.edge_index,
+                                             num_nodes=self.num_nodes)
 
         if subset.dtype == torch.bool:
             num_nodes = int(subset.sum())
@@ -328,17 +319,18 @@ class Data(PyGData):
             num_nodes = subset.size(0)
 
         for key, value in self:
-            if key == "edge_index":
+            if key == 'edge_index':
                 self.edge_index = edge_index
-            elif key == "edge_weight":
+            elif key == 'edge_weight':
                 self.edge_weight = self.edge_weight[edge_mask]
-            elif key == "num_nodes":
+            elif key == 'num_nodes':
                 self.num_nodes = num_nodes
             # prefer pattern indexing if available
             elif key in self.pattern:
-                self[key] = take(
-                    value, self.pattern[key], node_index=subset, edge_mask=edge_mask
-                )
+                self[key] = take(value,
+                                 self.pattern[key],
+                                 node_index=subset,
+                                 edge_mask=edge_mask)
             # fallback to PyG indexing (cannot index on multiple node dim)
             elif isinstance(value, Tensor):
                 if self.is_node_attr(key):

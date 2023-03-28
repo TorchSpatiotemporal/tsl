@@ -11,10 +11,10 @@ from ..spatiotemporal_dataset import SpatioTemporalDataset
 from ..synch_mode import SynchMode
 
 __all__ = [
-    "Splitter",
-    "CustomSplitter",
-    "TemporalSplitter",
-    "AtTimeStepSplitter",
+    'Splitter',
+    'CustomSplitter',
+    'TemporalSplitter',
+    'AtTimeStepSplitter',
 ]
 
 from ...typing import Index
@@ -63,7 +63,7 @@ class Splitter:
         # avoids _pickle.PicklingError: Can't pickle <...>: it's not the same
         # object as <...>
         d = self.__dict__.copy()
-        del d["fit"]
+        del d['fit']
         return d
 
     def __call__(self, *args, **kwargs):
@@ -83,15 +83,15 @@ class Splitter:
 
     @property
     def train_idxs(self):
-        return self.__indices.get("train")
+        return self.__indices.get('train')
 
     @property
     def val_idxs(self):
-        return self.__indices.get("val")
+        return self.__indices.get('val')
 
     @property
     def test_idxs(self):
-        return self.__indices.get("test")
+        return self.__indices.get('test')
 
     @property
     def train_len(self):
@@ -107,20 +107,20 @@ class Splitter:
 
     def set_indices(self, train=None, val=None, test=None):
         if train is not None:
-            self.__indices["train"] = train
+            self.__indices['train'] = train
         if val is not None:
-            self.__indices["val"] = val
+            self.__indices['val'] = val
         if test is not None:
-            self.__indices["test"] = test
+            self.__indices['test'] = test
 
     def reset(self):
         self.__indices = dict(train=None, val=None, test=None)
         self._fitted = False
 
     def lens(self) -> dict:
-        return dict(
-            train_len=self.train_len, val_len=self.val_len, test_len=self.test_len
-        )
+        return dict(train_len=self.train_len,
+                    val_len=self.val_len,
+                    test_len=self.test_len)
 
     def copy(self) -> "Splitter":
         copy = Splitter()
@@ -141,14 +141,12 @@ class CustomSplitter(Splitter):
     r"""Create a :class:`~tsl.data.datamodule.splitters.Splitter` using custom
     validation and test sets splitting functions."""
 
-    def __init__(
-        self,
-        val_split_fn: Callable = None,
-        test_split_fn: Callable = None,
-        val_kwargs: Mapping = None,
-        test_kwargs: Mapping = None,
-        mask_test_indices_in_val: bool = True,
-    ):
+    def __init__(self,
+                 val_split_fn: Callable = None,
+                 test_split_fn: Callable = None,
+                 val_kwargs: Mapping = None,
+                 test_kwargs: Mapping = None,
+                 mask_test_indices_in_val: bool = True):
         super(CustomSplitter, self).__init__()
         self.val_split_fn = val_split_fn
         self.test_split_fn = test_split_fn
@@ -158,11 +156,13 @@ class CustomSplitter(Splitter):
 
     @property
     def val_policy(self):
-        return self.val_split_fn.__name__ if callable(self.val_split_fn) else None
+        return self.val_split_fn.__name__ if callable(
+            self.val_split_fn) else None
 
     @property
     def test_policy(self):
-        return self.test_split_fn.__name__ if callable(self.test_split_fn) else None
+        return self.test_split_fn.__name__ if callable(
+            self.test_split_fn) else None
 
     def fit(self, dataset: SpatioTemporalDataset):
         _, test_idxs = self.test_split_fn(dataset, **self.test_kwargs)
@@ -177,12 +177,10 @@ class FixedIndicesSplitter(Splitter):
     r"""Create a :class:`~tsl.data.datamodule.splitters.Splitter` using fixed
     indices for training, validation and test sets."""
 
-    def __init__(
-        self,
-        train_idxs: Optional[Index] = None,
-        val_idxs: Optional[Index] = None,
-        test_idxs: Optional[Index] = None,
-    ):
+    def __init__(self,
+                 train_idxs: Optional[Index] = None,
+                 val_idxs: Optional[Index] = None,
+                 test_idxs: Optional[Index] = None):
         super(FixedIndicesSplitter, self).__init__()
         self.set_indices(train_idxs, val_idxs, test_idxs)
         self._fitted = True
@@ -194,9 +192,9 @@ class FixedIndicesSplitter(Splitter):
 class TemporalSplitter(Splitter):
     r"""Split the data sequentially with specified lengths."""
 
-    def __init__(
-        self, val_len: Union[int, float] = None, test_len: Union[int, float] = None
-    ):
+    def __init__(self,
+                 val_len: Union[int, float] = None,
+                 test_len: Union[int, float] = None):
         super(TemporalSplitter, self).__init__()
         self._val_len = val_len
         self._test_len = test_len
@@ -210,16 +208,14 @@ class TemporalSplitter(Splitter):
             val_len = int(val_len * (len(idx) - test_len))
         test_start = len(idx) - test_len
         val_start = test_start - val_len
-        self.set_indices(
-            idx[: val_start - dataset.samples_offset],
-            idx[val_start : test_start - dataset.samples_offset],
-            idx[test_start:],
-        )
+        self.set_indices(idx[:val_start - dataset.samples_offset],
+                         idx[val_start:test_start - dataset.samples_offset],
+                         idx[test_start:])
 
     @staticmethod
     def add_argparse_args(parser):
-        parser.add_argument("--val-len", type=float or int, default=0.1)
-        parser.add_argument("--test-len", type=float or int, default=0.2)
+        parser.add_argument('--val-len', type=float or int, default=0.1)
+        parser.add_argument('--test-len', type=float or int, default=0.2)
         return parser
 
 
@@ -228,14 +224,12 @@ class AtTimeStepSplitter(Splitter):
     :class:`~tsl.data.SpatioTemporalDataset` with
     :class:`~pandas.DatetimeIndex` index)."""
 
-    def __init__(
-        self,
-        first_val_ts: Union[Tuple, datetime] = None,
-        first_test_ts: Union[Tuple, datetime] = None,
-        last_val_ts: Union[Tuple, datetime] = None,
-        last_test_ts: Union[Tuple, datetime] = None,
-        drop_following_steps: bool = True,
-    ):
+    def __init__(self,
+                 first_val_ts: Union[Tuple, datetime] = None,
+                 first_test_ts: Union[Tuple, datetime] = None,
+                 last_val_ts: Union[Tuple, datetime] = None,
+                 last_test_ts: Union[Tuple, datetime] = None,
+                 drop_following_steps: bool = True):
         super(AtTimeStepSplitter, self).__init__()
         self.first_val_ts = first_val_ts
         self.first_test_ts = first_test_ts
@@ -244,12 +238,12 @@ class AtTimeStepSplitter(Splitter):
         self.drop_following_steps = drop_following_steps
 
     def fit(self, dataset: SpatioTemporalDataset):
-        test_idx = indices_between(
-            dataset, first_ts=self.first_test_ts, last_ts=self.last_test_ts
-        )
-        val_idx = indices_between(
-            dataset, first_ts=self.first_val_ts, last_ts=self.last_val_ts
-        )
+        test_idx = indices_between(dataset,
+                                   first_ts=self.first_test_ts,
+                                   last_ts=self.last_test_ts)
+        val_idx = indices_between(dataset,
+                                  first_ts=self.first_val_ts,
+                                  last_ts=self.last_val_ts)
         if self.drop_following_steps:
             val_idx = val_idx[val_idx < test_idx.min()]
             train_idx = np.arange(val_idx.min())
@@ -261,19 +255,19 @@ class AtTimeStepSplitter(Splitter):
 
     @staticmethod
     def add_argparse_args(parser):
-        parser.add_argument("--first-val-ts", type=list or tuple, default=None)
-        parser.add_argument("--first-test-ts", type=list or tuple, default=None)
+        parser.add_argument('--first-val-ts', type=list or tuple, default=None)
+        parser.add_argument('--first-test-ts',
+                            type=list or tuple,
+                            default=None)
         return parser
 
 
 ###
 
 
-def indices_between(
-    dataset: SpatioTemporalDataset,
-    first_ts: Union[Tuple, datetime] = None,
-    last_ts: Union[Tuple, datetime] = None,
-):
+def indices_between(dataset: SpatioTemporalDataset,
+                    first_ts: Union[Tuple, datetime] = None,
+                    last_ts: Union[Tuple, datetime] = None):
     if first_ts is not None:
         if not isinstance(first_ts, datetime):
             # first_ts must be (tuple, list) and len(first_ts) >= 3
@@ -293,7 +287,8 @@ def indices_between(
 
 def split_at_ts(dataset, ts, mask=None):
     from_day_idxs = indices_between(dataset, first_ts=ts)
-    prev_idxs = np.arange(from_day_idxs[0] if len(from_day_idxs) else len(dataset))
+    prev_idxs = np.arange(
+        from_day_idxs[0] if len(from_day_idxs) else len(dataset))
     if mask is not None:
         from_day_idxs = np.setdiff1d(from_day_idxs, mask)
         prev_idxs = np.setdiff1d(prev_idxs, mask)
@@ -311,9 +306,8 @@ def disjoint_months(dataset, months=None, synch_mode=SynchMode.WINDOW):
         start = dataset.horizon_offset
         end = dataset.horizon_offset + dataset.horizon - 1
     else:
-        raise ValueError(
-            f"synch_mode can only be one of {[SynchMode.WINDOW, SynchMode.HORIZON]}"
-        )
+        raise ValueError("synch_mode can only be one of "
+                         f"{[SynchMode.WINDOW, SynchMode.HORIZON]}")
     # after idxs
     indices = np.asarray(dataset._indices)
     start_in_months = np.in1d(dataset.index[indices + start].month, months)
@@ -333,6 +327,7 @@ def disjoint_months(dataset, months=None, synch_mode=SynchMode.WINDOW):
 
 
 def split_function_builder(fn, *args, name=None, **kwargs):
+
     def wrapper_split_fn(dataset, length=None, mask=None):
         return fn(dataset, length=length, mask=mask, *args, **kwargs)
 
@@ -345,14 +340,13 @@ def subset_len(length, set_size, period=None):
         period = set_size
     if length is None or length <= 0:
         length = 0
-    if 0.0 < length < 1.0:
+    if 0. < length < 1.:
         length = max(int(length * period), 1)
     elif period <= length < set_size:
         length = int(length / set_size * period)
     elif length > set_size:
-        raise ValueError(
-            "Provided length of %i is greater than set_size %i" % (length, set_size)
-        )
+        raise ValueError("Provided length of %i is greater than set_size %i" %
+                         (length, set_size))
     return length
 
 
@@ -365,10 +359,10 @@ def tail_of_period(iterable, length, mask=None, period=None):
     length = subset_len(length, size, period)
 
     prev_idxs, after_idxs = [], []
-    for batch_idxs in [indices[i : i + period] for i in range(0, size, period)]:
+    for batch_idxs in [indices[i:i + period] for i in range(0, size, period)]:
         batch_idxs = np.setdiff1d(batch_idxs, mask)
-        prev_idxs.extend(batch_idxs[: len(batch_idxs) - length])
-        after_idxs.extend(batch_idxs[len(batch_idxs) - length :])
+        prev_idxs.extend(batch_idxs[:len(batch_idxs) - length])
+        after_idxs.extend(batch_idxs[len(batch_idxs) - length:])
 
     return np.array(prev_idxs), np.array(after_idxs)
 
@@ -388,39 +382,42 @@ def past_pretest_days(dataset, length, mask):
     # get the first day of testing, as the first step of the horizon
     keep_until = np.min(mask)
     first_testing_day_idx = dataset._indices[keep_until]
-    first_testing_day = dataset.index[
-        first_testing_day_idx + dataset.lookback + dataset.delay
-    ]
+    first_testing_day = dataset.index[first_testing_day_idx +
+                                      dataset.lookback + dataset.delay]
 
     # extract samples before first day of testing through the years
     tz_info = dataset.index.tzinfo
     years = sorted(set(dataset.index.year))
     yearly_testing_loc = []
     for year in years:
-        ftd_year = datetime(
-            year, first_testing_day.month, first_testing_day.day, tzinfo=tz_info
-        )
+        ftd_year = datetime(year,
+                            first_testing_day.month,
+                            first_testing_day.day,
+                            tzinfo=tz_info)
         yearly_testing_loc.append(dataset.index.slice_locs(ftd_year)[0])
     yearly_train_samples = [
         np.where(dataset._indices < ytl - dataset.lookback - dataset.delay)[0]
         for ytl in yearly_testing_loc
     ]
     # filter the years in which there are no such samples
-    yearly_train_samples = [yts for yts in yearly_train_samples if len(yts) > 0]
+    yearly_train_samples = [
+        yts for yts in yearly_train_samples if len(yts) > 0
+    ]
 
-    # for each year excluding the last take the last "val_len // n_years" samples
+    # for each year but the last take the last "val_len // n_years" samples
     yearly_val_len = length // len(yearly_train_samples)
     yearly_val_lens = [
         min(yearly_val_len, len(yts)) for yts in yearly_train_samples[:-1]
     ]
-    # for the last year, take the remaining number of samples needed to reach val_len
-    # this value is always greater or equal to the other,
-    # so we have at least the same number of validation samples
-    # coming from the last year than the maximum among all the other years.
+    # For the last year, take the remaining number of samples needed to reach
+    # val_len. This value is always greater or equals to the other, so we have
+    # at least the same number of validation samples coming from the last year
+    # than the maximum among all the other years.
     yearly_val_lens.append(length - sum(yearly_val_lens))
     # finally extracts the validation samples
     val_idxs = [
-        idxs[-val_len:] for idxs, val_len in zip(yearly_train_samples, yearly_val_lens)
+        idxs[-val_len:]
+        for idxs, val_len in zip(yearly_train_samples, yearly_val_lens)
     ]
     val_idxs = np.concatenate(val_idxs)
 

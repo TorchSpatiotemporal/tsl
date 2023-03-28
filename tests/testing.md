@@ -13,7 +13,7 @@ conda install pytest
 pytest --verbose
 ```
 
-Markers are used to select or exclude some tests using the -m flag  
+Markers are used to select or exclude some tests using the -m flag
 - Exclude slow tests
 ```
 pytest -v -m 'not slow'

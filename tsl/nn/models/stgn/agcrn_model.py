@@ -24,33 +24,29 @@ class AGCRNModel(BaseModel):
             (default: :obj:`1`)
     """
 
-    def __init__(
-        self,
-        input_size: int,
-        output_size: int,
-        horizon: int,
-        n_nodes: int,
-        hidden_size: int = 64,
-        emb_size: int = 10,
-        exog_size: int = 0,
-        n_layers: int = 1,
-    ):
+    def __init__(self,
+                 input_size: int,
+                 output_size: int,
+                 horizon: int,
+                 n_nodes: int,
+                 hidden_size: int = 64,
+                 emb_size: int = 10,
+                 exog_size: int = 0,
+                 n_layers: int = 1):
         super(AGCRNModel, self).__init__(return_type=Tensor)
 
         self.input_encoder = nn.Linear(input_size + exog_size, hidden_size)
 
-        self.agrn = AGCRN(
-            input_size=hidden_size,
-            emb_size=emb_size,
-            num_nodes=n_nodes,
-            hidden_size=hidden_size,
-            n_layers=n_layers,
-            return_only_last_state=True,
-        )
+        self.agrn = AGCRN(input_size=hidden_size,
+                          emb_size=emb_size,
+                          num_nodes=n_nodes,
+                          hidden_size=hidden_size,
+                          n_layers=n_layers,
+                          return_only_last_state=True)
 
-        self.readout = LinearReadout(
-            input_size=hidden_size, output_size=output_size, horizon=horizon
-        )
+        self.readout = LinearReadout(input_size=hidden_size,
+                                     output_size=output_size,
+                                     horizon=horizon)
 
     def forward(self, x: Tensor, u: OptTensor = None) -> Tensor:
         """"""

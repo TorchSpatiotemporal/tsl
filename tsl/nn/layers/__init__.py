@@ -6,4 +6,11 @@ from .norm import *  # noqa
 from .ops import *  # noqa
 from .recurrent import *  # noqa
 
-__all__ = ["graph_convs", "recurrent", "norm", "multi", "base", "ops"]
+__all__ = [
+    'graph_convs',
+    'recurrent',
+    'norm',
+    'multi',
+    'base',
+    'ops',
+]

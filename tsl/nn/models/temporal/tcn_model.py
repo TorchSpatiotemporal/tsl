@@ -50,35 +50,31 @@ class TCNModel(BaseModel):
             (default: :obj:`'relu`)
     """
 
-    def __init__(
-        self,
-        input_size: int,
-        output_size: int,
-        horizon: int,
-        exog_size: int = 0,
-        hidden_size: int = 32,
-        ff_size: int = 32,
-        kernel_size: int = 2,
-        n_layers: int = 4,
-        n_convs_layer: int = 2,
-        readout_kernel_size: int = 1,
-        dilation: int = 2,
-        gated: bool = False,
-        resnet: bool = True,
-        norm: str = "batch",
-        dropout: float = 0.0,
-        activation: str = "relu",
-    ):
+    def __init__(self,
+                 input_size: int,
+                 output_size: int,
+                 horizon: int,
+                 exog_size: int = 0,
+                 hidden_size: int = 32,
+                 ff_size: int = 32,
+                 kernel_size: int = 2,
+                 n_layers: int = 4,
+                 n_convs_layer: int = 2,
+                 readout_kernel_size: int = 1,
+                 dilation: int = 2,
+                 gated: bool = False,
+                 resnet: bool = True,
+                 norm: str = 'batch',
+                 dropout: float = 0.,
+                 activation: str = 'relu'):
         super(TCNModel, self).__init__(return_type=Tensor)
 
         if exog_size:
-            self.input_encoder = ConditionalBlock(
-                input_size=input_size,
-                exog_size=exog_size,
-                output_size=hidden_size,
-                dropout=dropout,
-                activation=activation,
-            )
+            self.input_encoder = ConditionalBlock(input_size=input_size,
+                                                  exog_size=exog_size,
+                                                  output_size=hidden_size,
+                                                  dropout=dropout,
+                                                  activation=activation)
         else:
             self.input_encoder = nn.Linear(input_size, hidden_size)
 
@@ -88,30 +84,26 @@ class TCNModel(BaseModel):
             layers.append(
                 nn.Sequential(
                     Norm(norm_type=norm, in_channels=hidden_size),
-                    TemporalConvNet(
-                        input_channels=hidden_size,
-                        hidden_channels=hidden_size,
-                        kernel_size=kernel_size,
-                        dilation=dilation,
-                        gated=gated,
-                        activation=activation,
-                        exponential_dilation=True,
-                        n_layers=n_convs_layer,
-                        causal_padding=True,
-                    ),
-                )
-            )
+                    TemporalConvNet(input_channels=hidden_size,
+                                    hidden_channels=hidden_size,
+                                    kernel_size=kernel_size,
+                                    dilation=dilation,
+                                    gated=gated,
+                                    activation=activation,
+                                    exponential_dilation=True,
+                                    n_layers=n_convs_layer,
+                                    causal_padding=True)))
         self.convs = nn.ModuleList(layers)
         self.resnet = resnet
         activation_layer = get_layer_activation(activation=activation)
 
         self.readout = nn.Sequential(
             Lambda(lambda x: x[:, -readout_kernel_size:]),
-            Rearrange("b t n f -> b n (f t)"),
+            Rearrange('b t n f -> b n (f t)'),
             nn.Linear(hidden_size * readout_kernel_size, ff_size * horizon),
             activation_layer(),
             nn.Dropout(dropout),
-            Rearrange("b n (f h) -> b h n f ", f=ff_size, h=horizon),
+            Rearrange('b n (f h) -> b h n f ', f=ff_size, h=horizon),
             nn.Linear(ff_size, output_size),
         )
         self.window = readout_kernel_size
@@ -123,7 +115,7 @@ class TCNModel(BaseModel):
         # u: [b t (n) f]
         if u is not None:
             if u.dim() == 3:
-                u = rearrange(u, "b t f -> b t 1 f")
+                u = rearrange(u, 'b t f -> b t 1 f')
             x = self.input_encoder(x, u)
         else:
             x = self.input_encoder(x)

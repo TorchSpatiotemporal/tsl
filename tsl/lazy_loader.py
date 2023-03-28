@@ -5,6 +5,7 @@ from types import ModuleType
 # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/
 # python/util/lazy_loader.py
 class LazyLoader(ModuleType):
+
     def __init__(self, local_name, parent_module_globals, name):
         self._local_name = local_name
         self._parent_module_globals = parent_module_globals

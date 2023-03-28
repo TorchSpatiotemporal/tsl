@@ -15,43 +15,33 @@ class DCRNNCell(GraphGRUCellBase):
             node.
     """
 
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: int,
-        k: int = 2,
-        root_weight: bool = True,
-        add_backward: bool = True,
-        bias: bool = True,
-    ):
+    def __init__(self,
+                 input_size: int,
+                 hidden_size: int,
+                 k: int = 2,
+                 root_weight: bool = True,
+                 add_backward: bool = True,
+                 bias: bool = True):
         # instantiate gates
-        forget_gate = DiffConv(
-            input_size + hidden_size,
-            hidden_size,
-            k=k,
-            root_weight=root_weight,
-            add_backward=add_backward,
-            bias=bias,
-        )
-        update_gate = DiffConv(
-            input_size + hidden_size,
-            hidden_size,
-            k=k,
-            root_weight=root_weight,
-            add_backward=add_backward,
-            bias=bias,
-        )
-        candidate_gate = DiffConv(
-            input_size + hidden_size,
-            hidden_size,
-            k=k,
-            root_weight=root_weight,
-            add_backward=add_backward,
-            bias=bias,
-        )
-        super(DCRNNCell, self).__init__(
-            hidden_size=hidden_size,
-            forget_gate=forget_gate,
-            update_gate=update_gate,
-            candidate_gate=candidate_gate,
-        )
+        forget_gate = DiffConv(input_size + hidden_size,
+                               hidden_size,
+                               k=k,
+                               root_weight=root_weight,
+                               add_backward=add_backward,
+                               bias=bias)
+        update_gate = DiffConv(input_size + hidden_size,
+                               hidden_size,
+                               k=k,
+                               root_weight=root_weight,
+                               add_backward=add_backward,
+                               bias=bias)
+        candidate_gate = DiffConv(input_size + hidden_size,
+                                  hidden_size,
+                                  k=k,
+                                  root_weight=root_weight,
+                                  add_backward=add_backward,
+                                  bias=bias)
+        super(DCRNNCell, self).__init__(hidden_size=hidden_size,
+                                        forget_gate=forget_gate,
+                                        update_gate=update_gate,
+                                        candidate_gate=candidate_gate)

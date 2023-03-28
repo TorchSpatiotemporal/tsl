@@ -25,37 +25,32 @@ class EvolveGCNModel(BaseModel):
         activation (str): Activation after each GCN layer.
     """
 
-    def __init__(
-        self,
-        input_size,
-        hidden_size,
-        output_size,
-        horizon,
-        exog_size,
-        n_layers,
-        norm,
-        root_weight,
-        cached,
-        variant="H",
-        activation="relu",
-    ):
+    def __init__(self,
+                 input_size,
+                 hidden_size,
+                 output_size,
+                 horizon,
+                 exog_size,
+                 n_layers,
+                 norm,
+                 root_weight,
+                 cached,
+                 variant='H',
+                 activation='relu'):
         super(EvolveGCNModel, self).__init__()
 
         input_size += exog_size
-        self.input_encoder = nn.Sequential(
-            nn.Linear(input_size, hidden_size),
-        )
+        self.input_encoder = nn.Sequential(nn.Linear(input_size,
+                                                     hidden_size), )
 
-        self.encoder = EvolveGCN(
-            input_size=hidden_size,
-            hidden_size=hidden_size,
-            n_layers=n_layers,
-            norm=norm,
-            variant=variant,
-            activation=activation,
-            root_weight=root_weight,
-            cached=cached,
-        )
+        self.encoder = EvolveGCN(input_size=hidden_size,
+                                 hidden_size=hidden_size,
+                                 n_layers=n_layers,
+                                 norm=norm,
+                                 variant=variant,
+                                 activation=activation,
+                                 root_weight=root_weight,
+                                 cached=cached)
 
         self.readout = LinearReadout(hidden_size, output_size, horizon)
 

@@ -9,15 +9,15 @@ from .rnn_gcn_model import RNNEncGCNDecModel
 from .stcn_model import STCNModel
 
 __all__ = [
-    "DCRNNModel",
-    "GraphWaveNetModel",
-    "GatedGraphNetworkModel",
-    "RNNEncGCNDecModel",
-    "STCNModel",
-    "GRINModel",
-    "EvolveGCNModel",
-    "GRUGCNModel",
-    "AGCRNModel",
+    'DCRNNModel',
+    'GraphWaveNetModel',
+    'GatedGraphNetworkModel',
+    'RNNEncGCNDecModel',
+    'STCNModel',
+    'GRINModel',
+    'EvolveGCNModel',
+    'GRUGCNModel',
+    'AGCRNModel',
 ]
 
 classes = __all__

@@ -22,13 +22,11 @@ class GatedGraphNetwork(MessagePassing):
             (default: :obj:`False`)
     """
 
-    def __init__(
-        self,
-        input_size: int,
-        output_size: int,
-        activation: str = "silu",
-        parametrized_skip_conn: bool = False,
-    ):
+    def __init__(self,
+                 input_size: int,
+                 output_size: int,
+                 activation: str = 'silu',
+                 parametrized_skip_conn: bool = False):
         super(GatedGraphNetwork, self).__init__(aggr="add", node_dim=-2)
 
         self.in_channels = input_size
@@ -46,8 +44,7 @@ class GatedGraphNetwork(MessagePassing):
         self.update_mlp = nn.Sequential(
             nn.Linear(input_size + output_size, output_size),
             get_layer_activation(activation)(),
-            nn.Linear(output_size, output_size),
-        )
+            nn.Linear(output_size, output_size))
 
         if (input_size != output_size) or parametrized_skip_conn:
             self.skip_conn = nn.Linear(input_size, output_size)

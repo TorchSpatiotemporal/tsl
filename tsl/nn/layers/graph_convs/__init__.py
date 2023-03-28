@@ -9,15 +9,15 @@ from .graph_conv import GraphConv
 from .spatiotemporal_attention import SpatioTemporalAttention
 
 __all__ = [
-    "GraphConv",
-    "DenseGraphConv",
-    "DenseGraphConvOrderK",
-    "DiffConv",
-    "GraphPolyVAR",
-    "MultiHeadGraphAttention",
-    "GATConv",
-    "GatedGraphNetwork",
-    "AdaptiveGraphConv",
+    'GraphConv',
+    'DenseGraphConv',
+    'DenseGraphConvOrderK',
+    'DiffConv',
+    'GraphPolyVAR',
+    'MultiHeadGraphAttention',
+    'GATConv',
+    'GatedGraphNetwork',
+    'AdaptiveGraphConv',
 ]
 
 classes = __all__

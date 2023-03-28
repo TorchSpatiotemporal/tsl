@@ -19,38 +19,32 @@ class DenseDCRNNCell(GraphGRUCellBase):
             central node.
     """
 
-    def __init__(
-        self, input_size: int, hidden_size: int, k: int = 2, root_weight: bool = False
-    ):
+    def __init__(self,
+                 input_size: int,
+                 hidden_size: int,
+                 k: int = 2,
+                 root_weight: bool = False):
         # instantiate gates
-        forget_gate = DenseGraphConvOrderK(
-            input_size + hidden_size,
-            hidden_size,
-            support_len=2,
-            order=k,
-            include_self=root_weight,
-            channel_last=True,
-        )
-        update_gate = DenseGraphConvOrderK(
-            input_size + hidden_size,
-            hidden_size,
-            support_len=2,
-            order=k,
-            include_self=root_weight,
-            channel_last=True,
-        )
-        candidate_gate = DenseGraphConvOrderK(
-            input_size + hidden_size,
-            hidden_size,
-            support_len=2,
-            order=k,
-            include_self=root_weight,
-            channel_last=True,
-        )
+        forget_gate = DenseGraphConvOrderK(input_size + hidden_size,
+                                           hidden_size,
+                                           support_len=2,
+                                           order=k,
+                                           include_self=root_weight,
+                                           channel_last=True)
+        update_gate = DenseGraphConvOrderK(input_size + hidden_size,
+                                           hidden_size,
+                                           support_len=2,
+                                           order=k,
+                                           include_self=root_weight,
+                                           channel_last=True)
+        candidate_gate = DenseGraphConvOrderK(input_size + hidden_size,
+                                              hidden_size,
+                                              support_len=2,
+                                              order=k,
+                                              include_self=root_weight,
+                                              channel_last=True)
 
-        super(DenseDCRNNCell, self).__init__(
-            hidden_size=hidden_size,
-            forget_gate=forget_gate,
-            update_gate=update_gate,
-            candidate_gate=candidate_gate,
-        )
+        super(DenseDCRNNCell, self).__init__(hidden_size=hidden_size,
+                                             forget_gate=forget_gate,
+                                             update_gate=update_gate,
+                                             candidate_gate=candidate_gate)

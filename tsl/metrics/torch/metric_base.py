@@ -20,49 +20,47 @@ def convert_to_masked_metric(metric_fn, **kwargs):
 
     """
     if not isinstance(metric_fn, MaskedMetric):
-        if "reduction" in inspect.getfullargspec(metric_fn).args:
-            metric_kwargs = {"reduction": "none"}
+        if 'reduction' in inspect.getfullargspec(metric_fn).args:
+            metric_kwargs = {'reduction': 'none'}
         else:
             metric_kwargs = dict()
-        return MaskedMetric(metric_fn, metric_fn_kwargs=metric_kwargs, **kwargs)
+        return MaskedMetric(metric_fn,
+                            metric_fn_kwargs=metric_kwargs,
+                            **kwargs)
     assert not len(kwargs)
     return deepcopy(metric_fn)
 
 
 class MaskedMetric(Metric):
-    r"""
-    Base class to implement the metrics used in `tsl`.
+    r"""Base class to implement the metrics used in `tsl`.
 
-    In particular a `MaskedMetric` accounts for
-    missing values in the input sequences
-    by accepting a boolean mask as additional input.
+    In particular a `MaskedMetric` accounts for missing values in the input
+    sequences by accepting a boolean mask as additional input.
 
     Args:
         metric_fn: Base function to compute the metric point wise.
         mask_nans (bool, optional): Whether to automatically mask nan values.
-        mask_inf (bool, optional): Whether to automatically mask
-            infinite values.
-        at (int, optional): Whether to compute the metric only w.r.t.
-            a certain time step.
+        mask_inf (bool, optional): Whether to automatically mask infinite
+            values.
+        at (int, optional): Whether to compute the metric only w.r.t. a certain
+            time step.
     """
 
     is_differentiable: bool = None
     higher_is_better: bool = None
     full_state_update: bool = None
 
-    def __init__(
-        self,
-        metric_fn,
-        mask_nans=False,
-        mask_inf=False,
-        metric_fn_kwargs=None,
-        at=None,
-        full_state_update: bool = None,
-        **kwargs: Any
-    ):
+    def __init__(self,
+                 metric_fn,
+                 mask_nans=False,
+                 mask_inf=False,
+                 metric_fn_kwargs=None,
+                 at=None,
+                 full_state_update: bool = None,
+                 **kwargs: Any):
         # set 'full_state_update' before Metric instantiation
         if full_state_update is not None:
-            self.__dict__["full_state_update"] = full_state_update
+            self.__dict__['full_state_update'] = full_state_update
         super(MaskedMetric, self).__init__(**kwargs)
 
         if metric_fn_kwargs is None:
@@ -77,12 +75,12 @@ class MaskedMetric(Metric):
             self.at = slice(None)
         else:
             self.at = slice(at, at + 1)
-        self.add_state(
-            "value", dist_reduce_fx="sum", default=torch.tensor(0.0, dtype=torch.float)
-        )
-        self.add_state(
-            "numel", dist_reduce_fx="sum", default=torch.tensor(0.0, dtype=torch.float)
-        )
+        self.add_state('value',
+                       dist_reduce_fx='sum',
+                       default=torch.tensor(0., dtype=torch.float))
+        self.add_state('numel',
+                       dist_reduce_fx='sum',
+                       default=torch.tensor(0., dtype=torch.float))
 
     def _check_mask(self, mask, val):
         if mask is None:

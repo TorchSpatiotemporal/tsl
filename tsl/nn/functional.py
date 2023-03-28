@@ -11,16 +11,15 @@ from torch_scatter.utils import broadcast
 import tsl
 
 __all__ = [
-    "expand_then_cat",
-    "gated_tanh",
-    "sparse_softmax",
-    "sparse_multi_head_attention",
+    'expand_then_cat',
+    'gated_tanh',
+    'sparse_softmax',
+    'sparse_multi_head_attention',
 ]
 
 
-def expand_then_cat(
-    tensors: Union[Tuple[Tensor, ...], List[Tensor]], dim: int = -1
-) -> Tensor:
+def expand_then_cat(tensors: Union[Tuple[Tensor, ...], List[Tensor]],
+                    dim: int = -1) -> Tensor:
     """Match the dimensions of tensors in the input list and then concatenate.
 
     Args:
@@ -58,13 +57,11 @@ def gated_tanh(input: Tensor, dim: int = -1) -> Tensor:
 
 
 @torch.jit.script
-def sparse_softmax(
-    src: Tensor,
-    index: Optional[Tensor] = None,
-    ptr: Optional[Tensor] = None,
-    num_nodes: Optional[int] = None,
-    dim: int = -2,
-) -> Tensor:
+def sparse_softmax(src: Tensor,
+                   index: Optional[Tensor] = None,
+                   ptr: Optional[Tensor] = None,
+                   num_nodes: Optional[int] = None,
+                   dim: int = -2) -> Tensor:
     r"""Extension of :func:`~torch_geometric.softmax` with index broadcasting
     to compute a sparsely evaluated softmax over multiple broadcast dimensions.
 
@@ -91,16 +88,16 @@ def sparse_softmax(
         dim = dim + src.dim() if dim < 0 else dim
         size = ([1] * dim) + [-1]
         ptr = ptr.view(size)
-        src_max = gather_csr(segment_csr(src, ptr, reduce="max"), ptr)
+        src_max = gather_csr(segment_csr(src, ptr, reduce='max'), ptr)
         out = (src - src_max).exp()
-        out_sum = gather_csr(segment_csr(out, ptr, reduce="sum"), ptr)
+        out_sum = gather_csr(segment_csr(out, ptr, reduce='sum'), ptr)
     elif index is not None:
         N = maybe_num_nodes(index, num_nodes)
         expanded_index = broadcast(index, src, dim)
-        src_max = scatter(src, expanded_index, dim, dim_size=N, reduce="max")
+        src_max = scatter(src, expanded_index, dim, dim_size=N, reduce='max')
         src_max = src_max.index_select(dim, index)
         out = (src - src_max).exp()
-        out_sum = scatter(out, expanded_index, dim, dim_size=N, reduce="sum")
+        out_sum = scatter(out, expanded_index, dim, dim_size=N, reduce='sum')
         out_sum = out_sum.index_select(dim, index)
     else:
         raise NotImplementedError
@@ -109,14 +106,12 @@ def sparse_softmax(
 
 
 @torch.jit.script
-def sparse_multi_head_attention(
-    q: Tensor,
-    k: Tensor,
-    v: Tensor,
-    index: Tensor,
-    dim_size: Optional[int] = None,
-    dropout_p: float = 0.0,
-):
+def sparse_multi_head_attention(q: Tensor,
+                                k: Tensor,
+                                v: Tensor,
+                                index: Tensor,
+                                dim_size: Optional[int] = None,
+                                dropout_p: float = 0.):
     r"""Computes multi-head, scaled, dot product attention on query, key and
     value tensors, applying dropout if a probability greater than 0 is
     specified. Index specifies for each query in q the belonging sequence in the

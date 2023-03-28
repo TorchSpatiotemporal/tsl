@@ -18,18 +18,24 @@ class AdaptiveGraphConv(nn.Module):
         bias: Whether to add a learnable bias.
     """
 
-    def __init__(self, input_size, emb_size, output_size, num_nodes, bias=True):
+    def __init__(self,
+                 input_size: int,
+                 emb_size: int,
+                 output_size: int,
+                 num_nodes: int,
+                 bias: bool = True):
         super(AdaptiveGraphConv, self).__init__()
-        self.weight = nn.Parameter(torch.Tensor(emb_size, 2, input_size, output_size))
+        self.weight = nn.Parameter(
+            torch.Tensor(emb_size, 2, input_size, output_size))
         self.num_nodes = num_nodes
         if bias:
             self.b = nn.Parameter(torch.Tensor(emb_size, output_size))
         else:
-            self.register_parameter("b", None)
+            self.register_parameter('b', None)
         self.reset_parameters()
 
     def reset_parameters(self):
-        stdv = 1.0 / math.sqrt(self.weight.size(-1))
+        stdv = 1. / math.sqrt(self.weight.size(-1))
         self.weight.data.uniform_(-stdv, stdv)
         if self.b is not None:
             self.b.data.zero_()
@@ -44,11 +50,11 @@ class AdaptiveGraphConv(nn.Module):
         if adj is None:
             adj = self.compute_adj(e)
         # compute adaptive weights
-        weight_adp = torch.einsum("nd, dkio->nkio", e, self.weight)
+        weight_adp = torch.einsum('nd, dkio->nkio', e, self.weight)
         # propagate + skip_con
         out = torch.stack([torch.matmul(adj, x), x], 2)
         # update features
-        out = torch.einsum("bnki, nkio->bno", out, weight_adp)
+        out = torch.einsum('bnki, nkio->bno', out, weight_adp)
         if self.b is not None:
             bias_adp = e @ self.b
             out = out + bias_adp

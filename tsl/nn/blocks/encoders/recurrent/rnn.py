@@ -26,26 +26,24 @@ class RNN(nn.Module):
             (default: ``0.``)
     """
 
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: int,
-        exog_size: int = None,
-        output_size: int = None,
-        n_layers: int = 1,
-        return_only_last_state: bool = False,
-        cell: str = "gru",
-        bias: bool = True,
-        dropout: float = 0.0,
-        **kwargs,
-    ):
+    def __init__(self,
+                 input_size: int,
+                 hidden_size: int,
+                 exog_size: int = None,
+                 output_size: int = None,
+                 n_layers: int = 1,
+                 return_only_last_state: bool = False,
+                 cell: str = 'gru',
+                 bias: bool = True,
+                 dropout: float = 0.,
+                 **kwargs):
         super(RNN, self).__init__()
 
         self.return_only_last_state = return_only_last_state
 
-        if cell == "gru":
+        if cell == 'gru':
             cell = nn.GRU
-        elif cell == "lstm":
+        elif cell == 'lstm':
             cell = nn.LSTM
         else:
             raise NotImplementedError(f'"{cell}" cell not implemented.')
@@ -53,18 +51,16 @@ class RNN(nn.Module):
         if exog_size is not None:
             input_size += exog_size
 
-        self.rnn = cell(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            num_layers=n_layers,
-            bias=bias,
-            dropout=dropout,
-        )
+        self.rnn = cell(input_size=input_size,
+                        hidden_size=hidden_size,
+                        num_layers=n_layers,
+                        bias=bias,
+                        dropout=dropout)
 
         if output_size is not None:
             self.readout = nn.Linear(hidden_size, output_size)
         else:
-            self.register_parameter("readout", None)
+            self.register_parameter('readout', None)
 
     def forward(self, x: Tensor, u: Optional[Tensor] = None):
         """Process the input sequence :obj:`x` with optional exogenous variables
@@ -86,10 +82,10 @@ class RNN(nn.Module):
         # x: [batches, steps, nodes, features]
         x = maybe_cat_exog(x, u)
         b, *_ = x.size()
-        x = rearrange(x, "b s n f -> s (b n) f")
+        x = rearrange(x, 'b s n f -> s (b n) f')
         x, *_ = self.rnn(x)
         # [steps batches * nodes, features] -> [steps batches, nodes, features]
-        x = rearrange(x, "s (b n) f -> b s n f", b=b)
+        x = rearrange(x, 's (b n) f -> b s n f', b=b)
         if self.return_only_last_state:
             x = x[:, -1]
         if self.readout is not None:
@@ -125,21 +121,20 @@ class RNNI(RNNIBase):
             (default: :obj:`False`)
     """
 
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: int,
-        exog_size: int = 0,
-        cell: str = "gru",
-        concat_mask: bool = True,
-        flip_time: bool = False,
-        n_layers: int = 1,
-        detach_input: bool = False,
-        cat_states_layers: bool = False,
-    ):
-        if cell == "gru":
+    def __init__(self,
+                 input_size: int,
+                 hidden_size: int,
+                 exog_size: int = 0,
+                 cell: str = 'gru',
+                 concat_mask: bool = True,
+                 flip_time: bool = False,
+                 n_layers: int = 1,
+                 detach_input: bool = False,
+                 cat_states_layers: bool = False):
+
+        if cell == 'gru':
             cell = GRUCell
-        elif cell == "lstm":
+        elif cell == 'lstm':
             cell = LSTMCell
         else:
             raise NotImplementedError(f'"{cell}" cell not implemented.')
@@ -156,40 +151,32 @@ class RNNI(RNNIBase):
             for i in range(n_layers)
         ]
 
-        super(RNNI, self).__init__(
-            cells, detach_input, concat_mask, flip_time, cat_states_layers
-        )
+        super(RNNI, self).__init__(cells, detach_input, concat_mask, flip_time,
+                                   cat_states_layers)
         self.readout = nn.Linear(hidden_size, self.input_size)
 
     def state_readout(self, h: List[StateType]):
         return self.readout(h[-1])
 
-    def preprocess_input(
-        self,
-        x: Tensor,
-        x_hat: Tensor,
-        input_mask: Tensor,
-        step: int,
-        u: Optional[Tensor] = None,
-        h: Optional[List[StateType]] = None,
-    ):
+    def preprocess_input(self,
+                         x: Tensor,
+                         x_hat: Tensor,
+                         input_mask: Tensor,
+                         step: int,
+                         u: Optional[Tensor] = None,
+                         h: Optional[List[StateType]] = None):
         x_t = super().preprocess_input(x, x_hat, input_mask, step)
         if u is not None:
             x_t = torch.cat([x_t, u[:, step]], -1)
         return x_t
 
-    def single_pass(
-        self, x: Tensor, h: List[StateType], *args, **kwargs
-    ) -> List[StateType]:
+    def single_pass(self, x: Tensor, h: List[StateType], *args,
+                    **kwargs) -> List[StateType]:
         return super().single_pass(x, h)
 
-    def forward(
-        self,
-        x: Tensor,
-        input_mask: Tensor,
-        u: Optional[Tensor] = None,
-        h: Optional[List[StateType]] = None,
-    ) -> Tuple[Tensor, Tensor, List[StateType]]:
+    def forward(self, x: Tensor, input_mask: Tensor, u: Optional[Tensor] = None,
+                h: Optional[List[StateType]] = None) \
+            -> Tuple[Tensor, Tensor, List[StateType]]:
         """Process the input sequence :obj:`x` with optional exogenous variables
         :obj:`u`.
 

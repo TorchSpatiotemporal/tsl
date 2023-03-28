@@ -27,51 +27,41 @@ class GraphConvGRUCell(GraphGRUCellBase):
             :class:`torch_geometric.nn.conv.MessagePassing`.
     """
 
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: int,
-        bias: bool = True,
-        norm: str = "mean",
-        root_weight: bool = True,
-        cached: bool = False,
-        **kwargs
-    ):
+    def __init__(self,
+                 input_size: int,
+                 hidden_size: int,
+                 bias: bool = True,
+                 norm: str = 'mean',
+                 root_weight: bool = True,
+                 cached: bool = False,
+                 **kwargs):
         self.input_size = input_size
         # instantiate gates
-        forget_gate = GraphConv(
-            input_size + hidden_size,
-            hidden_size,
-            norm=norm,
-            root_weight=root_weight,
-            bias=bias,
-            cached=cached,
-            **kwargs
-        )
-        update_gate = GraphConv(
-            input_size + hidden_size,
-            hidden_size,
-            norm=norm,
-            root_weight=root_weight,
-            bias=bias,
-            cached=cached,
-            **kwargs
-        )
-        candidate_gate = GraphConv(
-            input_size + hidden_size,
-            hidden_size,
-            norm=norm,
-            root_weight=root_weight,
-            bias=bias,
-            cached=cached,
-            **kwargs
-        )
-        super(GraphConvGRUCell, self).__init__(
-            hidden_size=hidden_size,
-            forget_gate=forget_gate,
-            update_gate=update_gate,
-            candidate_gate=candidate_gate,
-        )
+        forget_gate = GraphConv(input_size + hidden_size,
+                                hidden_size,
+                                norm=norm,
+                                root_weight=root_weight,
+                                bias=bias,
+                                cached=cached,
+                                **kwargs)
+        update_gate = GraphConv(input_size + hidden_size,
+                                hidden_size,
+                                norm=norm,
+                                root_weight=root_weight,
+                                bias=bias,
+                                cached=cached,
+                                **kwargs)
+        candidate_gate = GraphConv(input_size + hidden_size,
+                                   hidden_size,
+                                   norm=norm,
+                                   root_weight=root_weight,
+                                   bias=bias,
+                                   cached=cached,
+                                   **kwargs)
+        super(GraphConvGRUCell, self).__init__(hidden_size=hidden_size,
+                                               forget_gate=forget_gate,
+                                               update_gate=update_gate,
+                                               candidate_gate=candidate_gate)
 
 
 class GraphConvLSTMCell(GraphLSTMCellBase):
@@ -98,58 +88,46 @@ class GraphConvLSTMCell(GraphLSTMCellBase):
             :class:`torch_geometric.nn.conv.MessagePassing`.
     """
 
-    def __init__(
-        self,
-        input_size: int,
-        hidden_size: int,
-        bias: bool = True,
-        norm: str = "mean",
-        root_weight: bool = True,
-        cached: bool = False,
-        **kwargs
-    ):
+    def __init__(self,
+                 input_size: int,
+                 hidden_size: int,
+                 bias: bool = True,
+                 norm: str = 'mean',
+                 root_weight: bool = True,
+                 cached: bool = False,
+                 **kwargs):
         self.input_size = input_size
         # instantiate gates
-        input_gate = GraphConv(
-            input_size + hidden_size,
-            hidden_size,
-            norm=norm,
-            root_weight=root_weight,
-            bias=bias,
-            cached=cached,
-            **kwargs
-        )
-        forget_gate = GraphConv(
-            input_size + hidden_size,
-            hidden_size,
-            norm=norm,
-            root_weight=root_weight,
-            bias=bias,
-            cached=cached,
-            **kwargs
-        )
-        cell_gate = GraphConv(
-            input_size + hidden_size,
-            hidden_size,
-            norm=norm,
-            root_weight=root_weight,
-            bias=bias,
-            cached=cached,
-            **kwargs
-        )
-        output_gate = GraphConv(
-            input_size + hidden_size,
-            hidden_size,
-            norm=norm,
-            root_weight=root_weight,
-            bias=bias,
-            cached=cached,
-            **kwargs
-        )
-        super(GraphConvLSTMCell, self).__init__(
-            hidden_size=hidden_size,
-            input_gate=input_gate,
-            forget_gate=forget_gate,
-            cell_gate=cell_gate,
-            output_gate=output_gate,
-        )
+        input_gate = GraphConv(input_size + hidden_size,
+                               hidden_size,
+                               norm=norm,
+                               root_weight=root_weight,
+                               bias=bias,
+                               cached=cached,
+                               **kwargs)
+        forget_gate = GraphConv(input_size + hidden_size,
+                                hidden_size,
+                                norm=norm,
+                                root_weight=root_weight,
+                                bias=bias,
+                                cached=cached,
+                                **kwargs)
+        cell_gate = GraphConv(input_size + hidden_size,
+                              hidden_size,
+                              norm=norm,
+                              root_weight=root_weight,
+                              bias=bias,
+                              cached=cached,
+                              **kwargs)
+        output_gate = GraphConv(input_size + hidden_size,
+                                hidden_size,
+                                norm=norm,
+                                root_weight=root_weight,
+                                bias=bias,
+                                cached=cached,
+                                **kwargs)
+        super(GraphConvLSTMCell, self).__init__(hidden_size=hidden_size,
+                                                input_gate=input_gate,
+                                                forget_gate=forget_gate,
+                                                cell_gate=cell_gate,
+                                                output_gate=output_gate)

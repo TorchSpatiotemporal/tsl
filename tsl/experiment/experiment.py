@@ -21,7 +21,6 @@ if _HYDRA_AVAILABLE:
     from omegaconf.errors import ConfigAttributeError
 
     from .resolvers import register_resolvers
-
     register_resolvers()
 else:
     hydra = DictConfig = None
@@ -43,7 +42,7 @@ def _pre_experiment_routine(cfg: DictConfig):
 
     # set the seed for the run
     # if None, then use random positive int32 (for logging compatibilities)
-    seed = cfg.get("seed")
+    seed = cfg.get('seed')
     if seed is None:
         seed = random.randrange(0, 10**9)
     seed = seed_everything(seed)
@@ -52,31 +51,29 @@ def _pre_experiment_routine(cfg: DictConfig):
     run_args = dict(
         seed=seed,
         # name=hconf.job.name,
-        dir=hconf.runtime.output_dir,
-    )
-    if hconf.get("output_subdir") is not None:
-        run_args["tsl_subdir"] = osp.join(cfg.run.dir, hconf.output_subdir)
+        dir=hconf.runtime.output_dir)
+    if hconf.get('output_subdir') is not None:
+        run_args['tsl_subdir'] = osp.join(cfg.run.dir, hconf.output_subdir)
         # remove hydra conf from logging
-        os.unlink(osp.join(run_args["tsl_subdir"], "hydra.yaml"))
+        os.unlink(osp.join(run_args['tsl_subdir'], 'hydra.yaml'))
     # set run name
-    run_args["name"] = "${now:%Y-%m-%d_%H-%M-%S}_${run.seed}"
-    with flag_override(cfg, "struct", False):
+    run_args['name'] = "${now:%Y-%m-%d_%H-%M-%S}_${run.seed}"
+    with flag_override(cfg, 'struct', False):
         cfg.run = DictConfig(run_args)
 
     # override data_dir in tsl config
-    config.data_dir = cfg.get("data_dir", config.data_dir)
+    config.data_dir = cfg.get('data_dir', config.data_dir)
 
     # if True, then allow for adding new args to the cfg
-    if cfg.get("allow_config_extension", False):
+    if cfg.get('allow_config_extension', False):
         OmegaConf.set_struct(cfg, False)
 
     # set the PyTorch num_threads from here
-    if "num_threads" in cfg:
+    if 'num_threads' in cfg:
         torch.set_num_threads(cfg.num_threads)
 
-    logger.info(
-        "\n**** Experiment config ****\n" + OmegaConf.to_yaml(cfg, resolve=True)
-    )
+    logger.info("\n**** Experiment config ****\n" +
+                OmegaConf.to_yaml(cfg, resolve=True))
 
     return cfg
 
@@ -108,18 +105,14 @@ class Experiment:
             configuration, and act in-place on the configuration.
     """
 
-    def __init__(
-        self,
-        run_fn: Callable,
-        config_path: Optional[str] = None,
-        config_name: Optional[str] = None,
-        pre_run_hooks: Union[Callable, List[Callable]] = None,
-    ):
+    def __init__(self,
+                 run_fn: Callable,
+                 config_path: Optional[str] = None,
+                 config_name: Optional[str] = None,
+                 pre_run_hooks: Union[Callable, List[Callable]] = None):
         if not _HYDRA_AVAILABLE:
-            raise RuntimeError(
-                "Install optional dependency 'hydra-core'"
-                f" to use {self.__class__.__name__}."
-            )
+            raise RuntimeError("Install optional dependency 'hydra-core'"
+                               f" to use {self.__class__.__name__}.")
 
         # store the run configuration
         self.cfg: Optional[DictConfig] = None
@@ -129,7 +122,7 @@ class Experiment:
             config_path = config.config_dir
         # allow override of config_path as Hydra cli arg:
         # config_path={config_path} same as --config-path {config_path}
-        override_config_path = get_hydra_cli_arg("config_path", delete=True)
+        override_config_path = get_hydra_cli_arg('config_path', delete=True)
         config_path = override_config_path or config_path
         if not osp.isabs(config_path):
             root_path = osp.dirname(inspect.getfile(run_fn))
@@ -140,10 +133,10 @@ class Experiment:
 
         # allow override of config_name as Hydra cli arg:
         # config={config_name} same as --config-name {config_name}
-        override_config_name = get_hydra_cli_arg("config", delete=True)
+        override_config_name = get_hydra_cli_arg('config', delete=True)
         self.config_name = override_config_name or config_name
 
-        sys.argv.insert(1, "hydra.output_subdir=null")
+        sys.argv.insert(1, 'hydra.output_subdir=null')
 
         self._pre_run_hooks = [_pre_experiment_routine]
         if pre_run_hooks is not None:
@@ -163,6 +156,7 @@ class Experiment:
             raise RuntimeError("run_fn must have a single 'cfg' parameter.")
 
         def run_fn_decorator(func: Callable) -> Callable:
+
             @wraps(func)
             def decorated_run_fn(cfg: DictConfig):
                 # execute pre-run hooks
@@ -177,19 +171,14 @@ class Experiment:
 
             return decorated_run_fn
 
-        return hydra.main(
-            config_path=self.config_path,
-            config_name=self.config_name,
-            version_base=None,
-        )(run_fn_decorator(run_fn))
+        return hydra.main(config_path=self.config_path,
+                          config_name=self.config_name,
+                          version_base=None)(run_fn_decorator(run_fn))
 
     def __repr__(self):
         return "{}(config_path={}, config_name={}, run_fn={})".format(
-            self.__class__.__name__,
-            self.config_path,
-            self.config_name,
-            self.run_fn.__name__,
-        )
+            self.__class__.__name__, self.config_path, self.config_name,
+            self.run_fn.__name__)
 
     @property
     def run_dir(self):
@@ -204,7 +193,7 @@ class Experiment:
     def log_config(self) -> None:
         """Save config as ``.yaml`` file in
         :meth:`~tsl.experiment.Experiment.run_dir`."""
-        with open(osp.join(self.run_dir, "config.yaml"), "w") as fp:
+        with open(osp.join(self.run_dir, 'config.yaml'), 'w') as fp:
             fp.write(OmegaConf.to_yaml(self.cfg, resolve=True))
 
     def get_config_dict(self) -> dict:
@@ -212,7 +201,7 @@ class Experiment:
 
     @contextmanager
     def edit_config(self):
-        with flag_override(self.cfg, "struct", False) as cfg:
+        with flag_override(self.cfg, 'struct', False) as cfg:
             yield cfg
 
     def run(self):

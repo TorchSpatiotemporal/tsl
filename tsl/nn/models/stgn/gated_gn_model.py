@@ -33,20 +33,18 @@ class GatedGraphNetworkModel(BaseModel):
             the model turns into a dense spatial attention layer.
     """
 
-    def __init__(
-        self,
-        input_size: int,
-        input_window_size: int,
-        horizon: int,
-        n_nodes: int,
-        hidden_size: int,
-        output_size: int = None,
-        exog_size: int = 0,
-        enc_layers: int = 1,
-        gnn_layers: int = 1,
-        full_graph: bool = True,
-        activation: str = "silu",
-    ):
+    def __init__(self,
+                 input_size: int,
+                 input_window_size: int,
+                 horizon: int,
+                 n_nodes: int,
+                 hidden_size: int,
+                 output_size: int = None,
+                 exog_size: int = 0,
+                 enc_layers: int = 1,
+                 gnn_layers: int = 1,
+                 full_graph: bool = True,
+                 activation: str = 'silu'):
         super(GatedGraphNetworkModel, self).__init__()
 
         self.input_size = input_size
@@ -56,37 +54,28 @@ class GatedGraphNetworkModel(BaseModel):
 
         input_size += exog_size
         self.input_encoder = nn.Sequential(
-            nn.Linear(input_size * input_window_size, hidden_size),
-        )
+            nn.Linear(input_size * input_window_size, hidden_size), )
 
-        self.encoder_layers = nn.ModuleList(
-            [
-                nn.Sequential(
-                    nn.Linear(hidden_size, hidden_size),
-                    get_layer_activation(activation)(),
-                    nn.Linear(hidden_size, hidden_size),
-                )
-                for _ in range(enc_layers)
-            ]
-        )
+        self.encoder_layers = nn.ModuleList([
+            nn.Sequential(nn.Linear(hidden_size, hidden_size),
+                          get_layer_activation(activation)(),
+                          nn.Linear(hidden_size, hidden_size))
+            for _ in range(enc_layers)
+        ])
 
         self.emb = NodeEmbedding(n_nodes=n_nodes, emb_size=hidden_size)
 
-        self.gcn_layers = nn.ModuleList(
-            [
-                GatedGraphNetwork(hidden_size, hidden_size, activation=activation)
-                for _ in range(gnn_layers)
-            ]
-        )
+        self.gcn_layers = nn.ModuleList([
+            GatedGraphNetwork(hidden_size, hidden_size, activation=activation)
+            for _ in range(gnn_layers)
+        ])
 
-        self.decoder = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size), get_layer_activation(activation)()
-        )
+        self.decoder = nn.Sequential(nn.Linear(hidden_size, hidden_size),
+                                     get_layer_activation(activation)())
 
         self.readout = nn.Sequential(
             nn.Linear(hidden_size, horizon * self.output_size),
-            Rearrange("b n (h f) -> b h n f", h=horizon, f=self.output_size),
-        )
+            Rearrange('b n (h f) -> b h n f', h=horizon, f=self.output_size))
 
     def forward(self, x, edge_index=None, u=None):
         """"""
@@ -99,7 +88,7 @@ class GatedGraphNetworkModel(BaseModel):
             edge_index = torch.cartesian_prod(nodes, nodes).T
 
         # flat time dimension
-        x = rearrange(x[:, -self.input_window_size :], "b s n f -> b n (s f)")
+        x = rearrange(x[:, -self.input_window_size:], 'b s n f -> b n (s f)')
 
         x = self.input_encoder(x)
         for layer in self.encoder_layers:

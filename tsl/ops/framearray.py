@@ -25,7 +25,8 @@ def framearray_to_tensor(x: FrameArray) -> torch.Tensor:
     return torch.Tensor(x_numpy)
 
 
-def framearray_to_dataframe(x: FrameArray, index=None, columns=None) -> pd.DataFrame:
+def framearray_to_dataframe(x: FrameArray, index=None, columns=None) \
+        -> pd.DataFrame:
     if isinstance(x, pd.DataFrame):
         return x
     x = np.asarray(x)
@@ -41,17 +42,15 @@ def framearray_shape(x: FrameArray) -> tuple:
     if not isinstance(x, pd.DataFrame):
         return np.asarray(x).shape
     elif x.columns.nlevels > 1:
-        return (len(x),) + x.columns.levshape
+        return (len(x), ) + x.columns.levshape
     return x.shape
 
 
-def aggregate(
-    x: FrameArray,
-    index: Index,
-    aggr_fn: Callable = np.sum,
-    axis: int = 1,
-    level: int = 0,
-) -> FrameArray:
+def aggregate(x: FrameArray,
+              index: Index,
+              aggr_fn: Callable = np.sum,
+              axis: int = 1,
+              level: int = 0) -> FrameArray:
     """Aggregate rows/columns in (MultiIndexed) DataFrame according to a new
     index.
 
@@ -88,7 +87,10 @@ def aggregate(
     return x
 
 
-def reduce(x: FrameArray, index: Index, axis: int = 0, level: int = 0) -> FrameArray:
+def reduce(x: FrameArray,
+           index: Index,
+           axis: int = 0,
+           level: int = 0) -> FrameArray:
     if index is None:
         return x
     elif not isinstance(index, (pd.Index, slice)):
@@ -102,30 +104,29 @@ def reduce(x: FrameArray, index: Index, axis: int = 0, level: int = 0) -> FrameA
         if n_levels > 1:
             if index.dtype == bool:
                 index = x.columns.unique(level)[index]
-            index = tuple(
-                [index if i == level else slice(None) for i in range(n_levels)]
-            )
+            index = tuple([
+                index if i == level else slice(None) for i in range(n_levels)
+            ])
         return x.loc[:, index]
     else:
         axis = axis + level
-        index = tuple([index if i == axis else slice(None) for i in range(x.ndim)])
+        index = tuple(
+            [index if i == axis else slice(None) for i in range(x.ndim)])
         return x[index]
 
 
-def fill_nan(
-    x: FrameArray,
-    value: Optional[Union[Scalar, FrameArray]] = None,
-    method: FillOptions = None,
-    axis: int = 0,
-) -> FrameArray:
+def fill_nan(x: FrameArray,
+             value: Optional[Union[Scalar, FrameArray]] = None,
+             method: FillOptions = None,
+             axis: int = 0) -> FrameArray:
     assert axis in [0, 1]
     to_numpy = False
     if not isinstance(x, pd.DataFrame):
         x = framearray_to_dataframe(x)
         to_numpy = True
-    if method == "mean":
+    if method == 'mean':
         x = x.fillna(value=x.mean(axis=axis), axis=axis, inplace=False)
-    elif method == "linear":
+    elif method == 'linear':
         x = x.interpolate("linear", axis=axis, inplace=False)
     else:
         x = x.fillna(value=value, method=method, axis=axis, inplace=False)
@@ -134,7 +135,8 @@ def fill_nan(
     return x
 
 
-def temporal_mean(x: FrameArray, index: pd.DatetimeIndex = None) -> FrameArray:
+def temporal_mean(x: FrameArray, index: pd.DatetimeIndex = None) \
+        -> FrameArray:
     """Compute the mean values for each row.
 
     The mean is first computed hourly over the week of the year. Further
@@ -169,7 +171,10 @@ def temporal_mean(x: FrameArray, index: pd.DatetimeIndex = None) -> FrameArray:
         df_mean = x.copy()
     else:
         raise TypeError("`x` must be a pd.Dataframe or a np.ndarray.")
-    cond0 = [df_mean.index.year, df_mean.index.isocalendar().week, df_mean.index.hour]
+    cond0 = [
+        df_mean.index.year,
+        df_mean.index.isocalendar().week, df_mean.index.hour
+    ]
     cond1 = [df_mean.index.year, df_mean.index.month, df_mean.index.hour]
     conditions = [cond0, cond1, cond1[1:], cond1[2:]]
     while df_mean.isna().values.sum() and len(conditions):
@@ -177,14 +182,14 @@ def temporal_mean(x: FrameArray, index: pd.DatetimeIndex = None) -> FrameArray:
         df_mean = df_mean.fillna(nan_mean)
         conditions = conditions[1:]
     if df_mean.isna().values.sum():
-        df_mean = df_mean.fillna(method="ffill")
-        df_mean = df_mean.fillna(method="bfill")
+        df_mean = df_mean.fillna(method='ffill')
+        df_mean = df_mean.fillna(method='bfill')
     if isinstance(x, np.ndarray):
         df_mean = df_mean.values.reshape(shape)
     return df_mean
 
 
-def get_trend(df, period="week", train_len=None, valid_mask=None):
+def get_trend(df, period='week', train_len=None, valid_mask=None):
     """Perform detrending on a time series by subtrating from each value of the
     input dataframe the average value computed over the training dataset for
     each hour/weekday.
@@ -203,13 +208,13 @@ def get_trend(df, period="week", train_len=None, valid_mask=None):
     if valid_mask is not None:
         df[~valid_mask] = np.nan
     idx = [df.index.hour, df.index.minute]
-    if period == "week":
+    if period == 'week':
         idx = [
             df.index.weekday,
         ] + idx
-    elif period == "month":
+    elif period == 'month':
         idx = [df.index.month, df.index.weekday] + idx
-    elif period != "day":
+    elif period != 'day':
         raise NotImplementedError("Period must be in ('day', 'week', 'month')")
 
     means = df.groupby(idx).transform(np.nanmean)
