@@ -111,18 +111,22 @@ def add_missing_values(dataset: DatetimeDataset,
 def prediction_dataframe(y, index, columns=None, aggregate_by='mean'):
     """Aggregate batched predictions in a single DataFrame.
 
-    @param (list or np.ndarray) y: the list of predictions.
-    @param (list or np.ndarray) index: the list of time indexes coupled with
-        the predictions.
-    @param (list or pd.Index) columns: the columns of the returned DataFrame.
-    @param (str or list) aggregate_by: how to aggregate the predictions in case
-        there are more than one for a step.
-    - `mean`: take the mean of the predictions
-    - `central`: take the prediction at the central position, assuming that the
-        predictions are ordered chronologically
-    - `smooth_central`: average the predictions weighted by a gaussian signal
-        with std=1
-    @return: pd.DataFrame df: the evaluation mask for the DataFrame
+    Args:
+        y (list or np.ndarray): The list of predictions.
+        index (list or np.ndarray): The list of time indexes coupled with
+            the predictions.
+        columns (list or pd.Index): The columns of the returned DataFrame.
+        aggregate_by (str or list): How to aggregate the predictions in case
+            there are more than one for a step.
+
+            - `mean`: take the mean of the predictions;
+            - `central`: take the prediction at the central position, assuming
+              that the predictions are ordered chronologically;
+            - `smooth_central`: average the predictions weighted by a gaussian
+              signal with std=1.
+
+    Returns:
+        pd.DataFrame: The evaluation mask for the DataFrame.
     """
     dfs = [
         pd.DataFrame(data=data.reshape(data.shape[:2]),
