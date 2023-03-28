@@ -1,8 +1,8 @@
-from typing import Union, Tuple, List, Optional, Literal, Type, Dict
+from typing import Dict, List, Literal, Optional, Tuple, Type, Union
 
 from numpy import ndarray
-from pandas import DatetimeIndex, PeriodIndex, TimedeltaIndex, DataFrame
-from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
+from pandas import DataFrame, DatetimeIndex, PeriodIndex, TimedeltaIndex
+from scipy.sparse import coo_matrix, csc_matrix, csr_matrix
 from torch import Tensor
 from torch_sparse import SparseTensor
 
@@ -28,7 +28,6 @@ TemporalIndex = Union[DatetimeIndex, PeriodIndex, TimedeltaIndex]
 Index = Union[List, Tuple, TensArray]
 IndexSlice = Union[slice, Index]
 
-FillOptions = Optional[Literal["backfill", "bfill", "ffill", "pad",
-                               "mean", "linear"]]
+FillOptions = Optional[Literal["backfill", "bfill", "ffill", "pad", "mean", "linear"]]
 
 ModelReturnOptions = Type[Union[Tensor, Dict, List, Tuple]]

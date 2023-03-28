@@ -7,9 +7,7 @@ from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.nn.inits import glorot, zeros
-from torch_geometric.typing import (Adj,
-                                    OptPairTensor,
-                                    OptTensor)
+from torch_geometric.typing import Adj, OptPairTensor, OptTensor
 from torch_geometric.utils import add_self_loops, remove_self_loops
 from torch_sparse import SparseTensor, set_diag
 
@@ -106,21 +104,21 @@ class GATConv(MessagePassing):
     """
 
     def __init__(
-            self,
-            in_channels: Union[int, Tuple[int, int]],
-            out_channels: int,
-            heads: int = 1,
-            concat: bool = True,
-            dim: int = -2,
-            negative_slope: float = 0.2,
-            dropout: float = 0.0,
-            add_self_loops: bool = True,
-            edge_dim: Optional[int] = None,
-            fill_value: Union[float, Tensor, str] = 'mean',
-            bias: bool = True,
-            **kwargs,
+        self,
+        in_channels: Union[int, Tuple[int, int]],
+        out_channels: int,
+        heads: int = 1,
+        concat: bool = True,
+        dim: int = -2,
+        negative_slope: float = 0.2,
+        dropout: float = 0.0,
+        add_self_loops: bool = True,
+        edge_dim: Optional[int] = None,
+        fill_value: Union[float, Tensor, str] = "mean",
+        bias: bool = True,
+        **kwargs,
     ):
-        kwargs.setdefault('aggr', 'add')
+        kwargs.setdefault("aggr", "add")
         super().__init__(node_dim=dim, **kwargs)
 
         self.in_channels = in_channels
@@ -135,45 +133,58 @@ class GATConv(MessagePassing):
 
         if self.concat:
             self.head_channels = self.out_channels // self.heads
-            assert self.head_channels * self.heads == self.out_channels, \
-                "`out_channels` must be divisible by `heads`."
+            assert (
+                self.head_channels * self.heads == self.out_channels
+            ), "`out_channels` must be divisible by `heads`."
         else:
             self.head_channels = self.out_channels
 
         # In case we are operating in bipartite graphs, we apply separate
         # transformations 'lin_src' and 'lin_dst' to source and target nodes:
         if isinstance(in_channels, int):
-            self.lin_src = Linear(in_channels, heads * self.head_channels,
-                                  bias=False, weight_initializer='glorot')
+            self.lin_src = Linear(
+                in_channels,
+                heads * self.head_channels,
+                bias=False,
+                weight_initializer="glorot",
+            )
             self.lin_dst = self.lin_src
         else:
-            self.lin_src = Linear(in_channels[0], heads * self.head_channels,
-                                  False,
-                                  weight_initializer='glorot')
-            self.lin_dst = Linear(in_channels[1], heads * self.head_channels,
-                                  False,
-                                  weight_initializer='glorot')
+            self.lin_src = Linear(
+                in_channels[0],
+                heads * self.head_channels,
+                False,
+                weight_initializer="glorot",
+            )
+            self.lin_dst = Linear(
+                in_channels[1],
+                heads * self.head_channels,
+                False,
+                weight_initializer="glorot",
+            )
 
         # The learnable parameters to compute attention coefficients:
         self.att_src = Parameter(torch.Tensor(1, heads, self.head_channels))
         self.att_dst = Parameter(torch.Tensor(1, heads, self.head_channels))
 
         if edge_dim is not None:
-            self.lin_edge = Linear(edge_dim, heads * self.head_channels,
-                                   bias=False,
-                                   weight_initializer='glorot')
-            self.att_edge = Parameter(
-                torch.Tensor(1, heads, self.head_channels))
+            self.lin_edge = Linear(
+                edge_dim,
+                heads * self.head_channels,
+                bias=False,
+                weight_initializer="glorot",
+            )
+            self.att_edge = Parameter(torch.Tensor(1, heads, self.head_channels))
         else:
             self.lin_edge = None
-            self.register_parameter('att_edge', None)
+            self.register_parameter("att_edge", None)
 
         if bias and concat:
             self.bias = Parameter(torch.Tensor(heads * self.head_channels))
         elif bias and not concat:
             self.bias = Parameter(torch.Tensor(out_channels))
         else:
-            self.register_parameter('bias', None)
+            self.register_parameter("bias", None)
 
         self.reset_parameters()
 
@@ -187,8 +198,13 @@ class GATConv(MessagePassing):
         glorot(self.att_edge)
         zeros(self.bias)
 
-    def forward(self, x: Union[Tensor, OptPairTensor], edge_index: Adj,
-                edge_attr: OptTensor = None, need_weights: bool = False):
+    def forward(
+        self,
+        x: Union[Tensor, OptPairTensor],
+        edge_index: Adj,
+        edge_attr: OptTensor = None,
+        need_weights: bool = False,
+    ):
         """"""
         node_dim = self.node_dim
         self.node_dim = (node_dim + x.dim()) if node_dim < 0 else node_dim
@@ -217,8 +233,8 @@ class GATConv(MessagePassing):
             if isinstance(edge_index, Tensor):
                 edge_index, edge_attr = remove_self_loops(edge_index, edge_attr)
                 edge_index, edge_attr = add_self_loops(
-                    edge_index, edge_attr,
-                    fill_value=self.fill_value, num_nodes=N)
+                    edge_index, edge_attr, fill_value=self.fill_value, num_nodes=N
+                )
             elif isinstance(edge_index, SparseTensor):
                 if self.edge_dim is None:
                     edge_index = set_diag(edge_index)
@@ -226,7 +242,8 @@ class GATConv(MessagePassing):
                     raise NotImplementedError(
                         "The usage of 'edge_attr' and 'add_self_loops' "
                         "simultaneously is currently not yet supported for "
-                        "'edge_index' in a 'SparseTensor' form")
+                        "'edge_index' in a 'SparseTensor' form"
+                    )
 
         # edge_updater_type: (alpha: OptPairTensor, edge_attr: OptTensor)
         alpha = self.edge_updater(edge_index, alpha=alpha, edge_attr=edge_attr)
@@ -248,7 +265,7 @@ class GATConv(MessagePassing):
             if isinstance(edge_index, Tensor):
                 alpha = (edge_index, alpha)
             elif isinstance(edge_index, SparseTensor):
-                alpha = edge_index.set_value(alpha, layout='coo')
+                alpha = edge_index.set_value(alpha, layout="coo")
         else:
             alpha = None
 
@@ -256,9 +273,15 @@ class GATConv(MessagePassing):
 
         return out, alpha
 
-    def edge_update(self, alpha_j: Tensor, alpha_i: OptTensor,
-                    edge_attr: OptTensor, index: Tensor, ptr: OptTensor,
-                    size_i: Optional[int]) -> Tensor:
+    def edge_update(
+        self,
+        alpha_j: Tensor,
+        alpha_i: OptTensor,
+        edge_attr: OptTensor,
+        index: Tensor,
+        ptr: OptTensor,
+        size_i: Optional[int],
+    ) -> Tensor:
         """"""
         # Given edge-level attention coefficients for source and target nodes,
         # we simply need to sum them up to "emulate" concatenation:
@@ -276,8 +299,9 @@ class GATConv(MessagePassing):
             alpha = alpha + alpha_edge.view(shape)
 
         alpha = F.leaky_relu(alpha, self.negative_slope)
-        alpha = sparse_softmax(alpha, index, num_nodes=size_i, ptr=ptr,
-                               dim=self.node_dim)
+        alpha = sparse_softmax(
+            alpha, index, num_nodes=size_i, ptr=ptr, dim=self.node_dim
+        )
         alpha = F.dropout(alpha, p=self.dropout, training=self.training)
         return alpha
 
@@ -286,5 +310,7 @@ class GATConv(MessagePassing):
         return alpha.unsqueeze(-1) * x_j
 
     def __repr__(self) -> str:
-        return (f'{self.__class__.__name__}({self.in_channels}, '
-                f'{self.out_channels}, heads={self.heads})')
+        return (
+            f"{self.__class__.__name__}({self.in_channels}, "
+            f"{self.out_channels}, heads={self.heads})"
+        )

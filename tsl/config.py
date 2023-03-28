@@ -13,17 +13,17 @@ class Config(dict):
     def __init__(self, **kwargs):
         super(Config, self).__init__()
         # configure paths for config files and logs
-        self.config_dir = kwargs.pop('config_dir', 'config')
+        self.config_dir = kwargs.pop("config_dir", "config")
         # set 'data_dir' as directory for data loading and downloading
         # defaults to '{tsl_path}/.storage'
-        default_storage = os.path.join(self.root_dir, '.storage')
-        self.data_dir = kwargs.pop('data_dir', default_storage)
+        default_storage = os.path.join(self.root_dir, ".storage")
+        self.data_dir = kwargs.pop("data_dir", default_storage)
         self.update(**kwargs)
 
     def __setitem__(self, key: str, value):
         # when adding a directory, transform it to an absolute path (if it is
         # not already) considering the path relative to the current directory
-        if key.endswith('_dir') and value is not None:
+        if key.endswith("_dir") and value is not None:
             if not os.path.isabs(value):
                 value = os.path.join(self.curr_dir, value)
         super(Config, self).__setitem__(key, value)
@@ -47,8 +47,8 @@ class Config(dict):
         type_name = type(self).__name__
         arg_strings = []
         for name, value in sorted(self.items()):
-            arg_strings.append('%s=%r' % (name, value))
-        return '%s(%s)' % (type_name, ', '.join(arg_strings))
+            arg_strings.append("%s=%r" % (name, value))
+        return "%s(%s)" % (type_name, ", ".join(arg_strings))
 
     @property
     def root_dir(self):
@@ -67,15 +67,17 @@ class Config(dict):
 
     def load_config_file(self, filename: str):
         """Load a configuration from a json or yaml file."""
-        with open(filename, 'r') as fp:
-            if filename.endswith('.json'):
+        with open(filename, "r") as fp:
+            if filename.endswith(".json"):
                 import json
+
                 data = json.load(fp)
-            elif filename.endswith('.yaml') or filename.endswith('.yml'):
+            elif filename.endswith(".yaml") or filename.endswith(".yml"):
                 import yaml
+
                 data = yaml.load(fp, Loader=yaml.FullLoader)
             else:
-                raise RuntimeError('Config file format not supported.')
+                raise RuntimeError("Config file format not supported.")
         self.update(data)
         return self
 

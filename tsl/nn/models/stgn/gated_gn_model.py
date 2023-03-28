@@ -6,7 +6,7 @@ from torch import nn
 from tsl.nn.layers.base import NodeEmbedding
 from tsl.nn.layers.graph_convs import GatedGraphNetwork
 from tsl.nn.models import BaseModel
-from tsl.nn.utils import maybe_cat_exog, get_layer_activation
+from tsl.nn.utils import get_layer_activation, maybe_cat_exog
 
 
 class GatedGraphNetworkModel(BaseModel):
@@ -33,18 +33,20 @@ class GatedGraphNetworkModel(BaseModel):
             the model turns into a dense spatial attention layer.
     """
 
-    def __init__(self,
-                 input_size: int,
-                 input_window_size: int,
-                 horizon: int,
-                 n_nodes: int,
-                 hidden_size: int,
-                 output_size: int = None,
-                 exog_size: int = 0,
-                 enc_layers: int = 1,
-                 gnn_layers: int = 1,
-                 full_graph: bool = True,
-                 activation: str = 'silu'):
+    def __init__(
+        self,
+        input_size: int,
+        input_window_size: int,
+        horizon: int,
+        n_nodes: int,
+        hidden_size: int,
+        output_size: int = None,
+        exog_size: int = 0,
+        enc_layers: int = 1,
+        gnn_layers: int = 1,
+        full_graph: bool = True,
+        activation: str = "silu",
+    ):
         super(GatedGraphNetworkModel, self).__init__()
 
         self.input_size = input_size
@@ -62,8 +64,9 @@ class GatedGraphNetworkModel(BaseModel):
                 nn.Sequential(
                     nn.Linear(hidden_size, hidden_size),
                     get_layer_activation(activation)(),
-                    nn.Linear(hidden_size, hidden_size)
-                ) for _ in range(enc_layers)
+                    nn.Linear(hidden_size, hidden_size),
+                )
+                for _ in range(enc_layers)
             ]
         )
 
@@ -71,20 +74,18 @@ class GatedGraphNetworkModel(BaseModel):
 
         self.gcn_layers = nn.ModuleList(
             [
-                GatedGraphNetwork(hidden_size, hidden_size,
-                                  activation=activation) for _ in
-                range(gnn_layers)
+                GatedGraphNetwork(hidden_size, hidden_size, activation=activation)
+                for _ in range(gnn_layers)
             ]
         )
 
         self.decoder = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
-            get_layer_activation(activation)()
+            nn.Linear(hidden_size, hidden_size), get_layer_activation(activation)()
         )
 
         self.readout = nn.Sequential(
             nn.Linear(hidden_size, horizon * self.output_size),
-            Rearrange('b n (h f) -> b h n f', h=horizon, f=self.output_size)
+            Rearrange("b n (h f) -> b h n f", h=horizon, f=self.output_size),
         )
 
     def forward(self, x, edge_index=None, u=None):
@@ -98,7 +99,7 @@ class GatedGraphNetworkModel(BaseModel):
             edge_index = torch.cartesian_prod(nodes, nodes).T
 
         # flat time dimension
-        x = rearrange(x[:, -self.input_window_size:], 'b s n f -> b n (s f)')
+        x = rearrange(x[:, -self.input_window_size :], "b s n f -> b n (s f)")
 
         x = self.input_encoder(x)
         for layer in self.encoder_layers:

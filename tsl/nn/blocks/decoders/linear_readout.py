@@ -1,5 +1,5 @@
 from einops.layers.torch import Rearrange
-from torch import nn, Tensor
+from torch import Tensor, nn
 
 
 class LinearReadout(nn.Module):
@@ -17,16 +17,13 @@ class LinearReadout(nn.Module):
             (default: :obj:`True`)
     """
 
-    def __init__(self,
-                 input_size: int,
-                 output_size: int,
-                 horizon: int = 1,
-                 bias: bool = True):
+    def __init__(
+        self, input_size: int, output_size: int, horizon: int = 1, bias: bool = True
+    ):
         super(LinearReadout, self).__init__()
 
         self.readout = nn.Linear(input_size, output_size * horizon, bias=bias)
-        self.rearrange = Rearrange('b n (h f) -> b h n f',
-                                   f=output_size, h=horizon)
+        self.rearrange = Rearrange("b n (h f) -> b h n f", f=output_size, h=horizon)
 
     def forward(self, h: Tensor) -> Tensor:
         """"""

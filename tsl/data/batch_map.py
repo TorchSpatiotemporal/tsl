@@ -1,17 +1,20 @@
-from typing import Iterator
-from typing import (Optional, Union, List, Tuple, Mapping)
+from typing import Iterator, List, Mapping, Optional, Tuple, Union
 
 from tsl.utils.python_utils import ensure_list
-from .synch_mode import SynchMode, WINDOW, STATIC
+
+from .synch_mode import STATIC, WINDOW, SynchMode
 
 
 class BatchMapItem:
-    def __init__(self, keys: Union[List, str],
-                 synch_mode: Optional[Union[SynchMode, str]] = None,
-                 preprocess: bool = True,
-                 cat_dim: Optional[int] = -1,
-                 pattern: Optional[str] = None,
-                 shape: Optional[tuple] = None):
+    def __init__(
+        self,
+        keys: Union[List, str],
+        synch_mode: Optional[Union[SynchMode, str]] = None,
+        preprocess: bool = True,
+        cat_dim: Optional[int] = -1,
+        pattern: Optional[str] = None,
+        shape: Optional[tuple] = None,
+    ):
         super(BatchMapItem, self).__init__()
         # store keys to be mapped
         self.keys = ensure_list(keys)
@@ -33,20 +36,20 @@ class BatchMapItem:
 
     def __setattr__(self, key, value):
         super(BatchMapItem, self).__setattr__(key, value)
-        if key == 'pattern' and value is not None and self.synch_mode is None:
-            synch_mode = WINDOW if 't' in value else STATIC
-            super(BatchMapItem, self).__setattr__('synch_mode', synch_mode)
+        if key == "pattern" and value is not None and self.synch_mode is None:
+            synch_mode = WINDOW if "t" in value else STATIC
+            super(BatchMapItem, self).__setattr__("synch_mode", synch_mode)
 
     def __repr__(self):
         return "([{}], pattern='{}', shape={})".format(
-            ', '.join(self.keys), self.pattern, self.shape)
+            ", ".join(self.keys), self.pattern, self.shape
+        )
 
     def kwargs(self):
         return self.__dict__
 
 
 class BatchMap(Mapping):
-
     def __init__(self, **kwargs):
         super().__init__()
         for k, v in kwargs.items():
@@ -63,8 +66,7 @@ class BatchMap(Mapping):
         elif isinstance(value, Mapping):
             value = BatchMapItem(**value)
         else:
-            raise TypeError('Invalid type for InputMap item "{}"'
-                            .format(type(value)))
+            raise TypeError('Invalid type for InputMap item "{}"'.format(type(value)))
         self.__dict__[key] = value
 
     def __getitem__(self, k):
@@ -78,12 +80,11 @@ class BatchMap(Mapping):
 
     def __repr__(self):
         s = ["'{}': {}".format(key, repr(value)) for key, value in self.items()]
-        return "{}(\n  {}\n)".format(self.__class__.__name__, ',\n  '.join(s))
+        return "{}(\n  {}\n)".format(self.__class__.__name__, ",\n  ".join(s))
 
     def update(self, **kwargs):
         for k, v in kwargs.items():
             self[k] = v
 
     def by_synch_mode(self, synch_mode: SynchMode):
-        return {k: v for k, v in self.items() if
-                v.synch_mode is synch_mode}
+        return {k: v for k, v in self.items() if v.synch_mode is synch_mode}

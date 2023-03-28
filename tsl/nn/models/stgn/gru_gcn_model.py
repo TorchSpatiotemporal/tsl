@@ -25,60 +25,70 @@ class GRUGCNModel(BaseModel):
         norm (str): Normalization used by the graph convolutional layers.
     """
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 output_size,
-                 horizon,
-                 exog_size,
-                 enc_layers,
-                 gcn_layers,
-                 norm='mean',
-                 encode_edges=False,
-                 activation='softplus'):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        output_size,
+        horizon,
+        exog_size,
+        enc_layers,
+        gcn_layers,
+        norm="mean",
+        encode_edges=False,
+        activation="softplus",
+    ):
         super(GRUGCNModel, self).__init__()
 
         input_size += exog_size
-        self.input_encoder = RNN(input_size=input_size,
-                                 hidden_size=hidden_size,
-                                 n_layers=enc_layers,
-                                 return_only_last_state=True,
-                                 cell='gru')
+        self.input_encoder = RNN(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            n_layers=enc_layers,
+            return_only_last_state=True,
+            cell="gru",
+        )
 
         if encode_edges:
             self.edge_encoder = nn.Sequential(
-                RNN(input_size=input_size,
+                RNN(
+                    input_size=input_size,
                     hidden_size=hidden_size,
                     n_layers=enc_layers,
                     return_only_last_state=True,
-                    cell='gru'),
+                    cell="gru",
+                ),
                 nn.Linear(hidden_size, 1),
                 nn.Softplus(),
-                Rearrange('e f -> (e f)', f=1)
+                Rearrange("e f -> (e f)", f=1),
             )
         else:
-            self.register_parameter('edge_encoder', None)
+            self.register_parameter("edge_encoder", None)
 
         self.gcn_layers = nn.ModuleList(
             [
-                GraphConv(hidden_size,
-                          hidden_size,
-                          root_weight=False,
-                          norm=norm,
-                          activation=activation) for _ in range(gcn_layers)
+                GraphConv(
+                    hidden_size,
+                    hidden_size,
+                    root_weight=False,
+                    norm=norm,
+                    activation=activation,
+                )
+                for _ in range(gcn_layers)
             ]
         )
 
         self.skip_con = nn.Linear(hidden_size, hidden_size)
 
-        self.readout = MLPDecoder(input_size=hidden_size,
-                                  hidden_size=hidden_size,
-                                  output_size=output_size,
-                                  activation=activation,
-                                  horizon=horizon)
+        self.readout = MLPDecoder(
+            input_size=hidden_size,
+            hidden_size=hidden_size,
+            output_size=output_size,
+            activation=activation,
+            horizon=horizon,
+        )
 
-    def forward(self, x, edge_index, edge_weight=None, edge_features=None,
-                u=None):
+    def forward(self, x, edge_index, edge_weight=None, edge_features=None, u=None):
         """"""
         # x: [batches steps nodes features]
         x = utils.maybe_cat_exog(x, u)

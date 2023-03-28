@@ -2,7 +2,7 @@ from torch import nn as nn
 from torch.nn import Module
 from torch.nn import functional as F
 
-from tsl.nn.layers.base import TemporalConv, GatedTemporalConv
+from tsl.nn.layers.base import GatedTemporalConv, TemporalConv
 from tsl.nn.utils import get_layer_activation
 
 
@@ -25,13 +25,15 @@ class ConditionalBlock(Module):
         activation (str, optional): Activation function.
     """
 
-    def __init__(self,
-                 input_size,
-                 exog_size,
-                 output_size,
-                 dropout=0.,
-                 skip_connection=False,
-                 activation='relu'):
+    def __init__(
+        self,
+        input_size,
+        exog_size,
+        output_size,
+        dropout=0.0,
+        skip_connection=False,
+        activation="relu",
+    ):
         super().__init__()
         self.d_in = input_size
         self.d_u = exog_size
@@ -48,7 +50,7 @@ class ConditionalBlock(Module):
         if skip_connection:
             self.skip_conn = nn.Linear(self.d_in, self.d_out)
         else:
-            self.register_parameter('skip_conn', None)
+            self.register_parameter("skip_conn", None)
 
     def forward(self, x, u=None):
         """"""
@@ -90,59 +92,69 @@ class ConditionalTCNBlock(nn.Module):
             connection from the input to the output.
     """
 
-    def __init__(self,
-                 input_size,
-                 exog_size,
-                 output_size,
-                 kernel_size,
-                 dilation=1,
-                 dropout=0.,
-                 gated=False,
-                 activation='relu',
-                 weight_norm=False,
-                 channel_last=True,
-                 skip_connection=False):
+    def __init__(
+        self,
+        input_size,
+        exog_size,
+        output_size,
+        kernel_size,
+        dilation=1,
+        dropout=0.0,
+        gated=False,
+        activation="relu",
+        weight_norm=False,
+        channel_last=True,
+        skip_connection=False,
+    ):
         super().__init__()
 
         if gated:
             # inputs module
             self.inputs_conv = nn.Sequential(
-                GatedTemporalConv(input_channels=input_size,
-                                  output_channels=output_size,
-                                  kernel_size=kernel_size,
-                                  dilation=dilation,
-                                  weight_norm=weight_norm,
-                                  channel_last=channel_last),
-                nn.Dropout(dropout)
+                GatedTemporalConv(
+                    input_channels=input_size,
+                    output_channels=output_size,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    weight_norm=weight_norm,
+                    channel_last=channel_last,
+                ),
+                nn.Dropout(dropout),
             )
             self.conditions_conv = nn.Sequential(
-                GatedTemporalConv(input_channels=exog_size,
-                                  output_channels=output_size,
-                                  kernel_size=kernel_size,
-                                  dilation=dilation,
-                                  weight_norm=weight_norm,
-                                  channel_last=channel_last),
-                nn.Dropout(dropout)
+                GatedTemporalConv(
+                    input_channels=exog_size,
+                    output_channels=output_size,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    weight_norm=weight_norm,
+                    channel_last=channel_last,
+                ),
+                nn.Dropout(dropout),
             )
         else:
             # inputs module
             self.inputs_conv = nn.Sequential(
-                TemporalConv(input_channels=input_size,
-                             output_channels=output_size,
-                             kernel_size=kernel_size,
-                             dilation=dilation,
-                             weight_norm=weight_norm),
+                TemporalConv(
+                    input_channels=input_size,
+                    output_channels=output_size,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    weight_norm=weight_norm,
+                ),
                 get_layer_activation(activation)(),
-                nn.Dropout(dropout)
+                nn.Dropout(dropout),
             )
             self.conditions_conv = nn.Sequential(
-                TemporalConv(input_channels=exog_size,
-                             output_channels=output_size,
-                             kernel_size=kernel_size,
-                             dilation=dilation,
-                             weight_norm=weight_norm),
+                TemporalConv(
+                    input_channels=exog_size,
+                    output_channels=output_size,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    weight_norm=weight_norm,
+                ),
                 get_layer_activation(activation)(),
-                nn.Dropout(dropout)
+                nn.Dropout(dropout),
             )
         self.out_input = nn.Linear(output_size, output_size)
         self.out_cond = nn.Linear(output_size, output_size, bias=False)
@@ -150,10 +162,11 @@ class ConditionalTCNBlock(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         if skip_connection:
-            self.skip_conn = TemporalConv(input_size, output_size, 1,
-                                          channel_last=channel_last)
+            self.skip_conn = TemporalConv(
+                input_size, output_size, 1, channel_last=channel_last
+            )
         else:
-            self.register_parameter('skip_conn', None)
+            self.register_parameter("skip_conn", None)
 
     def forward(self, x, u=None):
         """"""

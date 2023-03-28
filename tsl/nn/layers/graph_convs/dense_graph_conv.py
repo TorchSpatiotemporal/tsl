@@ -19,7 +19,15 @@ class DenseGraphConvOrderK(nn.Module):
             opposed to "b f n t".
     """
 
-    def __init__(self, input_size, output_size, support_len=3, order=2, include_self=True, channel_last=False):
+    def __init__(
+        self,
+        input_size,
+        output_size,
+        support_len=3,
+        order=2,
+        include_self=True,
+        channel_last=False,
+    ):
         super(DenseGraphConvOrderK, self).__init__()
         self.channel_last = channel_last
         self.include_self = include_self
@@ -52,7 +60,7 @@ class DenseGraphConvOrderK(nn.Module):
 
         if not include_self:
             for ak in supp_k:
-                ak.fill_diagonal_(0.)
+                ak.fill_diagonal_(0.0)
         return support + supp_k
 
     # Adapted from: https://github.com/nnzhan/Graph-WaveNet
@@ -63,22 +71,22 @@ class DenseGraphConvOrderK(nn.Module):
             if x.dim() == 3:
                 # [batch, nodes, channels]
                 squeeze = True
-                x = rearrange(x, 'b n c -> b c n 1')
+                x = rearrange(x, "b n c -> b c n 1")
             else:
                 # [batch, steps, nodes, channels]
-                x = rearrange(x, 'b s n c -> b c n s')
+                x = rearrange(x, "b s n c -> b c n s")
         else:
             if x.dim() == 3:
                 # [batch, channels, nodes]
                 squeeze = True
                 x = torch.unsqueeze(x, -1)
         out = [x] if self.include_self else []
-        if (type(support) is not list):
+        if type(support) is not list:
             support = [support]
         for a in support:
             x1 = x
             for k in range(self.order):
-                x1 = torch.einsum('ncvl, wv -> ncwl', (x1, a)).contiguous()
+                x1 = torch.einsum("ncvl, wv -> ncwl", (x1, a)).contiguous()
                 out.append(x1)
 
         out = torch.cat(out, dim=1)
@@ -86,7 +94,7 @@ class DenseGraphConvOrderK(nn.Module):
         if squeeze:
             out = out.squeeze(-1)
         if self.channel_last:
-            out = rearrange(out, 'b c n ... -> b ... n c')
+            out = rearrange(out, "b c n ... -> b ... n c")
         return out
 
 
@@ -99,13 +107,14 @@ class DenseGraphConv(nn.Module):
         output_size: Output size.
         bias: Whether to add a learnable bias.
     """
+
     def __init__(self, input_size, output_size, bias=True):
         super(DenseGraphConv, self).__init__()
         self.linear = nn.Linear(input_size, output_size, bias=False)
         if bias:
             self.b = nn.Parameter(torch.Tensor(output_size))
         else:
-            self.register_parameter('b', None)
+            self.register_parameter("b", None)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -120,10 +129,10 @@ class DenseGraphConv(nn.Module):
         x = self.linear(x)
 
         # reshape to have features+T as last dim
-        x = rearrange(x, 'b s n f -> b n (s f)')
+        x = rearrange(x, "b s n f -> b n (s f)")
         # message passing
         x = torch.matmul(adj, x)
-        x = rearrange(x, 'b n (s c) -> b n s f', s=s, f=f)
+        x = rearrange(x, "b n (s c) -> b n s f", s=s, f=f)
         if self.b is not None:
             x = x + self.b
         return x

@@ -7,6 +7,7 @@ from torch import Tensor
 
 from tsl.nn.layers.graph_convs.gpvar import GraphPolyVAR
 from tsl.ops.graph_generators import build_tri_community_graph
+
 from .synthetic import GaussianNoiseSyntheticDataset
 
 
@@ -16,11 +17,12 @@ def _gcn_gso(edge_index, num_nodes):
     networks." <https://arxiv.org/abs/1609.02907>`_ (Kipf et al., ICLR 2017).
     """
     from torch_geometric.utils import add_self_loops, degree
+
     edge_index, _ = add_self_loops(edge_index=edge_index, num_nodes=num_nodes)
     row, col = edge_index
     deg = degree(col, num_nodes)
     deg_inv_sqrt = deg.pow(-0.5)
-    deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+    deg_inv_sqrt[deg_inv_sqrt == float("inf")] = 0
     edge_weight = deg_inv_sqrt[row] * deg_inv_sqrt[col]
     return edge_index, edge_weight
 
@@ -46,16 +48,19 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
         name (optional, str): Name of the dataset.
     """
 
-    def __init__(self,
-                 num_communities: int,
-                 num_steps: int,
-                 filter_params: Union[List, Tensor, ndarray],
-                 sigma_noise: float = .2,
-                 name: str = None):
+    def __init__(
+        self,
+        num_communities: int,
+        num_steps: int,
+        filter_params: Union[List, Tensor, ndarray],
+        sigma_noise: float = 0.2,
+        name: str = None,
+    ):
         if name is None:
             name = "GP-VAR"
         node_idx, edge_index, _ = build_tri_community_graph(
-            num_communities=num_communities)
+            num_communities=num_communities
+        )
         num_nodes = len(node_idx)
         connectivity = _gcn_gso(torch.tensor(edge_index), num_nodes)
 
@@ -63,14 +68,16 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
             filter_params = torch.as_tensor(filter_params, dtype=torch.float32)
 
         filter = _GPVAR.from_params(filter_params=filter_params)
-        super(GPVARDataset, self).__init__(num_features=1,
-                                           num_nodes=num_nodes,
-                                           num_steps=num_steps,
-                                           connectivity=connectivity,
-                                           min_window=filter.temporal_order,
-                                           model=filter,
-                                           sigma_noise=sigma_noise,
-                                           name=name)
+        super(GPVARDataset, self).__init__(
+            num_features=1,
+            num_nodes=num_nodes,
+            num_steps=num_steps,
+            connectivity=connectivity,
+            min_window=filter.temporal_order,
+            model=filter,
+            sigma_noise=sigma_noise,
+            name=name,
+        )
 
 
 class GPVARDatasetAZ(GPVARDataset):
@@ -83,6 +90,7 @@ class GPVARDatasetAZ(GPVARDataset):
         root (str, optional): Path to the directory to use for data storage.
             (default: :obj:`None`)
     """
+
     seed = 1234
     NUM_COMMUNITIES = 5
     NUM_STEPS = 30000
@@ -90,20 +98,18 @@ class GPVARDatasetAZ(GPVARDataset):
 
     def __init__(self, root: str = None):
         self.root = root
-        filter_params = [[5., 2.],
-                         [-4., 6.],
-                         [-1., 0.]]
+        filter_params = [[5.0, 2.0], [-4.0, 6.0], [-1.0, 0.0]]
         super(GPVARDatasetAZ, self).__init__(
             num_communities=self.NUM_COMMUNITIES,
             num_steps=self.NUM_STEPS,
             filter_params=filter_params,
             sigma_noise=self.SIGMA_NOISE,
-            name='GPVAR-AZ'
+            name="GPVAR-AZ",
         )
 
     @property
     def required_file_names(self):
-        return [f'GPVAR_AZ.npy']
+        return ["GPVAR_AZ.npy"]
 
     def build(self) -> None:
         x, y_opt, _ = self.generate_data(seed=self.seed)

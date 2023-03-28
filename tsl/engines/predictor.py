@@ -1,9 +1,9 @@
 import inspect
-from typing import Type, Mapping, Callable, Optional
+from typing import Callable, Mapping, Optional, Type
 
 import pytorch_lightning as pl
 import torch
-from torchmetrics import MetricCollection, Metric
+from torchmetrics import Metric, MetricCollection
 
 from tsl import logger
 from tsl.data import Data
@@ -56,21 +56,22 @@ class Predictor(pl.LightningModule):
             (default: :obj:`None`)
     """
 
-    def __init__(self,
-                 model: Optional[torch.nn.Module] = None,
-                 loss_fn: Optional[Callable] = None,
-                 scale_target: bool = False,
-                 metrics: Optional[Mapping[str, Metric]] = None,
-                 *,
-                 model_class: Optional[Type] = None,
-                 model_kwargs: Optional[Mapping] = None,
-                 optim_class: Optional[Type] = None,
-                 optim_kwargs: Optional[Mapping] = None,
-                 scheduler_class: Optional = None,
-                 scheduler_kwargs: Optional[Mapping] = None):
+    def __init__(
+        self,
+        model: Optional[torch.nn.Module] = None,
+        loss_fn: Optional[Callable] = None,
+        scale_target: bool = False,
+        metrics: Optional[Mapping[str, Metric]] = None,
+        *,
+        model_class: Optional[Type] = None,
+        model_kwargs: Optional[Mapping] = None,
+        optim_class: Optional[Type] = None,
+        optim_kwargs: Optional[Mapping] = None,
+        scheduler_class: Optional = None,
+        scheduler_kwargs: Optional[Mapping] = None,
+    ):
         super(Predictor, self).__init__()
-        self.save_hyperparameters(ignore=['loss_fn', 'model'],
-                                  logger=False)
+        self.save_hyperparameters(ignore=["loss_fn", "model"], logger=False)
         self.model_cls = model_class
         self.model_kwargs = model_kwargs or dict()
         self._model_fwd_signature = None  # automatic set on model assignment
@@ -99,7 +100,7 @@ class Predictor(pl.LightningModule):
 
     def __setattr__(self, key, value):
         super(Predictor, self).__setattr__(key, value)
-        if key == 'model' and value is not None:
+        if key == "model" and value is not None:
             self._model_fwd_signature = foo_signature(self.model.forward)
             self._check_kwargs = True
 
@@ -122,18 +123,20 @@ class Predictor(pl.LightningModule):
         storage = torch.load(filename, lambda storage, loc: storage)
         # if predictor.model has been instantiated inside predictor
         if self.model_cls is not None:
-            model_cls = storage['hyper_parameters']['model_class']
-            model_kwargs = storage['hyper_parameters']['model_kwargs']
+            model_cls = storage["hyper_parameters"]["model_class"]
+            model_kwargs = storage["hyper_parameters"]["model_kwargs"]
             # check model class and hyperparameters are the same
             assert model_cls == self.model_cls
             if model_kwargs is not None:
                 for k, v in model_kwargs.items():
                     assert v == self.model_kwargs[k]
         else:
-            logger.warning("Predictor with already instantiated model is "
-                           f"loading a state_dict from {filename}. Cannot "
-                           " check if model hyperparameters are the same.")
-        self.load_state_dict(storage['state_dict'])
+            logger.warning(
+                "Predictor with already instantiated model is "
+                f"loading a state_dict from {filename}. Cannot "
+                " check if model hyperparameters are the same."
+            )
+        self.load_state_dict(storage["state_dict"])
 
     @property
     def is_tsl_model(self):
@@ -143,29 +146,35 @@ class Predictor(pl.LightningModule):
     @property
     def trainable_parameters(self) -> int:
         """"""
-        return sum(
-            p.numel() for p in self.model.parameters() if p.requires_grad)
+        return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
 
     @property
     def filter_forward_kwargs(self) -> bool:
         """"""
-        return self._model_fwd_signature is not None and \
-               not self._model_fwd_signature['has_kwargs']
+        return (
+            self._model_fwd_signature is not None
+            and not self._model_fwd_signature["has_kwargs"]
+        )
 
     def _filter_forward_kwargs(self, kwargs: dict) -> dict:
         """"""
         if self._check_kwargs:
-            model_args = self._model_fwd_signature['signature']
+            model_args = self._model_fwd_signature["signature"]
             filtered = set(kwargs).difference(model_args)
             forwarded = set(kwargs).intersection(model_args)
-            msg = f"Only args {list(forwarded)} are forwarded to the model " \
-                  f"({self.model.__class__.__name__}). "
+            msg = (
+                f"Only args {list(forwarded)} are forwarded to the model "
+                f"({self.model.__class__.__name__}). "
+            )
             if len(filtered):
                 msg = f"Arguments {list(filtered)} are filtered out. " + msg
             logger.warning(msg)
             self._check_kwargs = False
-        return {k: v for k, v in kwargs.items() if k in
-                self._model_fwd_signature['signature']}
+        return {
+            k: v
+            for k, v in kwargs.items()
+            if k in self._model_fwd_signature["signature"]
+        }
 
     def forward(self, *args, **kwargs):
         """"""
@@ -183,12 +192,13 @@ class Predictor(pl.LightningModule):
     @staticmethod
     def _check_metric(metric, on_step=False):
         if not isinstance(metric, MaskedMetric):
-            if 'reduction' in inspect.getfullargspec(metric).args:
-                metric_kwargs = {'reduction': 'none'}
+            if "reduction" in inspect.getfullargspec(metric).args:
+                metric_kwargs = {"reduction": "none"}
             else:
                 metric_kwargs = dict()
-            return MaskedMetric(metric, compute_on_step=on_step,
-                                metric_fn_kwargs=metric_kwargs)
+            return MaskedMetric(
+                metric, compute_on_step=on_step, metric_fn_kwargs=metric_kwargs
+            )
         metric = metric.clone()
         metric.reset()
         return metric
@@ -196,23 +206,34 @@ class Predictor(pl.LightningModule):
     def _set_metrics(self, metrics):
         self.train_metrics = MetricCollection(
             metrics={k: self._check_metric(m) for k, m in metrics.items()},
-            prefix='train_')
+            prefix="train_",
+        )
         self.val_metrics = MetricCollection(
             metrics={k: self._check_metric(m) for k, m in metrics.items()},
-            prefix='val_')
+            prefix="val_",
+        )
         self.test_metrics = MetricCollection(
             metrics={k: self._check_metric(m) for k, m in metrics.items()},
-            prefix='test_')
+            prefix="test_",
+        )
 
     def log_metrics(self, metrics, **kwargs):
         """"""
-        self.log_dict(metrics, on_step=False, on_epoch=True,
-                      logger=True, prog_bar=True, **kwargs)
+        self.log_dict(
+            metrics, on_step=False, on_epoch=True, logger=True, prog_bar=True, **kwargs
+        )
 
     def log_loss(self, name, loss, **kwargs):
         """"""
-        self.log(name + '_loss', loss.detach(), on_step=False, on_epoch=True,
-                 logger=True, prog_bar=False, **kwargs)
+        self.log(
+            name + "_loss",
+            loss.detach(),
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            prog_bar=False,
+            **kwargs,
+        )
 
     def _unpack_batch(self, batch):
         """
@@ -222,14 +243,18 @@ class Predictor(pl.LightningModule):
         :return: batch_data, batch_preprocessing
         """
         inputs, targets = batch.input, batch.target
-        mask = batch.get('mask')
-        transform = batch.get('transform')
+        mask = batch.get("mask")
+        transform = batch.get("transform")
         return inputs, targets, mask, transform
 
-    def predict_batch(self, batch: Data,
-                      preprocess: bool = False, postprocess: bool = True,
-                      return_target: bool = False,
-                      **forward_kwargs):
+    def predict_batch(
+        self,
+        batch: Data,
+        preprocess: bool = False,
+        postprocess: bool = True,
+        return_target: bool = False,
+        **forward_kwargs,
+    ):
         """This method takes as input a :class:`~tsl.data.Data` object and
         outputs the predictions.
 
@@ -268,11 +293,11 @@ class Predictor(pl.LightningModule):
         y_hat = self.forward(**inputs, **forward_kwargs)
         # Rescale outputs
         if postprocess:
-            trans = transform.get('y')
+            trans = transform.get("y")
             if trans is not None:
                 y_hat = trans.inverse_transform(y_hat)
         if return_target:
-            y = targets.get('y')
+            y = targets.get("y")
             return y, y_hat, mask
         return y_hat
 
@@ -286,7 +311,7 @@ class Predictor(pl.LightningModule):
 
         output = dict(**y, y_hat=y_hat)
         if mask is not None:
-            output['mask'] = mask
+            output["mask"] = mask
         return output
 
     def on_predict_epoch_end(self, results):
@@ -312,17 +337,18 @@ class Predictor(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         """"""
         y = y_loss = batch.y
-        mask = batch.get('mask')
+        mask = batch.get("mask")
 
         # Compute predictions and compute loss
-        y_hat_loss = self.predict_batch(batch, preprocess=False,
-                                        postprocess=not self.scale_target)
+        y_hat_loss = self.predict_batch(
+            batch, preprocess=False, postprocess=not self.scale_target
+        )
         y_hat = y_hat_loss.detach()
 
         # Scale target and output, eventually
         if self.scale_target:
-            y_loss = batch.transform['y'].transform(y)
-            y_hat = batch.transform['y'].inverse_transform(y_hat)
+            y_loss = batch.transform["y"].transform(y)
+            y_hat = batch.transform["y"].inverse_transform(y_hat)
 
         # Compute loss
         loss = self.loss_fn(y_hat_loss, y_loss, mask)
@@ -330,23 +356,24 @@ class Predictor(pl.LightningModule):
         # Logging
         self.train_metrics.update(y_hat, y, mask)
         self.log_metrics(self.train_metrics, batch_size=batch.batch_size)
-        self.log_loss('train', loss, batch_size=batch.batch_size)
+        self.log_loss("train", loss, batch_size=batch.batch_size)
         return loss
 
     def validation_step(self, batch, batch_idx):
         """"""
         y = y_loss = batch.y
-        mask = batch.get('mask')
+        mask = batch.get("mask")
 
         # Compute predictions
-        y_hat_loss = self.predict_batch(batch, preprocess=False,
-                                        postprocess=not self.scale_target)
+        y_hat_loss = self.predict_batch(
+            batch, preprocess=False, postprocess=not self.scale_target
+        )
         y_hat = y_hat_loss.detach()
 
         # Scale target and output, eventually
         if self.scale_target:
-            y_loss = batch.transform['y'].transform(y)
-            y_hat = batch.transform['y'].inverse_transform(y_hat)
+            y_loss = batch.transform["y"].transform(y)
+            y_hat = batch.transform["y"].inverse_transform(y_hat)
 
         # Compute loss
         val_loss = self.loss_fn(y_hat_loss, y_loss, mask)
@@ -354,7 +381,7 @@ class Predictor(pl.LightningModule):
         # Logging
         self.val_metrics.update(y_hat, y, mask)
         self.log_metrics(self.val_metrics, batch_size=batch.batch_size)
-        self.log_loss('val', val_loss, batch_size=batch.batch_size)
+        self.log_loss("val", val_loss, batch_size=batch.batch_size)
         return val_loss
 
     def test_step(self, batch, batch_idx):
@@ -362,20 +389,20 @@ class Predictor(pl.LightningModule):
         # Compute outputs and rescale
         y_hat = self.predict_batch(batch, preprocess=False, postprocess=True)
 
-        y, mask = batch.y, batch.get('mask')
+        y, mask = batch.y, batch.get("mask")
         test_loss = self.loss_fn(y_hat, y, mask)
 
         # Logging
         self.test_metrics.update(y_hat.detach(), y, mask)
         self.log_metrics(self.test_metrics, batch_size=batch.batch_size)
-        self.log_loss('test', test_loss, batch_size=batch.batch_size)
+        self.log_loss("test", test_loss, batch_size=batch.batch_size)
         return test_loss
 
     def compute_metrics(self, batch, preprocess=False, postprocess=True):
         """"""
         # Compute outputs and rescale
         y_hat = self.predict_batch(batch, preprocess, postprocess)
-        y, mask = batch.y, batch.get('mask')
+        y, mask = batch.y, batch.get("mask")
         self.test_metrics.update(y_hat.detach(), y, mask)
         metrics_dict = self.test_metrics.compute()
         self.test_metrics.reset()
@@ -385,11 +412,11 @@ class Predictor(pl.LightningModule):
         """"""
         cfg = dict()
         optimizer = self.optim_class(self.parameters(), **self.optim_kwargs)
-        cfg['optimizer'] = optimizer
+        cfg["optimizer"] = optimizer
         if self.scheduler_class is not None:
-            metric = self.scheduler_kwargs.pop('monitor', None)
+            metric = self.scheduler_kwargs.pop("monitor", None)
             scheduler = self.scheduler_class(optimizer, **self.scheduler_kwargs)
-            cfg['lr_scheduler'] = scheduler
+            cfg["lr_scheduler"] = scheduler
             if metric is not None:
-                cfg['monitor'] = metric
+                cfg["monitor"] = metric
         return cfg

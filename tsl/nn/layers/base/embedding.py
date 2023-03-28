@@ -1,8 +1,8 @@
 import math
-from typing import Optional, Union, List
+from typing import List, Optional, Union
 
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
 from torch_geometric.typing import OptTensor
 
 
@@ -18,39 +18,46 @@ class NodeEmbedding(nn.Module):
             (default :obj:`True`)
     """
 
-    def __init__(self, n_nodes: int, emb_size: int,
-                 initializer: Union[str, Tensor] = 'uniform',
-                 requires_grad: bool = True):
+    def __init__(
+        self,
+        n_nodes: int,
+        emb_size: int,
+        initializer: Union[str, Tensor] = "uniform",
+        requires_grad: bool = True,
+    ):
         super(NodeEmbedding, self).__init__()
         self.n_nodes = int(n_nodes)
         self.emb_size = int(emb_size)
 
         if isinstance(initializer, Tensor):
             self.initializer = "from_values"
-            self.register_buffer('_default_values', initializer.float())
+            self.register_buffer("_default_values", initializer.float())
         else:
             self.initializer = initializer
-            self.register_buffer('_default_values', None)
+            self.register_buffer("_default_values", None)
 
-        self.emb = nn.Parameter(Tensor(self.n_nodes, self.emb_size),
-                                requires_grad=requires_grad)
+        self.emb = nn.Parameter(
+            Tensor(self.n_nodes, self.emb_size), requires_grad=requires_grad
+        )
 
         self.reset_emb()
 
     def __repr__(self) -> str:
         return "{}(n_nodes={}, embedding_size={})".format(
-            self.__class__.__name__, self.n_nodes, self.emb_size)
+            self.__class__.__name__, self.n_nodes, self.emb_size
+        )
 
     def reset_emb(self):
         with torch.no_grad():
-            if self.initializer == 'uniform' or self.initializer is None:
+            if self.initializer == "uniform" or self.initializer is None:
                 bound = 1.0 / math.sqrt(self.emb.size(-1))
                 self.emb.data.uniform_(-bound, bound)
-            elif self.initializer == 'from_values':
+            elif self.initializer == "from_values":
                 self.emb.data.copy_(self._default_values)
             else:
-                raise RuntimeError(f"Embedding initializer '{self.initializer}'"
-                                   " is not supported.")
+                raise RuntimeError(
+                    f"Embedding initializer '{self.initializer}'" " is not supported."
+                )
 
     def reset_parameters(self):
         self.reset_emb()
@@ -58,9 +65,12 @@ class NodeEmbedding(nn.Module):
     def get_emb(self):
         return self.emb
 
-    def forward(self, expand: Optional[List] = None,
-                token_index: OptTensor = None,
-                tokens_first: bool = True):
+    def forward(
+        self,
+        expand: Optional[List] = None,
+        token_index: OptTensor = None,
+        tokens_first: bool = True,
+    ):
         """"""
         emb = self.get_emb()
         if token_index is not None:
@@ -70,6 +80,5 @@ class NodeEmbedding(nn.Module):
         if expand is None:
             return emb
         shape = [*emb.size()]
-        view = [1 if d > 0 else shape.pop(0 if tokens_first else -1)
-                for d in expand]
+        view = [1 if d > 0 else shape.pop(0 if tokens_first else -1) for d in expand]
         return emb.view(*view).expand(*expand)

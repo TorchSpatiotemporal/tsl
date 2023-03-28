@@ -4,9 +4,10 @@ import numpy as np
 import pandas as pd
 
 from tsl import logger
-from .prototypes import DatetimeDataset
+
 from ..ops.similarities import gaussian_kernel
 from ..utils import download_url, extract_zip
+from .prototypes import DatetimeDataset
 
 
 class MetrLA(DatetimeDataset):
@@ -30,27 +31,35 @@ class MetrLA(DatetimeDataset):
     """
     url = "https://drive.switch.ch/index.php/s/Z8cKHAVyiDqkzaG/download"
 
-    similarity_options = {'distance'}
+    similarity_options = {"distance"}
 
     def __init__(self, root=None, impute_zeros=True, freq=None):
         # set root path
         self.root = root
         # load dataset
         df, dist, mask = self.load(impute_zeros=impute_zeros)
-        super().__init__(target=df, mask=mask, freq=freq,
-                         similarity_score="distance",
-                         temporal_aggregation="nearest",
-                         name="MetrLA")
-        self.add_covariate('dist', dist, pattern='n n')
+        super().__init__(
+            target=df,
+            mask=mask,
+            freq=freq,
+            similarity_score="distance",
+            temporal_aggregation="nearest",
+            name="MetrLA",
+        )
+        self.add_covariate("dist", dist, pattern="n n")
 
     @property
     def raw_file_names(self):
-        return ['metr_la.h5', 'distances_la.csv', 'sensor_locations_la.csv',
-                'sensor_ids_la.txt']
+        return [
+            "metr_la.h5",
+            "distances_la.csv",
+            "sensor_locations_la.csv",
+            "sensor_ids_la.txt",
+        ]
 
     @property
     def required_file_names(self):
-        return ['metr_la.h5', 'metr_la_dist.npy']
+        return ["metr_la.h5", "metr_la_dist.npy"]
 
     def download(self) -> None:
         path = download_url(self.url, self.root_dir)
@@ -60,12 +69,12 @@ class MetrLA(DatetimeDataset):
     def build(self) -> None:
         self.maybe_download()
         # Build distance matrix
-        logger.info('Building distance matrix...')
-        raw_dist_path = os.path.join(self.root_dir, 'distances_la.csv')
+        logger.info("Building distance matrix...")
+        raw_dist_path = os.path.join(self.root_dir, "distances_la.csv")
         distances = pd.read_csv(raw_dist_path)
-        ids_path = os.path.join(self.root_dir, 'sensor_ids_la.txt')
+        ids_path = os.path.join(self.root_dir, "sensor_ids_la.txt")
         with open(ids_path) as f:
-            ids = f.read().strip().split(',')
+            ids = f.read().strip().split(",")
         num_sensors = len(ids)
         dist = np.ones((num_sensors, num_sensors), dtype=np.float32) * np.inf
         # Builds sensor id to index map.
@@ -76,7 +85,7 @@ class MetrLA(DatetimeDataset):
                 continue
             dist[sensor_to_ind[row[0]], sensor_to_ind[row[1]]] = row[2]
         # Save to built directory
-        path = os.path.join(self.root_dir, 'metr_la_dist.npy')
+        path = os.path.join(self.root_dir, "metr_la_dist.npy")
         np.save(path, dist)
         # Remove raw data
         self.clean_downloads()
@@ -84,22 +93,22 @@ class MetrLA(DatetimeDataset):
     def load_raw(self):
         self.maybe_build()
         # load traffic data
-        traffic_path = os.path.join(self.root_dir, 'metr_la.h5')
+        traffic_path = os.path.join(self.root_dir, "metr_la.h5")
         df = pd.read_hdf(traffic_path)
         # add missing values
         datetime_idx = sorted(df.index)
-        date_range = pd.date_range(datetime_idx[0], datetime_idx[-1], freq='5T')
+        date_range = pd.date_range(datetime_idx[0], datetime_idx[-1], freq="5T")
         df = df.reindex(index=date_range)
         # load distance matrix
-        path = os.path.join(self.root_dir, 'metr_la_dist.npy')
+        path = os.path.join(self.root_dir, "metr_la_dist.npy")
         dist = np.load(path)
         return df, dist
 
     def load(self, impute_zeros=True):
         df, dist = self.load_raw()
-        mask = (df.values != 0.).astype('uint8')
+        mask = (df.values != 0.0).astype("uint8")
         if impute_zeros:
-            df = df.replace(to_replace=0., method='ffill')
+            df = df.replace(to_replace=0.0, method="ffill")
         return df, dist, mask
 
     def compute_similarity(self, method: str, **kwargs):

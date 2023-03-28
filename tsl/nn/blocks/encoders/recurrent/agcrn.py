@@ -5,6 +5,7 @@ from torch import Tensor
 from tsl.nn.layers.base import NodeEmbedding
 from tsl.nn.layers.graph_convs.adaptive_graph_conv import AdaptiveGraphConv
 from tsl.nn.layers.recurrent import AGCRNCell
+
 from .base import RNNBase
 
 
@@ -21,23 +22,32 @@ class AGCRN(RNNBase):
         n_layers: Number of recurrent layers.
     """
 
-    def __init__(self, input_size: int, emb_size: int, hidden_size: int,
-                 num_nodes: int,
-                 n_layers: int = 1, cat_states_layers: bool = False,
-                 return_only_last_state: bool = False,
-                 bias: bool = True):
+    def __init__(
+        self,
+        input_size: int,
+        emb_size: int,
+        hidden_size: int,
+        num_nodes: int,
+        n_layers: int = 1,
+        cat_states_layers: bool = False,
+        return_only_last_state: bool = False,
+        bias: bool = True,
+    ):
         self.input_size = input_size
         self.hidden_size = hidden_size
         rnn_cells = [
-            AGCRNCell(input_size if i == 0 else hidden_size,
-                      emb_size=emb_size,
-                      hidden_size=hidden_size,
-                      num_nodes=num_nodes,
-                      bias=bias)
+            AGCRNCell(
+                input_size if i == 0 else hidden_size,
+                emb_size=emb_size,
+                hidden_size=hidden_size,
+                num_nodes=num_nodes,
+                bias=bias,
+            )
             for i in range(n_layers)
         ]
-        super(AGCRN, self).__init__(rnn_cells, cat_states_layers,
-                                    return_only_last_state)
+        super(AGCRN, self).__init__(
+            rnn_cells, cat_states_layers, return_only_last_state
+        )
         self.node_emb = NodeEmbedding(num_nodes, emb_size)
 
     def forward(self, x: Tensor, h: Optional[Tensor] = None):

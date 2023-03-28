@@ -26,8 +26,8 @@ class LayerNorm(torch.nn.Module):
             self.weight = Parameter(torch.Tensor(in_channels))
             self.bias = Parameter(torch.Tensor(in_channels))
         else:
-            self.register_parameter('weight', None)
-            self.register_parameter('bias', None)
+            self.register_parameter("weight", None)
+            self.register_parameter("bias", None)
 
         self.reset_parameters()
 
@@ -48,4 +48,4 @@ class LayerNorm(torch.nn.Module):
         return out
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self.in_channels})'
+        return f"{self.__class__.__name__}({self.in_channels})"

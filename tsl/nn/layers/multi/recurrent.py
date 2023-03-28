@@ -3,8 +3,8 @@ from typing import Tuple
 import torch
 from torch import Tensor
 
-from .linear import MultiLinear
 from ..recurrent.base import GRUCellBase, LSTMCellBase
+from .linear import MultiLinear
 
 
 class MultiGRUCell(GRUCellBase):
@@ -49,25 +49,39 @@ class MultiGRUCell(GRUCellBase):
         torch.Size([64, 12, 10, 32])
     """
 
-    def __init__(self, input_size: int, hidden_size: int, n_instances: int,
-                 bias: bool = True,
-                 device=None, dtype=None) -> None:
-        factory_kwargs = {'device': device, 'dtype': dtype}
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        n_instances: int,
+        bias: bool = True,
+        device=None,
+        dtype=None,
+    ) -> None:
+        factory_kwargs = {"device": device, "dtype": dtype}
         self.input_size = input_size
         self.n_instances = n_instances
         # instantiate gates
         in_size = input_size + hidden_size
-        forget_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                  **factory_kwargs)
-        update_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                  **factory_kwargs)
-        candidate_gate = MultiLinear(in_size, hidden_size, n_instances,
-                                     bias=bias, **factory_kwargs)
+        forget_gate = MultiLinear(
+            in_size, hidden_size, n_instances, bias=bias, **factory_kwargs
+        )
+        update_gate = MultiLinear(
+            in_size, hidden_size, n_instances, bias=bias, **factory_kwargs
+        )
+        candidate_gate = MultiLinear(
+            in_size, hidden_size, n_instances, bias=bias, **factory_kwargs
+        )
         super().__init__(hidden_size, forget_gate, update_gate, candidate_gate)
 
     def initialize_state(self, x) -> Tensor:
-        return torch.zeros(x.size(0), self.n_instances, self.hidden_size,
-                           dtype=x.dtype, device=x.device)
+        return torch.zeros(
+            x.size(0),
+            self.n_instances,
+            self.hidden_size,
+            dtype=x.dtype,
+            device=x.device,
+        )
 
 
 class MultiLSTMCell(LSTMCellBase):
@@ -114,27 +128,48 @@ class MultiLSTMCell(LSTMCellBase):
         torch.Size([64, 12, 10, 32])
     """
 
-    def __init__(self, input_size: int, hidden_size: int, n_instances: int,
-                 bias: bool = True,
-                 device=None, dtype=None) -> None:
-        factory_kwargs = {'device': device, 'dtype': dtype}
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        n_instances: int,
+        bias: bool = True,
+        device=None,
+        dtype=None,
+    ) -> None:
+        factory_kwargs = {"device": device, "dtype": dtype}
         self.input_size = input_size
         self.n_instances = n_instances
         # instantiate gates
         in_size = input_size + hidden_size
-        input_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                 **factory_kwargs)
-        forget_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                  **factory_kwargs)
-        cell_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                **factory_kwargs)
-        output_gate = MultiLinear(in_size, hidden_size, n_instances, bias=bias,
-                                  **factory_kwargs)
-        super().__init__(hidden_size, input_gate, forget_gate,
-                         cell_gate, output_gate)
+        input_gate = MultiLinear(
+            in_size, hidden_size, n_instances, bias=bias, **factory_kwargs
+        )
+        forget_gate = MultiLinear(
+            in_size, hidden_size, n_instances, bias=bias, **factory_kwargs
+        )
+        cell_gate = MultiLinear(
+            in_size, hidden_size, n_instances, bias=bias, **factory_kwargs
+        )
+        output_gate = MultiLinear(
+            in_size, hidden_size, n_instances, bias=bias, **factory_kwargs
+        )
+        super().__init__(hidden_size, input_gate, forget_gate, cell_gate, output_gate)
 
     def initialize_state(self, x) -> Tuple[Tensor, Tensor]:
-        return (torch.zeros(x.size(0), self.n_instances, self.hidden_size,
-                            dtype=x.dtype, device=x.device),
-                torch.zeros(x.size(0), self.n_instances, self.hidden_size,
-                            dtype=x.dtype, device=x.device))
+        return (
+            torch.zeros(
+                x.size(0),
+                self.n_instances,
+                self.hidden_size,
+                dtype=x.dtype,
+                device=x.device,
+            ),
+            torch.zeros(
+                x.size(0),
+                self.n_instances,
+                self.hidden_size,
+                dtype=x.dtype,
+                device=x.device,
+            ),
+        )

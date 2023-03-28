@@ -2,7 +2,7 @@ from einops import rearrange
 from torch import nn
 
 from tsl.nn.blocks.decoders.gcn_decoder import GCNDecoder
-from tsl.nn.blocks.encoders import ConditionalBlock, RNN
+from tsl.nn.blocks.encoders import RNN, ConditionalBlock
 from tsl.nn.models import BaseModel
 
 
@@ -29,36 +29,42 @@ class RNNEncGCNDecModel(BaseModel):
         activation (str, optional): Activation function.
     """
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 output_size,
-                 exog_size,
-                 rnn_layers,
-                 gcn_layers,
-                 rnn_dropout,
-                 gcn_dropout,
-                 horizon,
-                 cell_type='gru',
-                 activation='relu'):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        output_size,
+        exog_size,
+        rnn_layers,
+        gcn_layers,
+        rnn_dropout,
+        gcn_dropout,
+        horizon,
+        cell_type="gru",
+        activation="relu",
+    ):
         super(RNNEncGCNDecModel, self).__init__()
 
         if exog_size:
-            self.input_encoder = ConditionalBlock(input_size=input_size,
-                                                  exog_size=exog_size,
-                                                  output_size=hidden_size,
-                                                  activation=activation)
+            self.input_encoder = ConditionalBlock(
+                input_size=input_size,
+                exog_size=exog_size,
+                output_size=hidden_size,
+                activation=activation,
+            )
         else:
             self.input_encoder = nn.Sequential(
                 nn.Linear(input_size, hidden_size),
             )
 
-        self.encoder = RNN(input_size=hidden_size,
-                           hidden_size=hidden_size,
-                           n_layers=rnn_layers,
-                           return_only_last_state=True,
-                           dropout=rnn_dropout,
-                           cell=cell_type)
+        self.encoder = RNN(
+            input_size=hidden_size,
+            hidden_size=hidden_size,
+            n_layers=rnn_layers,
+            return_only_last_state=True,
+            dropout=rnn_dropout,
+            cell=cell_type,
+        )
 
         self.decoder = GCNDecoder(
             input_size=hidden_size,
@@ -67,7 +73,7 @@ class RNNEncGCNDecModel(BaseModel):
             horizon=horizon,
             n_layers=gcn_layers,
             activation=activation,
-            dropout=gcn_dropout
+            dropout=gcn_dropout,
         )
 
     def forward(self, x, edge_index, edge_weight, u=None, **kwargs):
@@ -76,7 +82,7 @@ class RNNEncGCNDecModel(BaseModel):
         # u: [batches steps (nodes) features]
         if u is not None:
             if u.dim() == 3:
-                u = rearrange(u, 'b s f -> b s 1 f')
+                u = rearrange(u, "b s f -> b s 1 f")
             x = self.input_encoder(x, u)
         else:
             x = self.input_encoder(x)
