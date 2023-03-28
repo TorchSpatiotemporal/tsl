@@ -1,6 +1,6 @@
 <div align="center">
     <br><br>
-    <img src=./docs/source/_static/img/tsl_logo_text.svg width="75%"/>
+    <img alt="Torch Spatiotemporal" src=./docs/source/_static/img/tsl_logo_text.svg width="85%"/>
     <h3>Neural spatiotemporal forecasting with PyTorch</h3>
     <hr>
     <p>

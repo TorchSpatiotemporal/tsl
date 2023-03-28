@@ -1,7 +1,7 @@
 Data Structures
 ===============
 
-TSL is meant to deal with discrete-time spatiotemporal data, i.e., signals that
+:tsl:`tsl` is meant to deal with discrete-time spatiotemporal data, i.e., signals that
 evolve over discrete points in time and space. Common input examples
 are data coming from sensor networks. In principle, data of this kind can be
 represented by 3-dimensional tensors, with:
@@ -11,7 +11,7 @@ represented by 3-dimensional tensors, with:
 #. The **Features** (:obj:`f`) or **Channels** dimension, allowing for multiple (heterogeneous) measurements at the same spatio-temporal point.
 
 We call a **spatiotemporal graph** a tensor with finite :obj:`t`, :obj:`n`, and
-:obj:`f` dimensions, paired with the underlying topology. In TSL, we use the
+:obj:`f` dimensions, paired with the underlying topology. In :tsl:`tsl`, we use the
 class :class:`tsl.data.Data` to represent and store the attributes of
 a single spatiotemporal graph.
 
@@ -100,7 +100,7 @@ a best practice to explicit them in the ``Data`` object through **patterns**.
 
     The usage of patterns is not mandatory, although they clarify the dimensions
     of each tensor in a spatiotemporal graph object and are used internally by
-    TSL for operations on graphs (e.g., reduction to subgraph, temporal
+    :tsl:`tsl` for operations on graphs (e.g., reduction to subgraph, temporal
     resampling, tensors collation).
 
 The ``StaticBatch`` object

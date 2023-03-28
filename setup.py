@@ -35,6 +35,7 @@ full_install_requires = plot_requires + experiment_requires + [
 ]
 
 doc_requires = full_install_requires + [
+    'docutils',
     'sphinx',
     'sphinx-design',
     'sphinx-copybutton',

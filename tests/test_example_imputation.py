@@ -11,7 +11,7 @@ from tsl import __path__ as tsl_path
 from tsl.data import SpatioTemporalDataModule, ImputationDataset
 from tsl.data.preprocessing import StandardScaler
 from tsl.datasets import MetrLA, PemsBay, AirQuality
-from tsl.engines import Predictor, Imputer
+from tsl.engines import Imputer
 from tsl.metrics import torch as torch_metrics, numpy as numpy_metrics
 from tsl.nn.models import RNNImputerModel, BiRNNImputerModel, GRINModel
 from tsl.ops.imputation import add_missing_values

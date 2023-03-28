@@ -4,7 +4,7 @@
 Data structures
 ===============
 
-The module :mod:`tsl.data` contains all the classes and methods used in tsl to
+The module :mod:`tsl.data` contains all the classes and methods used in :tsl:`tsl` to
 store, represent, and process spatiotemporal data in PyTorch.
 
 .. toctree::

@@ -13,7 +13,7 @@ in such a map-style dataset is retrieved by ``dataset[idx]`` (see the `PyTorch
 tutorial <https://pytorch.org/tutorials/beginner/basics/data_tutorial.html>`_
 on datasets and dataloaders for more information).
 
-The main class in TSL for handling spatiotemporal datasets is the
+The main class in :tsl:`tsl` for handling spatiotemporal datasets is the
 :class:`tsl.data.SpatioTemporalDataset` object, that inherits directly from the
 PyTorch ``Dataset``. The core functionality of :obj:`SpatioTemporalDataset` is
 to map (long) sequence of spatiotemporal data into :class:`tsl.data.Data`
@@ -213,7 +213,7 @@ Understanding patterns
 
 The `t > n > f` Convention
 ++++++++++++++++++++++++++
-In TSL, tabular data of this form are represented by following the [Time, Node, Features]
+In :tsl:`tsl`, tabular data of this form are represented by following the [Time, Node, Features]
 (T N F) convention. Considering the previous example, we represent measurements
 acquired by 400 air quality monitoring stations in a day (with a sampling interval
 of one hour) as a tensor :math:`\mathbf{X}` with dimensions :math:`\left(24, 400, 3 \right)`.

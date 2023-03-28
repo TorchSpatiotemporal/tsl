@@ -3,7 +3,8 @@ Inference engines
 
 The module :mod:`tsl.engines` contains inference engines, i.e., modules meant
 to wrap deep models in order to ease training and inference phases.
-Every engine extends a :class:`~pytorch_lightning.core.LightningModule`.
+Every engine extends a :class:`~pytorch_lightning.core.LightningModule` from
+:lightning:`Lightning`.
 
 Currently, there are two basic engines:
 

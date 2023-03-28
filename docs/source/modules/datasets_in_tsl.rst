@@ -1,8 +1,8 @@
 .. py:module:: tsl.datasets
 .. currentmodule:: tsl.datasets
 
-Datasets in TSL
-===============
+Datasets in :tsl:`tsl`
+======================
 
 .. autosummary::
    :nosignatures:

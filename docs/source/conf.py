@@ -2,6 +2,8 @@ import datetime
 import doctest
 import os
 
+from docutils import nodes
+
 import tsl
 
 os.environ["PYTORCH_JIT"] = '0'  # generate doc for torch.jit.script methods
@@ -73,6 +75,7 @@ html_title = "Torch Spatiotemporal"
 html_theme = 'furo'
 language = "en"
 
+html_baseurl = ''
 html_static_path = ['_static']
 html_logo = '_static/img/tsl_logo_text.svg'
 html_favicon = '_static/img/tsl_logo.svg'
@@ -123,6 +126,26 @@ hoverxref_intersphinx = ['PyG', 'numpy']
 # -- Setup options -----------------------------------------------------------
 #
 
+
+def logo_role(name, rawtext, text, *args, **kwargs):
+    if name == 'tsl':
+        url = f'{html_baseurl}/_static/img/tsl_logo.svg'
+    elif name == 'hydra':
+        url = f'{html_baseurl}/_static/img/logos/hydra-head.svg'
+    elif name in ['pyg', 'pytorch', 'lightning']:
+        url = f'{html_baseurl}/_static/img/logos/{name}.svg'
+    else:
+        raise RuntimeError
+    node = nodes.image(uri=url,
+                       alt=str(name).capitalize() + ' logo')
+    node['classes'] += ['inline-logo', name]
+    if text != 'null':
+        node['classes'].append('with-text')
+        span = nodes.inline(text=text)
+        return [node, span], []
+    return [node], []
+
+
 def setup(app):
     def rst_jinja_render(app, docname, source):
         src = source[0]
@@ -130,3 +153,9 @@ def setup(app):
         source[0] = rendered
 
     app.connect("source-read", rst_jinja_render)
+
+    app.add_role('tsl', logo_role)
+    app.add_role('pyg', logo_role)
+    app.add_role('pytorch', logo_role)
+    app.add_role('hydra', logo_role)
+    app.add_role('lightning', logo_role)

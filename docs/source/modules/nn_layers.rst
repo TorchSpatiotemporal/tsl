@@ -1,7 +1,7 @@
 Layers
 ======
 
-This module contains all the neural layers available in tsl.
+This module contains all the neural layers available in :tsl:`tsl`.
 
 
 Graph Convolutional Layers

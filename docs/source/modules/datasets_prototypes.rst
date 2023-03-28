@@ -9,7 +9,7 @@ in creating new datasets. All datasets provided by the library are implemented
 extending these interfaces.
 
 The most general interface is :class:`~tsl.datasets.prototypes.Dataset`, which is the
-parent class for every dataset in tsl. The more complete class
+parent class for every dataset in :tsl:`tsl`. The more complete class
 :class:`~tsl.datasets.prototypes.TabularDataset` provides useful functionalities for
 multivariate time series datasets with data in a tabular format, i.e., with
 time, node and feature dimensions. Data passed to this dataset should be

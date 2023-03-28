@@ -2,7 +2,7 @@ Transforms
 ==========
 
 In the spirit of `torchvision <https://pytorch.org/vision/stable/>`_ and
-`PyG <https://www.pyg.org/>`_, this module contains transform operations
+:pyg:`null` `PyG <https://www.pyg.org/>`_, this module contains transform operations
 called on every :class:`~tsl.data.SpatioTemporalDataset` item get.
 A ``transform`` object expects a :class:`~tsl.data.Data` object as input and
 returns a transformed object of the same type.

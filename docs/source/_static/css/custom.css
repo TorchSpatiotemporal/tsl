@@ -52,6 +52,7 @@ section#torch-spatiotemporal h1 {
     #particles-js {
         height: 15rem;
     }
+
     .hero-lead {
         font-size: 100%;
     }
@@ -95,7 +96,18 @@ code.literal {
     display: none;
 }
 
-/*.left-details {
-    overflow-y: hidden;
-    height: 1.35rem;
-}*/
+/* Logos */
+
+img.inline-logo {
+    display: inline-block;
+    width: 1.2em;
+    vertical-align: text-top;
+}
+
+img.inline-logo.with-text {
+    margin-right: .2em;
+}
+
+img.inline-logo.tsl {
+    width: 1.3em;
+}

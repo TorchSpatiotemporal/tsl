@@ -15,9 +15,9 @@ Torch Spatiotemporal
     <script src="_static/js/particles.js"></script>
     <script src="_static/js/particles_config.js"></script>
 
-**Torch Spatiotemporal** (tsl) is a python library for **neural spatiotemporal data processing**, with a focus on Graph Neural Networks.
+:tsl:`null` **Torch Spatiotemporal** (tsl) is a python library for **neural spatiotemporal data processing**, with a focus on Graph Neural Networks.
 
-It is built upon the most used libraries of the python scientific computing ecosystem, with the final objective of providing a straightforward process that goes from data preprocessing to model prototyping. In particular, tsl offers a wide range of utilities to develop neural networks in `PyTorch <https://pytorch.org/>`_ and `PyG <https://www.pyg.org/>`_ for processing spatiotemporal data signals.
+It is built upon the most used libraries of the python scientific computing ecosystem, with the final objective of providing a straightforward process that goes from data preprocessing to model prototyping. In particular, :tsl:`tsl` offers a wide range of utilities to develop neural networks in :pytorch:`null` `PyTorch <https://pytorch.org/>`_ and :pyg:`null` `PyG <https://www.pyg.org/>`_ for processing spatiotemporal data signals.
 
 In detail, the package provide:
 
@@ -25,11 +25,11 @@ In detail, the package provide:
 * Tools to deal with irregularities in the data stream: missing data, variations in the underlying network, etc.
 * Automatization of the preprocessing phase, with methods to scale and detrend the time series (see :doc:`modules/data_preprocessing` section).
 * A set of most used datasets in spatiotemporal data processing literature (see :doc:`modules/datasets` section).
-* A straightforward way of building spatiotemporal datasets that work with `PyTorch <https://pytorch.org/>`_ and `PyG <https://www.pyg.org/>`_ (see :doc:`modules/data` section).
-* Out-of-the-box scalability -- from a single CPU to clusters of GPUs -- with `PyTorch Lightning <https://www.pytorchlightning.ai/>`_  (see :doc:`modules/engines` section).
+* A straightforward way of building spatiotemporal datasets that work with :pytorch:`null` `PyTorch <https://pytorch.org/>`_ and :pyg:`null` `PyG <https://www.pyg.org/>`_ (see :doc:`modules/data` section).
+* Out-of-the-box scalability -- from a single CPU to clusters of GPUs -- with :lightning:`null` `PyTorch Lightning <https://www.pytorchlightning.ai/>`_  (see :doc:`modules/engines` section).
 * Plug-and-play state-of-the-art models from neural spatiotemporal literature (see :doc:`modules/nn_models` section).
 * A collection of neural layers for creating neural spatiotemporal models in a fast and modular way (see :doc:`modules/nn_layers` section).
-* A standard for experiment reproducibility based on the `Hydra <https://hydra.cc/>`_ framework, to promote and support research on spatiotemporal data mining  (see :doc:`modules/experiment` section).
+* A standard for experiment reproducibility based on the :hydra:`null` `Hydra <https://hydra.cc/>`_ framework, to promote and support research on spatiotemporal data mining  (see :doc:`modules/experiment` section).
 
 ----
 
@@ -39,7 +39,7 @@ In detail, the package provide:
 
     -- Isaac Newton
 
-tsl relies heavily on these libraries for its functionalities:
+:tsl:`tsl` relies heavily on these libraries for its functionalities:
 
 .. grid:: 3 6 6 6
     :gutter: 2
@@ -89,21 +89,21 @@ Get started
         :link-type: doc
         :shadow: sm
 
-        Read the guide on how to to install tsl on your system.
+        Read the guide on how to to install :tsl:`tsl` on your system.
 
     .. grid-item-card::  :octicon:`gear;1em;sd-text-primary` Usage
         :link: usage/spatiotemporal_dataset
         :link-type: doc
         :shadow: sm
 
-        Look at the basic functionalities of tsl for spatiotemporal data processing.
+        Look at the basic functionalities of :tsl:`tsl` for spatiotemporal data processing.
 
     .. grid-item-card::  :octicon:`file-code;1em;sd-text-primary` Notebooks
         :link: usage/notebooks
         :link-type: doc
         :shadow: sm
 
-        Check the notebooks for tutorial to use tsl at the best.
+        Check the notebooks for tutorial to use :tsl:`tsl` at the best.
 
     .. grid-item-card::  :octicon:`repo;1em;sd-text-primary` Package API
         :link: py-modindex

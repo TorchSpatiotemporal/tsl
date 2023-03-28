@@ -4,16 +4,16 @@ Quickstart
 Installation
 ------------
 
-Torch Spatiotemporal is compatible with Python>=3.8. We recommend installation
+:tsl:`tsl` is compatible with Python>=3.8. We recommend installation
 on a `Anaconda or Miniconda <https://conda.io/projects/conda/en/latest/user-guide/install>`_
 environment or a `virtual env <https://docs.python.org/3/library/venv.html>`_.
 
 .. admonition:: Before installation
    :class: caution
 
-   Torch Spatiotemporal is built upon `PyTorch>=1.9 <https://pytorch.org/>`_ and
+   :tsl:`tsl` is built upon `PyTorch>=1.9 <https://pytorch.org/>`_ and
    `PyG>=2.0.3 <https://github.com/pyg-team/pytorch_geometric/>`_. Make sure you have
-   both installed in your environment before installing tsl. In the following,
+   both installed in your environment before installing :tsl:`tsl`. In the following,
    we provide instructions on how to install them for the chosen installation
    procedure.
 
@@ -26,7 +26,7 @@ Installing using conda
     Using conda allows to automatically solve PyTorch and PyG dependencies,
     choosing the latest CUDA version available supported by the system.
 
-To install tsl using conda, clone the repository, navigate to the library root
+To install :tsl:`tsl` using conda, clone the repository, navigate to the library root
 directory and create a new conda environment using the provided conda configuration:
 
 .. code:: bash
@@ -35,7 +35,7 @@ directory and create a new conda environment using the provided conda configurat
     cd tsl
     conda env create -f conda_env.yml
 
-Then, activate the environment and install tsl using :code:`pip`.
+Then, activate the environment and install :tsl:`tsl` using :code:`pip`.
 
 .. code:: bash
 
@@ -44,7 +44,7 @@ Then, activate the environment and install tsl using :code:`pip`.
 
 .. note::
 
-   Installation of tsl directly from conda is on the roadmap!
+   Installation of :tsl:`tsl` directly from conda is on the roadmap!
 
 
 Installing using pip
