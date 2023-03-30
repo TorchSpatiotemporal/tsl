@@ -86,8 +86,8 @@ def test_example_imputation():
 
     # instantiate dataset
     torch_dataset = ImputationDataset(target=dataset.dataframe(),
+                                      mask=dataset.training_mask,
                                       eval_mask=dataset.eval_mask,
-                                      eval_mask=dataset.training_mask,
                                       transform=MaskInput(),
                                       connectivity=adj,
                                       window=cfg.window,
@@ -192,7 +192,7 @@ def test_example_imputation():
     output = trainer.predict(imputer, dataloaders=dm.val_dataloader())
     output = torch_to_numpy(output)
     y_hat, y_true, mask = (output['y_hat'], output['y'],
-                           output.get('mask', None))
+                           output.get('eval_mask', None))
     res_functional.update(
         dict(val_mae=numpy_metrics.mae(y_hat, y_true, mask),
              val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
