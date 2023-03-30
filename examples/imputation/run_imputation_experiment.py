@@ -193,7 +193,7 @@ def run_imputation(cfg: DictConfig):
     output = trainer.predict(imputer, dataloaders=dm.val_dataloader())
     output = torch_to_numpy(output)
     y_hat, y_true, mask = (output['y_hat'], output['y'],
-                           output.get('mask', None))
+                           output.get('eval_mask', None))
     res.update(
         dict(val_mae=numpy_metrics.mae(y_hat, y_true, mask),
              val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),

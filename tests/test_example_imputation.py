@@ -182,7 +182,7 @@ def test_example_imputation():
     output = trainer.predict(imputer, dataloaders=dm.test_dataloader())
     output = torch_to_numpy(output)
     y_hat, y_true, mask = (output['y_hat'], output['y'],
-                           output.get('mask', None))
+                           output.get('eval_mask', None))
     res_functional = dict(test_mae=numpy_metrics.mae(y_hat, y_true, mask),
                           test_mre=numpy_metrics.mre(y_hat, y_true, mask),
                           test_mape=numpy_metrics.mape(y_hat, y_true, mask))

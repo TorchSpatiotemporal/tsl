@@ -105,21 +105,6 @@ class ImputationDataset(SpatioTemporalDataset):
                  precision: Union[int, str] = 32,
                  name: Optional[str] = None):
 
-        if covariates is None:
-            covariates = dict()
-        # add to covariate
-        covariates['eval_mask'] = dict(value=eval_mask,
-                                       pattern='t n f',
-                                       add_to_input_map=True,
-                                       synch_mode=HORIZON,
-                                       preprocess=False)
-        # add to input map
-        if input_map is not None:
-            input_map['eval_mask'] = BatchMapItem('eval_mask',
-                                                  synch_mode=HORIZON,
-                                                  pattern='t n f',
-                                                  preprocess=False)
-
         horizon = window
         delay = -window
         horizon_lag = window_lag
@@ -143,6 +128,19 @@ class ImputationDataset(SpatioTemporalDataset):
                                                 horizon_lag=horizon_lag,
                                                 precision=precision,
                                                 name=name)
+        # add eval_mask as covariate
+        self.add_covariate(
+            name='eval_mask',
+            value=eval_mask,
+            pattern='t n f',
+            add_to_input_map=False,  # NB
+            synch_mode=HORIZON,
+            preprocess=False)
+        # add eval_mask to auxiliary map
+        self.auxiliary_map['eval_mask'] = BatchMapItem('eval_mask',
+                                                       synch_mode=HORIZON,
+                                                       pattern='t n f',
+                                                       preprocess=False)
 
         # ensure evaluation datapoints are removed from input
         if mask is not None:
@@ -151,3 +149,5 @@ class ImputationDataset(SpatioTemporalDataset):
             mask = torch.logical_not(
                 self.eval_mask) & ~torch.isnan(self.target)
         self.set_mask(mask)
+        # add to mask to input map
+        self.update_input_map(mask='mask')
