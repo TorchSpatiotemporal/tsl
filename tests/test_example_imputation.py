@@ -87,7 +87,7 @@ def test_example_imputation():
     # instantiate dataset
     torch_dataset = ImputationDataset(target=dataset.dataframe(),
                                       eval_mask=dataset.eval_mask,
-                                      input_mask=dataset.training_mask,
+                                      eval_mask=dataset.training_mask,
                                       transform=MaskInput(),
                                       connectivity=adj,
                                       window=cfg.window,

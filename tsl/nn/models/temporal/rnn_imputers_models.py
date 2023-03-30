@@ -90,7 +90,7 @@ class RNNImputerModel(BaseModel):
 
     def forward(self,
                 x: Tensor,
-                input_mask: Tensor,
+                mask: Tensor,
                 u: Optional[Tensor] = None,
                 return_hidden: bool = False) -> Union[Tensor, list]:
         """"""
@@ -98,7 +98,7 @@ class RNNImputerModel(BaseModel):
         nodes = x.size(2)
 
         x = rearrange(x, f'b t n f -> {self._to_pattern}')
-        input_mask = rearrange(input_mask, f'b t n f -> {self._to_pattern}')
+        mask = rearrange(mask, f'b t n f -> {self._to_pattern}')
 
         if u is not None:
             if self.fully_connected:  # fc and 'b t f'
@@ -110,7 +110,7 @@ class RNNImputerModel(BaseModel):
             else:  # no fc and 'b t n f'
                 u = rearrange(u, f'b t n f -> {self._to_pattern}')
 
-        x_hat, h, _ = self.rnn(x, input_mask, u)
+        x_hat, h, _ = self.rnn(x, mask, u)
 
         x_hat = rearrange(x_hat, f'{self._to_pattern} -> b t n f', n=nodes)
 
@@ -123,13 +123,10 @@ class RNNImputerModel(BaseModel):
 
     def predict(self,
                 x: Tensor,
-                input_mask: Tensor,
+                mask: Tensor,
                 u: Optional[Tensor] = None) -> Tensor:
         """"""
-        return self.forward(x=x,
-                            input_mask=input_mask,
-                            u=u,
-                            return_hidden=False)
+        return self.forward(x=x, mask=mask, u=u, return_hidden=False)
 
 
 class BiRNNImputerModel(BaseModel):
@@ -237,7 +234,7 @@ class BiRNNImputerModel(BaseModel):
 
     def forward(self,
                 x: Tensor,
-                input_mask: Tensor,
+                mask: Tensor,
                 u: Optional[Tensor] = None,
                 return_hidden: bool = False,
                 return_predictions: bool = True) -> Union[Tensor, list]:
@@ -246,7 +243,7 @@ class BiRNNImputerModel(BaseModel):
         nodes = x.size(2)
 
         x = rearrange(x, f'b t n f -> {self._to_pattern}')
-        input_mask = rearrange(input_mask, f'b t n f -> {self._to_pattern}')
+        mask = rearrange(mask, f'b t n f -> {self._to_pattern}')
 
         if u is not None:
             if self.fully_connected:  # fc and 'b t f'
@@ -258,8 +255,8 @@ class BiRNNImputerModel(BaseModel):
             else:  # no fc and 'b t n f'
                 u = rearrange(u, f'b t n f -> {self._to_pattern}')
 
-        x_hat_fwd, h_fwd, _ = self.fwd_rnn(x, input_mask, u)
-        x_hat_bwd, h_bwd, _ = self.bwd_rnn(x, input_mask, u)
+        x_hat_fwd, h_fwd, _ = self.fwd_rnn(x, mask, u)
+        x_hat_bwd, h_bwd, _ = self.bwd_rnn(x, mask, u)
 
         if not self.fully_connected:
             h_fwd = rearrange(h_fwd, f'{self._to_pattern} -> b t n f', n=nodes)
@@ -287,11 +284,11 @@ class BiRNNImputerModel(BaseModel):
 
     def predict(self,
                 x: Tensor,
-                input_mask: Tensor,
+                mask: Tensor,
                 u: Optional[Tensor] = None) -> Tensor:
         """"""
         return self.forward(x=x,
-                            input_mask=input_mask,
+                            mask=mask,
                             u=u,
                             return_hidden=False,
                             return_predictions=False)

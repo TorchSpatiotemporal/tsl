@@ -102,18 +102,18 @@ class GRINModel(BaseModel):
                 x: Tensor,
                 edge_index: Adj,
                 edge_weight: OptTensor = None,
-                input_mask: OptTensor = None,
+                mask: OptTensor = None,
                 u: OptTensor = None) -> list:
         """"""
         # x: [batch, steps, nodes, channels]
         fwd_out, fwd_pred, fwd_repr, _ = self.fwd_gril(x,
                                                        edge_index,
                                                        edge_weight,
-                                                       mask=input_mask,
+                                                       mask=mask,
                                                        u=u)
         # Backward
         rev_x = x.flip(1)
-        rev_mask = input_mask.flip(1) if input_mask is not None else None
+        rev_mask = mask.flip(1) if mask is not None else None
         rev_u = u.flip(1) if u is not None else None
         *bwd, _ = self.bwd_gril(rev_x,
                                 edge_index,
@@ -123,7 +123,7 @@ class GRINModel(BaseModel):
         bwd_out, bwd_pred, bwd_repr = [res.flip(1) for res in bwd]
 
         if self.merge_mode == 'mlp':
-            inputs = [fwd_repr, bwd_repr, input_mask]
+            inputs = [fwd_repr, bwd_repr, mask]
             if self.emb is not None:
                 b, s, *_ = fwd_repr.size()  # fwd_h: [b t n f]
                 inputs += [self.emb(expand=(b, s, -1, -1))]
@@ -139,11 +139,11 @@ class GRINModel(BaseModel):
                 x: Tensor,
                 edge_index: Adj,
                 edge_weight: OptTensor = None,
-                input_mask: OptTensor = None,
+                mask: OptTensor = None,
                 u: OptTensor = None) -> Tensor:
         """"""
         imputation = self.forward(x=x,
-                                  input_mask=input_mask,
+                                  mask=mask,
                                   u=u,
                                   edge_index=edge_index,
                                   edge_weight=edge_weight)[0]

@@ -72,8 +72,8 @@ def run_imputation(cfg: DictConfig):
 
     # instantiate dataset
     torch_dataset = ImputationDataset(target=dataset.dataframe(),
+                                      mask=dataset.training_mask,
                                       eval_mask=dataset.eval_mask,
-                                      input_mask=dataset.training_mask,
                                       covariates=covariates,
                                       transform=MaskInput(),
                                       connectivity=adj,
@@ -185,7 +185,7 @@ def run_imputation(cfg: DictConfig):
     output = trainer.predict(imputer, dataloaders=dm.test_dataloader())
     output = torch_to_numpy(output)
     y_hat, y_true, mask = (output['y_hat'], output['y'],
-                           output.get('mask', None))
+                           output.get('eval_mask', None))
     res = dict(test_mae=numpy_metrics.mae(y_hat, y_true, mask),
                test_mre=numpy_metrics.mre(y_hat, y_true, mask),
                test_mape=numpy_metrics.mape(y_hat, y_true, mask))
