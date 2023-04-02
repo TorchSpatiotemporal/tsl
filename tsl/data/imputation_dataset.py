@@ -7,13 +7,13 @@ from tsl.typing import DataArray, SparseTensArray, TemporalIndex
 from .batch_map import BatchMap, BatchMapItem
 from .preprocessing import Scaler
 from .spatiotemporal_dataset import SpatioTemporalDataset
-from .synch_mode import HORIZON
+from .synch_mode import HORIZON, WINDOW
 
 
 class ImputationDataset(SpatioTemporalDataset):
     r"""A dataset for imputation tasks. It is a subclass of
-    :class:`SpatioTemporalDataset` and most of its attributes. The main
-    difference is the addition of a :obj:`eval_mask` attribute which is a
+    :class:`~tsl.data.SpatioTemporalDataset` and most of its attributes. The
+    main difference is the addition of a :obj:`eval_mask` attribute which is a
     boolean mask denoting if values to evaluate imputations.
 
     Args:
@@ -149,5 +149,23 @@ class ImputationDataset(SpatioTemporalDataset):
             mask = torch.logical_not(
                 self.eval_mask) & ~torch.isnan(self.target)
         self.set_mask(mask)
-        # add to mask to input map
-        self.update_input_map(mask='mask')
+        # add mask to input map
+        self.input_map['mask'] = BatchMapItem('mask',
+                                              synch_mode=WINDOW,
+                                              pattern='t n f',
+                                              preprocess=False,
+                                              shape=self.mask.shape)
+
+    def reset_auxiliary_map(self):
+        self._clear_batch_map('auxiliary')
+        self.auxiliary_map['eval_mask'] = BatchMapItem('eval_mask',
+                                                       synch_mode=HORIZON,
+                                                       pattern='t n f',
+                                                       preprocess=False)
+
+    def reset_input_map(self):
+        super().reset_input_map()
+        self.input_map['mask'] = BatchMapItem('mask',
+                                              synch_mode=WINDOW,
+                                              pattern='t n f',
+                                              preprocess=False)

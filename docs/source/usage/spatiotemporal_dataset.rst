@@ -152,10 +152,11 @@ series conditioned to a (finite) set of past observations. We call the
 spatial and features dimensions -- the **target** of the dataset.
 
 The ``target`` argument is the only mandatory argument for creating a
-:class:`~tsl.data.SpatioTemporalDataset`. Unless otherwise specified (see
-`Mapping tensors to graph attributes`_), the tensor set as
-:attr:`~tsl.data.SpatioTemporalDataset.target` is mapped in dataset sample
+:class:`~tsl.data.SpatioTemporalDataset`. Unless otherwise specified, the tensor
+set as :attr:`~tsl.data.SpatioTemporalDataset.target` is mapped in dataset sample
 ``dataset[idx]`` as:
+
+.. (see `Mapping tensors to graph attributes`_)
 
 * ``dataset[idx].x``, the sequence of past observations, lasting for
   ``dataset.window`` time steps.
@@ -196,28 +197,28 @@ data refers to by means of **patterns**.
         Check the introductory notebook.
 
 
-Understanding patterns
-++++++++++++++++++++++
+..  Understanding patterns
+    ++++++++++++++++++++++
 
 
-Spatial relationships
----------------------
+    Spatial relationships
+    ---------------------
 
 
-Mapping tensors to graph attributes
------------------------------------
+    Mapping tensors to graph attributes
+    -----------------------------------
 
 
-Understanding patterns
-----------------------
+    Understanding patterns
+    ----------------------
 
-The `t > n > f` Convention
-++++++++++++++++++++++++++
-In :tsl:`tsl`, tabular data of this form are represented by following the [Time, Node, Features]
-(T N F) convention. Considering the previous example, we represent measurements
-acquired by 400 air quality monitoring stations in a day (with a sampling interval
-of one hour) as a tensor :math:`\mathbf{X}` with dimensions :math:`\left(24, 400, 3 \right)`.
+    The `t > n > f` Convention
+    ++++++++++++++++++++++++++
+    In :tsl:`tsl`, tabular data of this form are represented by following the [Time, Node, Features]
+    (T N F) convention. Considering the previous example, we represent measurements
+    acquired by 400 air quality monitoring stations in a day (with a sampling interval
+    of one hour) as a tensor :math:`\mathbf{X}` with dimensions :math:`\left(24, 400, 3 \right)`.
 
-.. Note::
-    Unless otherwise stated, all layers and models in :mod:`tsl.nn` expect
-    as input a 4-dim tensor shaped as :obj:`[batch_size, steps, nodes, channels]`.
+    .. Note::
+        Unless otherwise stated, all layers and models in :mod:`tsl.nn` expect
+        as input a 4-dim tensor shaped as :obj:`[batch_size, steps, nodes, channels]`.

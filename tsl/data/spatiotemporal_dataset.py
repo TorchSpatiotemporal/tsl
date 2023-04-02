@@ -207,8 +207,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
         # Updated auxiliary map (i.e., how to map data, exogenous and attribute
         # inside item)
+        self.reset_auxiliary_map()
         if auxiliary_map is not None:
-            self._update_batch_map('auxiliary', auxiliary_map)
+            self.set_auxiliary_map(auxiliary_map)
 
         # A scaler is a module that transforms data with a linear operation
         if scalers is not None:
@@ -485,8 +486,15 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                                             pattern='t n f',
                                             shape=self.shape)
 
-    def reset_auxiliary(self):
+    def reset_auxiliary_map(self):
         self._clear_batch_map('auxiliary')
+        if self.mask is not None:
+            self.auxiliary_map['mask'] = BatchMapItem('mask',
+                                                      SynchMode.HORIZON,
+                                                      preprocess=False,
+                                                      cat_dim=None,
+                                                      pattern='t n f',
+                                                      shape=self.mask.shape)
 
     def set_input_map(self, input_map=None, **kwargs):
         self._clear_batch_map('input')
@@ -586,10 +594,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             sample.input['edge_index'] = self.edge_index
             if self.edge_weight is not None:
                 sample.input['edge_weight'] = self.edge_weight
-
-        # get mask (if any)
-        if self.mask is not None:
-            sample.mask = self.mask[hrz_idxs]
 
         return sample
 
@@ -1290,6 +1294,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                      dataset,
                      connectivity: Optional[Union[SparseTensArray,
                                                   Tuple[DataArray]]] = None,
+                     covariate_keys: List[str] = None,
                      input_map: Optional[Union[Mapping, BatchMap]] = None,
                      target_map: Optional[Union[Mapping, BatchMap]] = None,
                      auxiliary_map: Optional[Union[Mapping, BatchMap]] = None,
@@ -1304,10 +1309,13 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         """Create a :class:`~tsl.data.SpatioTemporalDataset` from a
         :class:`~tsl.datasets.prototypes.TabularDataset`.
         """
+        covariates = dataset._covariates
+        if covariate_keys is not None:
+            covariates = {k: v for k, v in covariates if k in covariate_keys}
         return cls(target=dataset.target,
                    index=dataset.index,
                    mask=dataset.mask,
-                   covariates=dataset._covariates,
+                   covariates=covariates,
                    name=dataset.name,
                    precision=dataset.precision,
                    connectivity=connectivity,
