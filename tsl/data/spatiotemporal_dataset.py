@@ -207,7 +207,6 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
 
         # Updated auxiliary map (i.e., how to map data, exogenous and attribute
         # inside item)
-        self.reset_auxiliary_map()
         if auxiliary_map is not None:
             self.set_auxiliary_map(auxiliary_map)
 
@@ -778,7 +777,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         r"""Set sequence of primary channels at :obj:`self.data`."""
         self.target = self._parse_target(data)
 
-    def set_mask(self, mask: Optional[DataArray]):
+    def set_mask(self,
+                 mask: Optional[DataArray],
+                 add_to_auxiliary_map: bool = True):
         r"""Set mask of target channels, i.e., a bool for each (node, time
         step, channel) triplet denoting if corresponding value in target is
         observed (obj:`True`) or not (obj:`False`)."""
@@ -799,6 +800,13 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                                  'n_channels',
                                  'mask',
                                  allow_broadcasting=True)
+            if add_to_auxiliary_map:
+                self.auxiliary_map['mask'] = BatchMapItem('mask',
+                                                          SynchMode.HORIZON,
+                                                          preprocess=False,
+                                                          cat_dim=None,
+                                                          pattern='t n f',
+                                                          shape=mask.shape)
         self.mask = mask
 
     def set_connectivity(self,

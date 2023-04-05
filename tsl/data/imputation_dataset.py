@@ -19,12 +19,12 @@ class ImputationDataset(SpatioTemporalDataset):
     Args:
         target (DataArray): Data relative to the primary channels.
         eval_mask (DataArray): Boolean mask denoting values that can be used for
-            evaluating imputations. The mask is (1) if the corresponding value
-            can be used for evaluation and (0) otherwise.
+            evaluating imputations. The mask is :obj:`True` if the corresponding
+            value must be used for evaluation and :obj:`False` otherwise.
         index (TemporalIndex, optional): Temporal indices for the data.
             (default: :obj:`None`)
         mask (DataArray, optional): Boolean mask denoting if signal in data is
-            valid (1) or not (0).
+            valid (:obj:`True`) or not (:obj:`False`).
             (default: :obj:`None`)
         connectivity (SparseTensArray, tuple, optional): The adjacency matrix
             defining nodes' relational information. It can be either a
@@ -75,9 +75,6 @@ class ImputationDataset(SpatioTemporalDataset):
         window_lag (int): Sampling frequency (in number of steps) in lookback
             window.
             (default: 1)
-        horizon_lag (int): Sampling frequency (in number of steps) in prediction
-            horizon.
-            (default: 1)
         precision (int or str, optional): The float precision to store the data.
             Can be expressed as number (16, 32, or 64) or string ("half",
             "full", "double").
@@ -104,7 +101,6 @@ class ImputationDataset(SpatioTemporalDataset):
                  window_lag: int = 1,
                  precision: Union[int, str] = 32,
                  name: Optional[str] = None):
-
         horizon = window
         delay = -window
         horizon_lag = window_lag
@@ -144,17 +140,11 @@ class ImputationDataset(SpatioTemporalDataset):
 
         # ensure evaluation datapoints are removed from input
         if mask is not None:
-            mask = torch.logical_not(self.eval_mask) & mask
-        else:
-            mask = torch.logical_not(
-                self.eval_mask) & ~torch.isnan(self.target)
-        self.set_mask(mask)
-        # add mask to input map
-        self.input_map['mask'] = BatchMapItem('mask',
-                                              synch_mode=WINDOW,
-                                              pattern='t n f',
-                                              preprocess=False,
-                                              shape=self.mask.shape)
+            mask = ~torch.isnan(self.target)
+        mask = torch.logical_not(self.eval_mask) & mask
+
+        # set mask and add to input map
+        self.set_mask(mask, add_to_input_map=True)
 
     def reset_auxiliary_map(self):
         self._clear_batch_map('auxiliary')
@@ -165,7 +155,19 @@ class ImputationDataset(SpatioTemporalDataset):
 
     def reset_input_map(self):
         super().reset_input_map()
-        self.input_map['mask'] = BatchMapItem('mask',
-                                              synch_mode=WINDOW,
-                                              pattern='t n f',
-                                              preprocess=False)
+        if self.mask is not None:
+            self.input_map['mask'] = BatchMapItem('mask',
+                                                  synch_mode=WINDOW,
+                                                  pattern='t n f',
+                                                  preprocess=False)
+
+    def set_mask(self,
+                 mask: Optional[DataArray],
+                 add_to_input_map: bool = True):
+        super().set_mask(mask, add_to_auxiliary_map=False)
+        if mask is not None and add_to_input_map:
+            self.input_map['mask'] = BatchMapItem('mask',
+                                                  synch_mode=WINDOW,
+                                                  pattern='t n f',
+                                                  preprocess=False,
+                                                  shape=self.mask.shape)
