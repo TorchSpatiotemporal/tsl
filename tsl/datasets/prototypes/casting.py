@@ -99,4 +99,4 @@ def time_unit_to_nanoseconds(time_unit: str):
         return 365.2425 * 24 * 60 * 60 * 10**9
     elif time_unit == 'week':
         time_unit = 'W'
-    return pd.Timedelta('1' + time_unit).delta
+    return pd.Timedelta('1' + time_unit).value

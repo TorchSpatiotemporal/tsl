@@ -63,19 +63,18 @@ class NodeEmbedding(nn.Module):
 
     def forward(self,
                 expand: Optional[List] = None,
-                token_index: OptTensor = None,
-                tokens_first: bool = True):
+                node_index: OptTensor = None,
+                nodes_first: bool = True):
         """"""
         emb = self.get_emb()
-        if token_index is not None:
-            emb = emb[token_index]
-        if not tokens_first:
+        if node_index is not None:
+            emb = emb[node_index]
+        if not nodes_first:
             emb = emb.T
         if expand is None:
             return emb
         shape = [*emb.size()]
         view = [
-            1 if d > 0 else shape.pop(0 if tokens_first else -1)
-            for d in expand
+            1 if d > 0 else shape.pop(0 if nodes_first else -1) for d in expand
         ]
         return emb.view(*view).expand(*expand)
