@@ -139,7 +139,7 @@ class ImputationDataset(SpatioTemporalDataset):
                                                        preprocess=False)
 
         # ensure evaluation datapoints are removed from input
-        if mask is not None:
+        if mask is None:
             mask = ~torch.isnan(self.target)
         mask = torch.logical_not(self.eval_mask) & mask
 
