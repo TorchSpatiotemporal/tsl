@@ -107,6 +107,9 @@ class RNNI(RNNIBase):
         concat_mask (bool): If :obj:`True`, then the input tensor is
             concatenated to the mask when fed to the RNN cell.
             (default: :obj:`True`)
+        unitary_mask (bool): If :obj:`True`, then the mask is a single value
+            and applies to all features.
+            (default: :obj:`False`)
         flip_time (bool): If :obj:`True`, then the time is folded in the
             backward direction.
             (default: :obj:`False`)
@@ -127,6 +130,7 @@ class RNNI(RNNIBase):
                  exog_size: int = 0,
                  cell: str = 'gru',
                  concat_mask: bool = True,
+                 unitary_mask: bool = False,
                  flip_time: bool = False,
                  n_layers: int = 1,
                  detach_input: bool = False,
@@ -141,9 +145,11 @@ class RNNI(RNNIBase):
 
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.exog_size = exog_size
+        self.mask_size = 1 if unitary_mask else input_size
 
         if concat_mask:
-            input_size = 2 * input_size
+            input_size = input_size + self.mask_size
         input_size = input_size + exog_size
 
         cells = [
