@@ -9,13 +9,13 @@ with open("README.md", "r") as fh:
 install_requires = [
     'einops',
     'numpy>1.20.3',
-    'pandas>=1.4,<1.5',
-    'pytorch_lightning>=1.8,<1.9',
+    'pandas>=1.4',
+    'pytorch_lightning>=1.8',
     'PyYAML',
     'scikit_learn',
     'scipy',
     'tables',
-    'torchmetrics>=0.7,<0.11',
+    'torchmetrics>=0.7',
     'tqdm',
 ]
 
@@ -31,7 +31,7 @@ experiment_requires = [
 
 full_install_requires = plot_requires + experiment_requires + [
     'holidays',
-    'neptune-client>=0.14,<0.17',
+    'neptune-client>=0.14',
 ]
 
 doc_requires = full_install_requires + [
@@ -68,14 +68,11 @@ setup(
     license="MIT",
     classifiers=classifiers,
     keywords=[
-        'pytorch',
-        'pytorch-geometric',
-        'geometric-deep-learning',
-        'graph-neural-networks',
-        'graph-convolutional-networks',
-        'temporal-graph-networks',
-        'spatiotemporal-graph-neural-networks',
-        'spatiotemporal-processing',
+        'pytorch', 'pytorch-geometric', 'geometric-deep-learning',
+        'graph-neural-networks', 'temporal-graph-networks',
+        'spatiotemporal-graph-neural-networks', 'spatiotemporal-processing',
+        'neural-spatiotemporal-forecasting', 'time-series-analysis',
+        'forecasting'
     ],
     python_requires='>=3.8',
     install_requires=install_requires,

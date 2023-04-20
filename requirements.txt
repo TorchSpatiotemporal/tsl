@@ -2,11 +2,13 @@ einops
 hydra-core
 numpy>1.20.3
 omegaconf
-pandas>=1.4,<1.5
-pytorch_lightning>=1.8,<1.9
+pandas
+lightning
 PyYAML
 scikit_learn
 scipy
 tables
-torchmetrics>=0.7,<0.11
+torch>=2.0
+torch_geometric>=2.3
+torchmetrics>=0.7
 tqdm

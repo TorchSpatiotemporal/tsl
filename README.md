@@ -4,7 +4,9 @@
     <h3>Neural spatiotemporal forecasting with PyTorch</h3>
     <hr>
     <p>
-    <img alt="PyPI" src="https://img.shields.io/pypi/v/torch-spatiotemporal">
+    <a href='https://pypi.org/project/torch-spatiotemporal/'>
+        <img alt="PyPI" src="https://img.shields.io/pypi/v/torch-spatiotemporal">
+    </a>
     <img alt="PyPI - Python Version" src="https://img.shields.io/badge/python-%3E%3D3.8-blue">
     <!-- img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/torch-spatiotemporal" -->
     <img alt="Total downloads" src="https://static.pepy.tech/badge/torch-spatiotemporal">
