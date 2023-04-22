@@ -65,10 +65,9 @@ class MaskedMetric(Metric):
 
         if metric_fn_kwargs is None:
             metric_fn_kwargs = dict()
-        if metric_fn is None:
-            self.metric_fn = None
-        else:
-            self.metric_fn = partial(metric_fn, **metric_fn_kwargs)
+
+        self.metric_fn = partial(metric_fn, **metric_fn_kwargs)
+
         self.mask_nans = mask_nans
         self.mask_inf = mask_inf
         if at is None:
