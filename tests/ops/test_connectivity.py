@@ -36,6 +36,17 @@ def _test_normalize_connectivity(norm):
     assert torch.allclose(a.to_dense(), a_.to_dense())
 
 
+def test_normalize_dense():
+    a_ = convert_torch_connectivity((edge_index, edge_weight),
+                                    'dense',
+                                    num_nodes=num_nodes)
+    deg_inv = 1. / a_.sum(1)
+    deg_inv[deg_inv == float('inf')] = 0.
+    a_ = deg_inv.view(-1, 1) * a_
+    a, _ = normalize_connectivity(adj_t, None, 'mean', num_nodes)
+    assert torch.allclose(a.to_dense(), a_)
+
+
 def test_normalize_connectivity():
     norms = ['mean', 'sym', 'asym', 'none', 'gcn', None]
     for n in norms:
