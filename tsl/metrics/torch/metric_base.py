@@ -44,7 +44,8 @@ class MaskedMetric(Metric):
             values.
         at (int, optional): Whether to compute the metric only w.r.t. a certain
             time step.
-        t_dim (int): The index of the dimension that represents time in a batch.
+        dim (int): The index of the dimension that represents time in a batch.
+            Relevant only when also 'at' is defined.
             Default assumes [b t n f] format, hence is 1.
     """
 
@@ -59,7 +60,7 @@ class MaskedMetric(Metric):
                  metric_fn_kwargs=None,
                  at=None,
                  full_state_update: bool = None,
-                 t_dim: int = 1,
+                 dim: int = 1,
                  **kwargs: Any):
         # set 'full_state_update' before Metric instantiation
         if full_state_update is not None:
@@ -77,7 +78,7 @@ class MaskedMetric(Metric):
             self.at = slice(None)
         else:
             self.at = slice(at, at + 1)
-        self.t_dim = t_dim
+        self.dim = dim
         self.add_state('value',
                        dist_reduce_fx='sum',
                        default=torch.tensor(0., dtype=torch.float))
@@ -113,10 +114,10 @@ class MaskedMetric(Metric):
         return self.mask_inf or self.mask_nans or (mask is not None)
 
     def update(self, y_hat, y, mask=None):
-        y_hat = y_hat.select(self.t_dim, self.at)
-        y = y.select(self.t_dim, self.at)
+        y_hat = y_hat.select(self.dim, self.at)
+        y = y.select(self.dim, self.at)
         if mask is not None:
-            mask = mask.select(self.t_dim, self.at)
+            mask = mask.select(self.dim, self.at)
         if self.is_masked(mask):
             val, numel = self._compute_masked(y_hat, y, mask)
         else:
