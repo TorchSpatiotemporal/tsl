@@ -17,6 +17,9 @@ class MaskedPinballLoss(MaskedMetric):
             mini-batches.
         at (int, optional): Whether to compute the metric only w.r.t. a certain
             time step.
+        dim (int): The index of the dimension that represents time in a batch.
+            Relevant only when also 'at' is defined.
+            Default assumes [b t n f] format, hence is 1.
     """
 
     is_differentiable: bool = True
@@ -31,7 +34,8 @@ class MaskedPinballLoss(MaskedMetric):
                  dist_sync_on_step=False,
                  process_group=None,
                  dist_sync_fn=None,
-                 at=None):
+                 at=None,
+                 dim: int = 1):
         super(MaskedPinballLoss,
               self).__init__(metric_fn=pinball_loss,
                              mask_nans=mask_nans,
@@ -41,4 +45,5 @@ class MaskedPinballLoss(MaskedMetric):
                              process_group=process_group,
                              dist_sync_fn=dist_sync_fn,
                              metric_fn_kwargs={'q': q},
-                             at=at)
+                             at=at,
+                             dim=dim)

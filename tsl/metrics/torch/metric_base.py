@@ -1,7 +1,7 @@
 import inspect
 from copy import deepcopy
 from functools import partial
-from typing import Any
+from typing import Any, Optional
 
 import torch
 from torchmetrics import Metric
@@ -55,10 +55,10 @@ class MaskedMetric(Metric):
 
     def __init__(self,
                  metric_fn,
-                 mask_nans=False,
-                 mask_inf=False,
+                 mask_nans: Optional[bool] = False,
+                 mask_inf: Optional[bool] = False,
                  metric_fn_kwargs=None,
-                 at=None,
+                 at: Optional[int] = None,
                  full_state_update: bool = None,
                  dim: int = 1,
                  **kwargs: Any):
@@ -74,10 +74,7 @@ class MaskedMetric(Metric):
 
         self.mask_nans = mask_nans
         self.mask_inf = mask_inf
-        if at is None:
-            self.at = slice(None)
-        else:
-            self.at = slice(at, at + 1)
+        self.at = at
         self.dim = dim
         self.add_state('value',
                        dist_reduce_fx='sum',
@@ -114,10 +111,11 @@ class MaskedMetric(Metric):
         return self.mask_inf or self.mask_nans or (mask is not None)
 
     def update(self, y_hat, y, mask=None):
-        y_hat = y_hat.select(self.dim, self.at)
-        y = y.select(self.dim, self.at)
-        if mask is not None:
-            mask = mask.select(self.dim, self.at)
+        if self.at is not None:
+            y_hat = y_hat.select(self.dim, self.at)
+            y = y.select(self.dim, self.at)
+            if mask is not None:
+                mask = mask.select(self.dim, self.at)
         if self.is_masked(mask):
             val, numel = self._compute_masked(y_hat, y, mask)
         else:
