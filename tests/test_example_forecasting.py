@@ -171,12 +171,14 @@ def test_example_forecasting():
         mode='min',
     )
 
-    trainer = Trainer(max_epochs=cfg.epochs,
-                      default_root_dir=os.getcwd(),
-                      logger=False,
-                      gpus=1 if torch.cuda.is_available() else None,
-                      gradient_clip_val=cfg.grad_clip_val,
-                      callbacks=[early_stop_callback, checkpoint_callback])
+    trainer = Trainer(
+        max_epochs=cfg.epochs,
+        default_root_dir=os.getcwd(),
+        logger=False,
+        accelerator='gpu' if torch.cuda.is_available() else 'cpu',
+        devices=1,
+        gradient_clip_val=cfg.grad_clip_val,
+        callbacks=[early_stop_callback, checkpoint_callback])
 
     trainer.fit(predictor, datamodule=dm)
 
@@ -190,6 +192,7 @@ def test_example_forecasting():
     res_test = trainer.test(predictor, datamodule=dm)
 
     output = trainer.predict(predictor, dataloaders=dm.test_dataloader())
+    output = predictor.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
     y_hat, y_true, mask = (output['y_hat'], output['y'],
                            output.get('mask', None))
@@ -199,6 +202,7 @@ def test_example_forecasting():
 
     res_val = trainer.validate(predictor, datamodule=dm)
     output = trainer.predict(predictor, dataloaders=dm.val_dataloader())
+    output = predictor.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
     y_hat, y_true, mask = (output['y_hat'], output['y'],
                            output.get('mask', None))

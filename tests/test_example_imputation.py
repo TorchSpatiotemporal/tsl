@@ -161,12 +161,14 @@ def test_example_imputation():
         mode='min',
     )
 
-    trainer = Trainer(max_epochs=cfg.epochs,
-                      default_root_dir=os.getcwd(),
-                      logger=None,
-                      gpus=1 if torch.cuda.is_available() else None,
-                      gradient_clip_val=cfg.grad_clip_val,
-                      callbacks=[early_stop_callback, checkpoint_callback])
+    trainer = Trainer(
+        max_epochs=cfg.epochs,
+        default_root_dir=os.getcwd(),
+        logger=None,
+        accelerator='gpu' if torch.cuda.is_available() else 'cpu',
+        devices=1,
+        gradient_clip_val=cfg.grad_clip_val,
+        callbacks=[early_stop_callback, checkpoint_callback])
 
     trainer.fit(imputer, datamodule=dm)
 
@@ -180,6 +182,7 @@ def test_example_imputation():
     res_test = trainer.test(imputer, datamodule=dm)
 
     output = trainer.predict(imputer, dataloaders=dm.test_dataloader())
+    output = imputer.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
     y_hat, y_true, mask = (output['y_hat'], output['y'],
                            output.get('eval_mask', None))
@@ -190,6 +193,7 @@ def test_example_imputation():
     res_val = trainer.validate(imputer, datamodule=dm)
 
     output = trainer.predict(imputer, dataloaders=dm.val_dataloader())
+    output = imputer.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
     y_hat, y_true, mask = (output['y_hat'], output['y'],
                            output.get('eval_mask', None))
