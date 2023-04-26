@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import torch
 from torch.nn import functional as F
@@ -14,14 +14,18 @@ class MaskedMAE(MaskedMetric):
     """Mean Absolute Error Metric.
 
     Args:
-        mask_nans (bool, optional): Whether to automatically mask nan values.
-        mask_inf (bool, optional): Whether to automatically mask infinite
+        mask_nans (bool): Whether to automatically mask nan values.
+            (default: :obj:`False`)
+        mask_inf (bool): Whether to automatically mask infinite
             values.
+            (default: :obj:`False`)
         at (int, optional): Whether to compute the metric only w.r.t. a certain
             time step.
+            (default: :obj:`None`)
         dim (int): The index of the dimension that represents time in a batch.
             Relevant only when also 'at' is defined.
-            Default assumes [b t n f] format, hence is 1.
+            Default assumes [b t n f] format.
+            (default: :obj:`1`)
     """
 
     is_differentiable: bool = True
@@ -29,9 +33,9 @@ class MaskedMAE(MaskedMetric):
     full_state_update: bool = False
 
     def __init__(self,
-                 mask_nans=False,
-                 mask_inf=False,
-                 at=None,
+                 mask_nans: bool = False,
+                 mask_inf: bool = False,
+                 at: Optional[int] = None,
                  dim: int = 1,
                  **kwargs: Any):
         super(MaskedMAE, self).__init__(metric_fn=F.l1_loss,
@@ -47,19 +51,26 @@ class MaskedMAPE(MaskedMetric):
     """Mean Absolute Percentage Error Metric.
 
     Args:
-        mask_nans (bool, optional): Whether to automatically mask nan values.
+        mask_nans (bool): Whether to automatically mask nan values.
+            (default: :obj:`False`)
         at (int, optional): Whether to compute the metric only w.r.t. a certain
             time step.
+            (default: :obj:`None`)
         dim (int): The index of the dimension that represents time in a batch.
             Relevant only when also 'at' is defined.
-            Default assumes [b t n f] format, hence is 1.
+            Default assumes [b t n f] format.
+            (default: :obj:`1`)
     """
 
     is_differentiable: bool = True
     higher_is_better: bool = False
     full_state_update: bool = False
 
-    def __init__(self, mask_nans=False, at=None, dim: int = 1, **kwargs: Any):
+    def __init__(self,
+                 mask_nans: bool = False,
+                 at: Optional[int] = None,
+                 dim: int = 1,
+                 **kwargs: Any):
         super(MaskedMAPE,
               self).__init__(metric_fn=mape,
                              mask_nans=mask_nans,
@@ -74,14 +85,18 @@ class MaskedMSE(MaskedMetric):
     """Mean Squared Error Metric.
 
     Args:
-        mask_nans (bool, optional): Whether to automatically mask nan values.
-        mask_inf (bool, optional): Whether to automatically mask infinite
+        mask_nans (bool): Whether to automatically mask nan values.
+            (default: :obj:`False`)
+        mask_inf (bool): Whether to automatically mask infinite
             values.
+            (default: :obj:`False`)
         at (int, optional): Whether to compute the metric only w.r.t. a certain
             time step.
+            (default: :obj:`None`)
         dim (int): The index of the dimension that represents time in a batch.
             Relevant only when also 'at' is defined.
-            Default assumes [b t n f] format, hence is 1.
+            Default assumes [b t n f] format.
+            (default: :obj:`1`)
     """
 
     is_differentiable: bool = True
@@ -89,9 +104,9 @@ class MaskedMSE(MaskedMetric):
     full_state_update: bool = False
 
     def __init__(self,
-                 mask_nans=False,
-                 mask_inf=False,
-                 at=None,
+                 mask_nans: bool = False,
+                 mask_inf: bool = False,
+                 at: Optional[int] = None,
                  dim: int = 1,
                  **kwargs: Any):
         super(MaskedMSE, self).__init__(metric_fn=F.mse_loss,
@@ -107,14 +122,18 @@ class MaskedMRE(MaskedMetric):
     """Mean Relative Error Metric.
 
     Args:
-        mask_nans (bool, optional): Whether to automatically mask nan values.
-        mask_inf (bool, optional): Whether to automatically mask infinite
+        mask_nans (bool): Whether to automatically mask nan values.
+            (default: :obj:`False`)
+        mask_inf (bool): Whether to automatically mask infinite
             values.
+            (default: :obj:`False`)
         at (int, optional): Whether to compute the metric only w.r.t. a certain
             time step.
+            (default: :obj:`None`)
         dim (int): The index of the dimension that represents time in a batch.
             Relevant only when also 'at' is defined.
-            Default assumes [b t n f] format, hence is 1.
+            Default assumes [b t n f] format.
+            (default: :obj:`1`)
     """
 
     is_differentiable: bool = True
@@ -122,9 +141,9 @@ class MaskedMRE(MaskedMetric):
     full_state_update: bool = False
 
     def __init__(self,
-                 mask_nans=False,
-                 mask_inf=False,
-                 at=None,
+                 mask_nans: bool = False,
+                 mask_inf: bool = False,
+                 at: Optional[int] = None,
                  dim: int = 1,
                  **kwargs: Any):
         super(MaskedMRE, self).__init__(metric_fn=F.l1_loss,

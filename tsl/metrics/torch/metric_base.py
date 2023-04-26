@@ -1,7 +1,7 @@
 import inspect
 from copy import deepcopy
 from functools import partial
-from typing import Any, Optional
+from typing import Any, Callable, Dict, Optional
 
 import torch
 from torchmetrics import Metric
@@ -38,15 +38,26 @@ class MaskedMetric(Metric):
     sequences by accepting a boolean mask as additional input.
 
     Args:
-        metric_fn: Base function to compute the metric point-wise.
-        mask_nans (bool, optional): Whether to automatically mask nan values.
-        mask_inf (bool, optional): Whether to automatically mask infinite
+        metric_fn (callable): Base function to compute the metric point-wise.
+        mask_nans (bool): Whether to automatically mask nan values.
+            (default: :obj:`False`)
+        mask_inf (bool): Whether to automatically mask infinite
             values.
+            (default: :obj:`False`)
+        metric_fn_kwargs (dict, optional): Keyword arguments needed by
+            :obj:`metric_fn`.
+            (default: :obj:`None`)
         at (int, optional): Whether to compute the metric only w.r.t. a certain
             time step.
+            (default: :obj:`None`)
+        full_state_update (bool, optional): Set this to overwrite the
+            :obj:`full_state_update` value of the
+            :obj:`torchmetrics.Metric` base class.
+            (default: :obj:`None`)
         dim (int): The index of the dimension that represents time in a batch.
             Relevant only when also 'at' is defined.
-            Default assumes [b t n f] format, hence is 1.
+            Default assumes [b t n f] format.
+            (default: :obj:`1`)
     """
 
     is_differentiable: bool = None
@@ -54,12 +65,12 @@ class MaskedMetric(Metric):
     full_state_update: bool = None
 
     def __init__(self,
-                 metric_fn,
-                 mask_nans: Optional[bool] = False,
-                 mask_inf: Optional[bool] = False,
-                 metric_fn_kwargs=None,
+                 metric_fn: Callable,
+                 mask_nans: bool = False,
+                 mask_inf: bool = False,
+                 metric_fn_kwargs: Optional[Dict[str, Any]] = None,
                  at: Optional[int] = None,
-                 full_state_update: bool = None,
+                 full_state_update: Optional[bool] = None,
                  dim: int = 1,
                  **kwargs: Any):
         # set 'full_state_update' before Metric instantiation
