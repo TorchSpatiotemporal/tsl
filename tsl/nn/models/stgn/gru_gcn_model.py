@@ -1,5 +1,5 @@
 from einops.layers.torch import Rearrange
-from torch import nn
+from torch import Tensor, nn
 
 from tsl.nn import utils
 from tsl.nn.blocks.decoders import MLPDecoder
@@ -24,6 +24,8 @@ class GRUGCNModel(BaseModel):
         gcn_layers (int): Number of GCN layers in GCN decoder.
         norm (str): Normalization used by the graph convolutional layers.
     """
+
+    return_type = Tensor
 
     def __init__(self,
                  input_size,

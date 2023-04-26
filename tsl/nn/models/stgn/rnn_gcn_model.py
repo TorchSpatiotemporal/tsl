@@ -1,5 +1,5 @@
 from einops import rearrange
-from torch import nn
+from torch import Tensor, nn
 
 from tsl.nn.blocks.decoders.gcn_decoder import GCNDecoder
 from tsl.nn.blocks.encoders import RNN, ConditionalBlock
@@ -28,6 +28,8 @@ class RNNEncGCNDecModel(BaseModel):
             (default: ``'gru'``)
         activation (str, optional): Activation function.
     """
+
+    return_type = Tensor
 
     def __init__(self,
                  input_size,

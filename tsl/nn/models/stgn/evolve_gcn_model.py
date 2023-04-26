@@ -1,4 +1,4 @@
-from torch import nn
+from torch import Tensor, nn
 
 from tsl.nn.blocks.decoders import LinearReadout
 from tsl.nn.blocks.encoders import EvolveGCN
@@ -24,6 +24,8 @@ class EvolveGCNModel(BaseModel):
         variant (str): Variant of EvolveGCN to use (options: 'H' or 'O')
         activation (str): Activation after each GCN layer.
     """
+
+    return_type = Tensor
 
     def __init__(self,
                  input_size,

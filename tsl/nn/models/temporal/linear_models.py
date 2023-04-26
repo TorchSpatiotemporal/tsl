@@ -19,6 +19,8 @@ class ARModel(BaseModel):
         horizon (int): Forecasting horizon.
     """
 
+    return_type = Tensor
+
     def __init__(self,
                  input_size: int,
                  temporal_order: int,
@@ -26,7 +28,7 @@ class ARModel(BaseModel):
                  horizon: int,
                  exog_size: int = 0,
                  bias: bool = True):
-        super(ARModel, self).__init__(return_type=Tensor)
+        super(ARModel, self).__init__()
 
         input_size += exog_size
         self.linear = LinearReadout(input_size=input_size * temporal_order,
