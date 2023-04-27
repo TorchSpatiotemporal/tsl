@@ -7,7 +7,6 @@ from hydra import compose, initialize
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
-from tsl import __path__ as tsl_path
 from tsl.data import ImputationDataset, SpatioTemporalDataModule
 from tsl.data.preprocessing import StandardScaler
 from tsl.datasets import AirQuality, MetrLA, PemsBay
@@ -60,15 +59,13 @@ def get_dataset(dataset_name: str, p_fault=0., p_noise=0.):
 
 
 # force test folder to be cwd
-test_path = os.path.abspath(os.path.join(tsl_path[0], '..', 'tests'))
-os.chdir(test_path)
-
+os.chdir(os.path.dirname(__file__))
 # load cfg with hydra
-path_to_yamls = os.path.join('..', 'examples', 'imputation', 'config')
+path_to_yamls = os.path.join('.', 'config')
 with initialize(config_path=path_to_yamls,
-                job_name='test_example_imputation',
+                job_name='test_example_imputatiom',
                 version_base=None):
-    cfg = compose(config_name='test', overrides=[])
+    cfg = compose(config_name='test_imputation', overrides=[])
 
 
 @pytest.mark.slow

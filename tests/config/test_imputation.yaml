@@ -50,11 +50,13 @@ patience: 1
 batch_size: 64
 grad_clip_val: 5
 scale_target: True
+
 optimizer:
   name: Adam
   hparams:
     lr: 0.001
     weight_decay: 0
+
 lr_scheduler:
   name: CosineAnnealingLR
   hparams:

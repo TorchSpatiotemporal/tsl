@@ -42,6 +42,7 @@ epochs: 1
 patience: 1
 batch_size: 64
 grad_clip_val: 5
+
 optimizer:
   name: Adam
   hparams:
