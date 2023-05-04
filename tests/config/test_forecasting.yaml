@@ -1,25 +1,13 @@
-defaults:
-  - _self_
-
 #### Experiment params ########################################################
 hydra:
   output_subdir: null
-
-seed: 42
-tags:
-  - 'traffic'
-
-workers: 0
-#wandb:
-#  project: sandbox
-#  offline: False
 
 #### Dataset params ###########################################################
 dataset:
   name: la
   splitting:
-    val_len: 0.1
-    test_len: 0.2
+    val_len: 0.02
+    test_len: 0.03
   connectivity:
     method: distance
     threshold: 0.1
@@ -48,5 +36,3 @@ optimizer:
   hparams:
     lr: 0.01
     weight_decay: 0
-
-lr_scheduler: null

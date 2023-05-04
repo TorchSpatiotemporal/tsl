@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import numpy as np
 import pytest
@@ -15,7 +16,6 @@ from tsl.engines import Predictor
 from tsl.metrics import numpy as numpy_metrics
 from tsl.metrics import torch as torch_metrics
 from tsl.nn import models
-from tsl.utils import remove_files
 from tsl.utils.casting import torch_to_numpy
 
 
@@ -69,19 +69,26 @@ def get_dataset(dataset_name):
     return dataset
 
 
-# force test folder to be cwd
-os.chdir(os.path.dirname(__file__))
-# load cfg with hydra
-path_to_yamls = os.path.join('.', 'config')
-with initialize(config_path=path_to_yamls,
-                job_name='test_example_forecasting',
-                version_base=None):
-    cfg = compose(config_name='test_forecasting', overrides=[])
+def init_experiment():
+    from datetime import datetime
+    exp_id = 'forecasting_' + datetime.now().strftime("%Y%m%d%H%M%S")
+    # create temporary logging directory
+    base_dir = os.path.dirname(__file__)
+    log_dir = os.path.join(base_dir, exp_id)
+    os.makedirs(log_dir, exist_ok=True)
+    # load cfg with hydra
+    path_to_yamls = os.path.join('.', 'config')
+    with initialize(config_path=path_to_yamls,
+                    job_name='test_example_forecasting',
+                    version_base=None):
+        cfg = compose(config_name='test_forecasting', overrides=[])
+    return cfg, log_dir
 
 
 @pytest.mark.slow
 @pytest.mark.integration
 def test_example_forecasting():
+    cfg, log_dir = init_experiment()
     ########################################
     # data module                          #
     ########################################
@@ -106,8 +113,7 @@ def test_example_forecasting():
         dataset=torch_dataset,
         scalers=transform,
         splitter=dataset.get_splitter(**cfg.dataset.splitting),
-        batch_size=cfg.batch_size,
-        workers=cfg.workers)
+        batch_size=cfg.batch_size)
     dm.setup()
 
     ########################################
@@ -133,14 +139,8 @@ def test_example_forecasting():
         'mape': torch_metrics.MaskedMAPE(),
         'mae_at_15': torch_metrics.MaskedMAE(at=2),  # 3rd is 15 min
         'mae_at_30': torch_metrics.MaskedMAE(at=5),  # 6th is 30 min
-        'mae_at_60': torch_metrics.MaskedMAE(at=11)
-    }  # 12th is 1 h
-    if cfg.lr_scheduler is not None:
-        scheduler_class = getattr(torch.optim.lr_scheduler,
-                                  cfg.lr_scheduler.name)
-        scheduler_kwargs = dict(cfg.lr_scheduler.hparams)
-    else:
-        scheduler_class = scheduler_kwargs = None
+        'mae_at_60': torch_metrics.MaskedMAE(at=11)  # 12th is 1 h
+    }
 
     # setup predictor
     predictor = Predictor(model_class=model_cls,
@@ -148,9 +148,7 @@ def test_example_forecasting():
                           optim_class=getattr(torch.optim, cfg.optimizer.name),
                           optim_kwargs=dict(cfg.optimizer.hparams),
                           loss_fn=loss_fn,
-                          metrics=log_metrics,
-                          scheduler_class=scheduler_class,
-                          scheduler_kwargs=scheduler_kwargs)
+                          metrics=log_metrics)
 
     ########################################
     # training                             #
@@ -161,7 +159,7 @@ def test_example_forecasting():
                                         mode='min')
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath=os.getcwd(),
+        dirpath=log_dir,
         save_top_k=1,
         monitor='val_mae',
         mode='min',
@@ -169,12 +167,15 @@ def test_example_forecasting():
 
     trainer = Trainer(
         max_epochs=cfg.epochs,
-        default_root_dir=os.getcwd(),
-        logger=False,
+        default_root_dir=log_dir,
+        logger=None,
         accelerator='gpu' if torch.cuda.is_available() else 'cpu',
         devices=1,
         gradient_clip_val=cfg.grad_clip_val,
-        callbacks=[early_stop_callback, checkpoint_callback])
+        callbacks=[early_stop_callback, checkpoint_callback],
+        limit_train_batches=1,
+        log_every_n_steps=1,
+    )
 
     trainer.fit(predictor, datamodule=dm)
 
@@ -208,7 +209,7 @@ def test_example_forecasting():
              val_mape=numpy_metrics.mape(y_hat, y_true, mask)))
 
     # clean out directory
-    remove_files(os.getcwd(), extension='.ckpt')
+    shutil.rmtree(log_dir)
 
     assert np.isclose(res_test[0]['test_mae'], res_functional['test_mae'])
     assert np.isclose(res_test[0]['test_mape'], res_functional['test_mape'])
