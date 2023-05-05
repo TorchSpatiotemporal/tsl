@@ -9,6 +9,7 @@ from torch_sparse import SparseTensor
 from torch_sparse import cat as cat_sparse
 from torch_sparse import matmul
 
+from tsl.nn import get_functional_activation
 from tsl.ops.connectivity import asymmetric_norm, transpose
 
 
@@ -65,6 +66,9 @@ class DiffConv(MessagePassing):
             (default :obj:`True`)
         bias (bool, optional): If :obj:`True`, add a trainable additive bias.
             (default: :obj:`True`)
+        activation (str, optional): Activation function to be used, :obj:`None`
+            for identity function (i.e., no activation).
+            (default: :obj:`None`)
     """
 
     def __init__(self,
@@ -73,7 +77,8 @@ class DiffConv(MessagePassing):
                  k: int,
                  root_weight: bool = True,
                  add_backward: bool = True,
-                 bias: bool = True):
+                 bias: bool = True,
+                 activation: str = None):
         super(DiffConv, self).__init__(aggr="add", node_dim=-2)
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -81,6 +86,7 @@ class DiffConv(MessagePassing):
 
         self.root_weight = root_weight
         self.add_backward = add_backward
+        self.activation = get_functional_activation(activation)
 
         n_filters = k
         if add_backward:
@@ -158,4 +164,4 @@ class DiffConv(MessagePassing):
                 out += [x_sup]
 
         out = torch.cat(out, -1)
-        return self.filters(out)
+        return self.activation(self.filters(out))
