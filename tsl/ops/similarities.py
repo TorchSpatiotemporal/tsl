@@ -80,7 +80,7 @@ def geographical_distance(x: FrameArray, to_rad: bool = True):
         The distance between the points in kilometers. The type is the same as
         :obj:`x`.
     """
-    _AVG_EARTH_RADIUS_KM = 6371.0088
+    AVG_EARTH_RADIUS_KM = 6371.0088
 
     # Extract values of X if it is a DataFrame
     # Assume it is 2-dim array_like of lat-lon pairs
@@ -88,10 +88,11 @@ def geographical_distance(x: FrameArray, to_rad: bool = True):
 
     # If the input values are in degrees, convert them in radians
     if to_rad:
-        latlon_pairs = np.vectorize(np.radians)(latlon_pairs)
+        latlon_pairs = np.radians(latlon_pairs)
 
     from sklearn.metrics.pairwise import haversine_distances
-    distances = haversine_distances(latlon_pairs) * _AVG_EARTH_RADIUS_KM
+    distances = haversine_distances(latlon_pairs) * AVG_EARTH_RADIUS_KM
+    distances = distances.astype(latlon_pairs.dtype)
 
     # Cast response
     if isinstance(x, pd.DataFrame):

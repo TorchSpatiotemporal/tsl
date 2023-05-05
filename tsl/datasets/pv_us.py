@@ -132,7 +132,6 @@ class PvUS(DatetimeDataset):
                                               geographical_distance)
 
             # compute distances from latitude and longitude degrees
-            loc_coord = self.metadata.loc[:, ['lat', 'lon']]
-            dist = geographical_distance(loc_coord, to_rad=True).values
-            dist = dist.astype('float32')
+            loc_coord = self.metadata.loc[:, ['lat', 'lon']].values
+            dist = geographical_distance(loc_coord, to_rad=True)
             return gaussian_kernel(dist, theta=theta)
