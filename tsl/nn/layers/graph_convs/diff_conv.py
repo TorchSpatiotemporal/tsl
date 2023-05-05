@@ -9,7 +9,7 @@ from torch_sparse import SparseTensor
 from torch_sparse import cat as cat_sparse
 from torch_sparse import matmul
 
-from tsl.nn import get_functional_activation
+from tsl.nn.utils import get_functional_activation
 from tsl.ops.connectivity import asymmetric_norm, transpose
 
 
