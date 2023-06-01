@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-__version__ = '0.9.2'
+__version__ = '0.9.3'
 URL = 'https://github.com/TorchSpatiotemporal/tsl'
 
 with open("README.md", "r") as fh:
