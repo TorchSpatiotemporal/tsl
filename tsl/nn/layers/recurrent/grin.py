@@ -3,10 +3,11 @@ from typing import List, Optional, Union
 import torch
 import torch.nn as nn
 from torch import LongTensor, Tensor
-from torch_geometric.typing import OptTensor
+from torch_geometric.typing import Adj, OptTensor
 from torch_geometric.utils import (from_scipy_sparse_matrix, remove_self_loops,
                                    to_scipy_sparse_matrix)
 from torch_geometric.utils.num_nodes import maybe_num_nodes
+from torch_sparse import SparseTensor, remove_diag
 
 from tsl.nn.layers.base import NodeEmbedding
 from tsl.nn.layers.graph_convs import DiffConv
@@ -16,7 +17,7 @@ from tsl.ops.connectivity import asymmetric_norm, power_series, transpose
 from .dcrnn import DCRNNCell
 
 
-def compute_support(edge_index: LongTensor,
+def compute_support(edge_index: Adj,
                     edge_weight: OptTensor = None,
                     order: int = 1,
                     num_nodes: Optional[int] = None,
@@ -94,7 +95,7 @@ class SpatialDecoder(nn.Module):
                 x: Tensor,
                 mask: Tensor,
                 h: Tensor,
-                edge_index: LongTensor,
+                edge_index: Adj,
                 edge_weight: OptTensor = None,
                 u: OptTensor = None):
         # x: [batch, nodes, channels]
@@ -112,8 +113,11 @@ class SpatialDecoder(nn.Module):
             out = self.graph_conv(x_in, edge_index=None)
             self.graph_conv._support = None
         else:
-            edge_index, edge_weight = remove_self_loops(
-                edge_index, edge_weight)
+            if isinstance(edge_index, Tensor):
+                edge_index, edge_weight = remove_self_loops(
+                    edge_index, edge_weight)
+            elif isinstance(edge_index, SparseTensor):
+                edge_index = remove_diag(edge_index)
             out = self.graph_conv(x_in, edge_index, edge_weight)
         # out MLP
         out = torch.cat([out, h], -1)
@@ -226,7 +230,7 @@ class GRINCell(nn.Module):
 
     def forward(self,
                 x: Tensor,
-                edge_index: LongTensor,
+                edge_index: Adj,
                 edge_weight: OptTensor = None,
                 mask: OptTensor = None,
                 u: OptTensor = None,

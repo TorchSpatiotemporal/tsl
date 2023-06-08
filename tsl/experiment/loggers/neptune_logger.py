@@ -100,7 +100,7 @@ class NeptuneLogger(LightningNeptuneLogger):
                    metric_value: Union[Tensor, float, str],
                    step: Optional[int] = None):
         # todo log metric series at once
-        self.run[f'logs/{metric_name}'].log(metric_value, step)
+        self.run[f'logs/{metric_name}'].log(metric_value, step=step)
 
     def _artifact_storage_path(self, name, extension: str = None):
         # add extension to name

@@ -2,6 +2,8 @@ from typing import Any
 
 from omegaconf import OmegaConf
 
+from tsl.utils import ensure_list
+
 
 def prod_resolver(*x):
     p = x[0]
@@ -12,6 +14,10 @@ def prod_resolver(*x):
 
 def ternary_resolver(cond: bool, truthy: Any, falsy: Any):
     return truthy if cond else falsy
+
+
+def cat_resolver(*objs) -> list:
+    return [elem for obj in objs for elem in ensure_list(obj)]
 
 
 def register_resolvers():
@@ -31,3 +37,5 @@ def register_resolvers():
     OmegaConf.register_new_resolver(name='exp', resolver=lambda x, e: x**e)
     # ${ternary:True,is_true,is_false} -> is_true
     OmegaConf.register_new_resolver(name='ternary', resolver=ternary_resolver)
+    # ${cat:1,2,[3,[4]]} -> [1,2,3,[4]]
+    OmegaConf.register_new_resolver(name='cat', resolver=cat_resolver)
