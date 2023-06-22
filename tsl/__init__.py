@@ -7,7 +7,7 @@ datasets = LazyLoader('datasets', globals(), 'tsl.datasets')
 nn = LazyLoader('nn', globals(), 'tsl.nn')
 engines = LazyLoader('engines', globals(), 'tsl.engines')
 
-__version__ = '0.9.2'
+__version__ = '0.9.3'
 
 epsilon = 5e-8
 config = Config()

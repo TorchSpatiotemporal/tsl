@@ -1,7 +1,7 @@
 import torch
 from einops import rearrange
 from einops.layers.torch import Rearrange
-from torch import nn
+from torch import Tensor, nn
 
 from tsl.nn.layers.base import NodeEmbedding
 from tsl.nn.layers.graph_convs import GatedGraphNetwork
@@ -32,6 +32,8 @@ class GatedGraphNetworkModel(BaseModel):
         full_graph (int): Whether to use a full graph for the GNN. In that case,
             the model turns into a dense spatial attention layer.
     """
+
+    return_type = Tensor
 
     def __init__(self,
                  input_size: int,

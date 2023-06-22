@@ -22,7 +22,9 @@ class AGCRNModel(BaseModel):
         n_nodes (int): Number of nodes in the input (static) graph.
         n_layers (int): Number of AGCRN cells.
             (default: :obj:`1`)
-    """
+   """
+
+    return_type = Tensor
 
     def __init__(self,
                  input_size: int,
@@ -33,7 +35,7 @@ class AGCRNModel(BaseModel):
                  emb_size: int = 10,
                  exog_size: int = 0,
                  n_layers: int = 1):
-        super(AGCRNModel, self).__init__(return_type=Tensor)
+        super(AGCRNModel, self).__init__()
 
         self.input_encoder = nn.Linear(input_size + exog_size, hidden_size)
 

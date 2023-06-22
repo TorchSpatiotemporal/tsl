@@ -54,6 +54,8 @@ class GraphWaveNetModel(BaseModel):
             (default: :obj:`0.3`)
     """
 
+    return_type = Tensor
+
     def __init__(self,
                  input_size: int,
                  output_size: int,
@@ -71,7 +73,7 @@ class GraphWaveNetModel(BaseModel):
                  dilation_mod: int = 2,
                  norm: str = 'batch',
                  dropout: float = 0.3):
-        super(GraphWaveNetModel, self).__init__(return_type=Tensor)
+        super(GraphWaveNetModel, self).__init__()
 
         if learned_adjacency:
             assert n_nodes is not None

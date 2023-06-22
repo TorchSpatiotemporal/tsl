@@ -29,6 +29,8 @@ class RNNModel(BaseModel):
             (default: :obj:`relu`)
     """
 
+    return_type = Tensor
+
     def __init__(self,
                  input_size: int,
                  output_size: int,
@@ -42,7 +44,7 @@ class RNNModel(BaseModel):
                  ff_dropout: float = 0.,
                  cell_type: str = 'gru',
                  activation: str = 'relu'):
-        super(RNNModel, self).__init__(return_type=Tensor)
+        super(RNNModel, self).__init__()
 
         if exog_size:
             self.input_encoder = ConditionalBlock(input_size=input_size,

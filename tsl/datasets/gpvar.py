@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from numpy import ndarray
 from torch import Tensor
+from torch_geometric.utils import add_self_loops
 
 from tsl.nn.layers.graph_convs.gpvar import GraphPolyVAR
 from tsl.ops.graph_generators import build_tri_community_graph
@@ -16,7 +17,7 @@ def _gcn_gso(edge_index, num_nodes):
     the paper `"Semi-supervised classification with graph convolutional
     networks." <https://arxiv.org/abs/1609.02907>`_ (Kipf et al., ICLR 2017).
     """
-    from torch_geometric.utils import add_self_loops, degree
+    from torch_geometric.utils import degree
     edge_index, _ = add_self_loops(edge_index=edge_index, num_nodes=num_nodes)
     row, col = edge_index
     deg = degree(col, num_nodes)
@@ -45,6 +46,10 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
         filter_params (iterable): Parameters of the graph polynomial filter
             used to generate the dataset.
         sigma_noise (float): Standard deviation of the noise.
+        norm (str): The normalization used for edges and edge weights. The
+            available options are: :obj:`'gcn'`, :obj:`'asym'` and
+            :obj:`'none'`.
+            (default: :obj:`'none'`)
         name (optional, str): Name of the dataset.
     """
 
@@ -53,22 +58,27 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
                  num_steps: int,
                  filter_params: Union[List, Tensor, ndarray],
                  sigma_noise: float = .2,
+                 norm: str = 'none',
                  name: str = None):
         if name is None:
             name = "GP-VAR"
         node_idx, edge_index, _ = build_tri_community_graph(
             num_communities=num_communities)
         num_nodes = len(node_idx)
-        connectivity = _gcn_gso(torch.tensor(edge_index), num_nodes)
+        # add self loops
+        edge_index, _ = add_self_loops(edge_index=torch.tensor(edge_index),
+                                       num_nodes=num_nodes)
 
         if not isinstance(filter_params, Tensor):
             filter_params = torch.as_tensor(filter_params, dtype=torch.float32)
 
-        filter = _GPVAR.from_params(filter_params=filter_params)
+        filter = _GPVAR.from_params(filter_params=filter_params,
+                                    norm=norm,
+                                    cached=True)
         super(GPVARDataset, self).__init__(num_features=1,
                                            num_nodes=num_nodes,
                                            num_steps=num_steps,
-                                           connectivity=connectivity,
+                                           connectivity=edge_index,
                                            min_window=filter.temporal_order,
                                            model=filter,
                                            sigma_noise=sigma_noise,
@@ -98,6 +108,7 @@ class GPVARDatasetAZ(GPVARDataset):
                              num_steps=self.NUM_STEPS,
                              filter_params=filter_params,
                              sigma_noise=self.SIGMA_NOISE,
+                             norm='none',
                              name='GPVAR-AZ')
 
     @property
