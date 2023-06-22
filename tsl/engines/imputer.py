@@ -144,10 +144,10 @@ class Imputer(Predictor):
         :obj:`p = self.whiten_prob`. Then, whiten missing values in
         :obj:`batch.input.x`."""
         super(Imputer, self).on_train_batch_start(batch, batch_idx)
+        batch.original_mask = batch.mask
         if self.whiten_prob is not None:
             # randomly mask out value with probability p = whiten_prob
             mask = batch.mask
-            batch.original_mask = mask
             p = self.whiten_prob
             if isinstance(p, Tensor) and p.ndim > 0:
                 # broadcast p to mask size

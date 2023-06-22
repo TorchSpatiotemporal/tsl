@@ -189,11 +189,15 @@ class MissingValuesMixin:
     def set_eval_mask(self, eval_mask: FrameArray):
         eval_mask = self._parse_target(eval_mask)
         eval_mask = framearray_to_numpy(eval_mask).astype(bool)
-        eval_mask = eval_mask & self.mask
+        if self.mask is not None:
+            eval_mask = eval_mask & self.mask
         self.add_covariate('eval_mask', eval_mask, 't n f')
 
     @property
     def training_mask(self):
         if hasattr(self, 'eval_mask') and self.eval_mask is not None:
-            return self.mask & ~self.eval_mask
+            mask = ~self.eval_mask
+            if self.mask is not None:
+                mask = mask & self.mask
+            return mask
         return self.mask

@@ -33,6 +33,8 @@ class TransformerModel(BaseModel):
         activation (str, optional): Activation function.
     """
 
+    return_type = Tensor
+
     def __init__(self,
                  input_size: int,
                  output_size: int,
@@ -45,7 +47,7 @@ class TransformerModel(BaseModel):
                  dropout: float = 0.,
                  axis: str = 'time',
                  activation: str = 'elu'):
-        super(TransformerModel, self).__init__(return_type=Tensor)
+        super(TransformerModel, self).__init__()
 
         if exog_size:
             self.input_encoder = ConditionalBlock(input_size=input_size,

@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import numpy as np
 import pytest
@@ -7,7 +8,6 @@ from hydra import compose, initialize
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
-from tsl import __path__ as tsl_path
 from tsl.data import ImputationDataset, SpatioTemporalDataModule
 from tsl.data.preprocessing import StandardScaler
 from tsl.datasets import AirQuality, MetrLA, PemsBay
@@ -17,7 +17,6 @@ from tsl.metrics import torch as torch_metrics
 from tsl.nn.models import BiRNNImputerModel, GRINModel, RNNImputerModel
 from tsl.ops.imputation import add_missing_values
 from tsl.transforms import MaskInput
-from tsl.utils import remove_files
 from tsl.utils.casting import torch_to_numpy
 
 
@@ -59,21 +58,26 @@ def get_dataset(dataset_name: str, p_fault=0., p_noise=0.):
     raise ValueError(f"Dataset {dataset_name} not available in this setting.")
 
 
-# force test folder to be cwd
-test_path = os.path.abspath(os.path.join(tsl_path[0], '..', 'tests'))
-os.chdir(test_path)
-
-# load cfg with hydra
-path_to_yamls = os.path.join('..', 'examples', 'imputation', 'config')
-with initialize(config_path=path_to_yamls,
-                job_name='test_example_imputation',
-                version_base=None):
-    cfg = compose(config_name='test', overrides=[])
+def init_experiment():
+    from datetime import datetime
+    exp_id = 'imputation_' + datetime.now().strftime("%Y%m%d%H%M%S")
+    # create temporary logging directory
+    base_dir = os.path.dirname(__file__)
+    log_dir = os.path.join(base_dir, exp_id)
+    os.makedirs(log_dir, exist_ok=True)
+    # load cfg with hydra
+    path_to_yamls = os.path.join('.', 'config')
+    with initialize(config_path=path_to_yamls,
+                    job_name='test_example_imputation',
+                    version_base=None):
+        cfg = compose(config_name='test_imputation', overrides=[])
+    return cfg, log_dir
 
 
 @pytest.mark.slow
 @pytest.mark.integration
 def test_example_imputation():
+    cfg, log_dir = init_experiment()
     ########################################
     # data module                          #
     ########################################
@@ -99,12 +103,8 @@ def test_example_imputation():
         dataset=torch_dataset,
         scalers=scalers,
         splitter=dataset.get_splitter(**cfg.dataset.splitting),
-        batch_size=cfg.batch_size,
-        workers=cfg.workers)
+        batch_size=cfg.batch_size)
     dm.setup(stage='fit')
-
-    if cfg.get('in_sample', False):
-        dm.trainset = list(range(len(torch_dataset)))
 
     ########################################
     # imputer                              #
@@ -125,13 +125,6 @@ def test_example_imputation():
         'mape': torch_metrics.MaskedMAPE()
     }
 
-    if cfg.lr_scheduler is not None:
-        scheduler_class = getattr(torch.optim.lr_scheduler,
-                                  cfg.lr_scheduler.name)
-        scheduler_kwargs = dict(cfg.lr_scheduler.hparams)
-    else:
-        scheduler_class = scheduler_kwargs = None
-
     # setup imputer
     imputer = Imputer(model_class=model_cls,
                       model_kwargs=model_kwargs,
@@ -139,8 +132,6 @@ def test_example_imputation():
                       optim_kwargs=dict(cfg.optimizer.hparams),
                       loss_fn=loss_fn,
                       metrics=log_metrics,
-                      scheduler_class=scheduler_class,
-                      scheduler_kwargs=scheduler_kwargs,
                       whiten_prob=cfg.whiten_prob,
                       prediction_loss_weight=cfg.prediction_loss_weight,
                       impute_only_missing=cfg.impute_only_missing,
@@ -155,18 +146,23 @@ def test_example_imputation():
                                         mode='min')
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath=os.getcwd(),
+        dirpath=log_dir,
         save_top_k=1,
         monitor='val_mae',
         mode='min',
     )
 
-    trainer = Trainer(max_epochs=cfg.epochs,
-                      default_root_dir=os.getcwd(),
-                      logger=None,
-                      gpus=1 if torch.cuda.is_available() else None,
-                      gradient_clip_val=cfg.grad_clip_val,
-                      callbacks=[early_stop_callback, checkpoint_callback])
+    trainer = Trainer(
+        max_epochs=cfg.epochs,
+        default_root_dir=log_dir,
+        logger=None,
+        accelerator='gpu' if torch.cuda.is_available() else 'cpu',
+        devices=1,
+        gradient_clip_val=cfg.grad_clip_val,
+        callbacks=[early_stop_callback, checkpoint_callback],
+        limit_train_batches=1,
+        log_every_n_steps=1,
+    )
 
     trainer.fit(imputer, datamodule=dm)
 
@@ -180,6 +176,7 @@ def test_example_imputation():
     res_test = trainer.test(imputer, datamodule=dm)
 
     output = trainer.predict(imputer, dataloaders=dm.test_dataloader())
+    output = imputer.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
     y_hat, y_true, mask = (output['y_hat'], output['y'],
                            output.get('eval_mask', None))
@@ -190,6 +187,7 @@ def test_example_imputation():
     res_val = trainer.validate(imputer, datamodule=dm)
 
     output = trainer.predict(imputer, dataloaders=dm.val_dataloader())
+    output = imputer.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
     y_hat, y_true, mask = (output['y_hat'], output['y'],
                            output.get('eval_mask', None))
@@ -199,7 +197,7 @@ def test_example_imputation():
              val_mape=numpy_metrics.mape(y_hat, y_true, mask)))
 
     # clean out directory
-    remove_files(os.getcwd(), extension='.ckpt')
+    shutil.rmtree(log_dir)
 
     assert np.isclose(res_test[0]['test_mae'], res_functional['test_mae'])
     assert np.isclose(res_test[0]['test_mape'], res_functional['test_mape'])

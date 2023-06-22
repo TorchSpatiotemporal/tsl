@@ -42,10 +42,11 @@ class BaseModel(nn.Module):
       forward function (:class:`~torch.Tensor`, :obj:`list` or :obj:`dict`).
     """
 
-    def __init__(self, return_type: ModelReturnOptions = None):
+    return_type: ModelReturnOptions = None
+
+    def __init__(self):
         super(BaseModel, self).__init__()
-        self.return_type = return_type
-        if return_type is not None:
+        if self.return_type is not None:
             self.register_forward_hook(_forward_packer)
 
         model_signature = self.get_model_signature()

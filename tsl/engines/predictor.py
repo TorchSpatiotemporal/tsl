@@ -306,25 +306,31 @@ class Predictor(pl.LightningModule):
             output['mask'] = mask
         return output
 
-    def on_predict_epoch_end(self, results):
-        """"""
-        # iterate over results of each dataloader
-        processed_results = []
-        for res in results:
-            processed_res = dict()
-            # iterate over outputs for each batch
-            for b_res in res:
-                for k, v in b_res.items():
-                    try:
-                        processed_res[k].append(v)
-                    except KeyError:
-                        processed_res[k] = [v]
-            processed_results.append(processed_res)
-        results[:] = processed_results
-        # concatenate results
-        for res in results:
+    def collate_prediction_outputs(self, outputs):
+        """
+        Collate the outputs of the :meth:`predict_step` method.
+
+        Args:
+            outputs: Collated outputs of the :meth:`predict_step` method.
+
+        Returns:
+            The collated outputs.
+        """
+        # iterate over results
+        processed_res = dict()
+        keys = set()
+        # iterate over outputs for each batch
+        for res in outputs:
             for k, v in res.items():
-                res[k] = torch.cat(v, 0)
+                if k in keys:
+                    processed_res[k].append(v)
+                else:
+                    processed_res[k] = [v]
+                keys.add(k)
+        # concatenate results
+        for k, v in processed_res.items():
+            processed_res[k] = torch.cat(v, 0)
+        return processed_res
 
     def training_step(self, batch, batch_idx):
         """"""

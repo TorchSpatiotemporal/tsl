@@ -47,6 +47,8 @@ class GRINModel(BaseModel):
             (default: :obj:`mlp`)
     """
 
+    return_type = list
+
     def __init__(self,
                  input_size: int,
                  hidden_size: int = 64,
@@ -61,7 +63,7 @@ class GRINModel(BaseModel):
                  dropout: float = 0.,
                  ff_dropout: float = 0.,
                  merge_mode: str = 'mlp'):
-        super(GRINModel, self).__init__(return_type=list)
+        super(GRINModel, self).__init__()
         self.fwd_gril = GRINCell(input_size=input_size,
                                  hidden_size=hidden_size,
                                  exog_size=exog_size,

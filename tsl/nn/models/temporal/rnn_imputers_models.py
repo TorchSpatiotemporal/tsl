@@ -167,6 +167,8 @@ class BiRNNImputerModel(BaseModel):
             (default: ``0.``)
     """
 
+    return_type = list
+
     def __init__(self,
                  input_size: int,
                  hidden_size: int = 64,
@@ -179,7 +181,7 @@ class BiRNNImputerModel(BaseModel):
                  n_layers: int = 1,
                  cat_states_layers: bool = False,
                  dropout: float = 0.):
-        super(BiRNNImputerModel, self).__init__(return_type=list)
+        super(BiRNNImputerModel, self).__init__()
 
         self.input_size = input_size
         self.hidden_size = hidden_size

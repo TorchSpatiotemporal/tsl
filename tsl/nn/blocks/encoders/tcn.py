@@ -18,7 +18,7 @@ class TemporalConvNet(nn.Module):
             variables.
         output_channels (int, optional): Channels in the output layer.
         n_layers (int, optional): Number of hidden layers. (default: 1)
-        gated (bool, optional): Whether to used the GatedTanH activation
+        gated (bool, optional): Whether to use the GatedTanH activation
             function.
             (default: :obj:`False`)
         dropout (float, optional): Dropout probability.
@@ -61,6 +61,7 @@ class TemporalConvNet(nn.Module):
 
         layers = []
         d = dilation
+        receptive_field = 1
         for i in range(n_layers):
             if exponential_dilation:
                 d = dilation**i
@@ -74,7 +75,9 @@ class TemporalConvNet(nn.Module):
                           causal_pad=causal_padding,
                           weight_norm=weight_norm,
                           bias=bias))
+            receptive_field += (kernel_size - 1) * d * stride
 
+        self.receptive_field = receptive_field
         self.convs = nn.ModuleList(layers)
         self.f = get_functional_activation(
             activation) if not gated else nn.Identity()

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from tsl import logger
-from tsl.datasets.prototypes import DatetimeDataset
+from tsl.datasets.prototypes import TabularDataset
 from tsl.datasets.prototypes.mixin import MissingValuesMixin
 from tsl.utils.python_utils import ensure_list
 
@@ -54,10 +54,10 @@ def missing_val_lens(mask):
     return lens
 
 
-def to_missing_values_dataset(dataset: DatetimeDataset,
+def to_missing_values_dataset(dataset: TabularDataset,
                               eval_mask: np.ndarray,
                               inplace: bool = True):
-    assert isinstance(dataset, DatetimeDataset)
+    assert isinstance(dataset, TabularDataset)
     if not inplace:
         dataset = deepcopy(dataset)
 
@@ -73,7 +73,7 @@ def to_missing_values_dataset(dataset: DatetimeDataset,
     return dataset
 
 
-def add_missing_values(dataset: DatetimeDataset,
+def add_missing_values(dataset: TabularDataset,
                        p_noise=0.05,
                        p_fault=0.01,
                        min_seq=1,

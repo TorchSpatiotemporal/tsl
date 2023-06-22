@@ -154,10 +154,10 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
         y_opt = torch_to_numpy(y_opt)
         return x, y_opt, np.ones_like(x)
 
-    def get_connectivity(self, layout: str = 'edge_index'):
+    def get_connectivity(self, layout: str = 'edge_index', **kwargs):
         """"""
-        if self.connectivity is None:
-            return self.connectivity
-        return parse_connectivity(connectivity=self.connectivity,
-                                  target_layout=layout,
-                                  num_nodes=self.n_nodes)
+        if self.connectivity is not None:
+            return parse_connectivity(connectivity=self.connectivity,
+                                      target_layout=layout,
+                                      num_nodes=self.n_nodes)
+        return None
