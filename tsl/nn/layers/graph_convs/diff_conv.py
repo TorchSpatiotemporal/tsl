@@ -165,3 +165,8 @@ class DiffConv(MessagePassing):
 
         out = torch.cat(out, -1)
         return self.activation(self.filters(out))
+
+
+class DiffusionConv(DiffConv):
+    """Alias for :class:`~tsl.nn.layers.graph_convs.DiffConv`."""
+    pass

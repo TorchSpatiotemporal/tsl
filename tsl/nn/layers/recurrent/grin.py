@@ -287,7 +287,7 @@ class GRINCell(nn.Module):
         # Aggregate outputs -> [batch, steps, nodes, channels]
         imputations = torch.stack(imputations, dim=1)
         predictions = torch.stack(predictions, dim=1)
-        states = torch.stack(states, dim=1)
+        states = torch.stack(states, dim=2)
         representations = torch.stack(representations, dim=1)
 
         return imputations, predictions, representations, states

@@ -115,19 +115,20 @@ class DatetimeDataset(TabularDataset, TemporalFeaturesMixin):
 
     # Aggregation methods
 
-    def sort(self):
+    def sort(self) -> "DatetimeDataset":
         """"""
         self.target.sort_index(inplace=True)
         if self.force_synchronization:
             for name, attr in self._covariates.items():
                 if 't' in attr['pattern']:
                     attr['value'] = attr['value'].reindex(self.index)
+        return self
 
     def resample_(self,
                   freq=None,
                   aggr: str = None,
                   keep: Literal["first", "last", False] = 'first',
-                  mask_tolerance: float = 0.):
+                  mask_tolerance: float = 0.) -> "DatetimeDataset":
         """"""
         freq = to_pandas_freq(freq) if freq is not None else self.freq
         aggr = aggr if aggr is not None else self.temporal_aggregation
@@ -161,13 +162,17 @@ class DatetimeDataset(TabularDataset, TemporalFeaturesMixin):
 
         self.freq = freq
 
+        return self
+
     def resample(self,
                  freq=None,
                  aggr: str = None,
                  keep: Literal["first", "last", False] = 'first',
-                 mask_tolerance: float = 0.):
+                 mask_tolerance: float = 0.) -> "DatetimeDataset":
         """"""
-        return deepcopy(self).resample_(freq, aggr, keep, mask_tolerance)
+        self_copy = deepcopy(self)
+        self_copy.resample_(freq, aggr, keep, mask_tolerance)
+        return self_copy
 
     # Preprocessing
 

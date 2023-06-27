@@ -541,6 +541,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
                                       axis=1,
                                       level=lvl)
             self._covariates[name]['value'] = value
+        return self
 
     def aggregate(self,
                   node_index: Optional[Union[Index, Mapping]] = None,
@@ -578,7 +579,9 @@ class TabularDataset(Dataset, TabularParsingMixin):
         return self
 
     def reduce(self, time_index=None, node_index=None):
-        return deepcopy(self).reduce_(time_index, node_index)
+        self_copy = deepcopy(self)
+        self_copy.reduce_(time_index, node_index)
+        return self_copy
 
     @contextmanager
     def synchronize(self, flag=True):

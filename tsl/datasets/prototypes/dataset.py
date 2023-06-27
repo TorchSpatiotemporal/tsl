@@ -1,6 +1,7 @@
 import functools
 import os
-from typing import Iterable, List, Optional, Sequence, Set, Tuple, Union
+from typing import (Iterable, List, Mapping, Optional, Sequence, Set, Tuple,
+                    Union)
 
 import numpy as np
 from numpy import ndarray
@@ -160,40 +161,78 @@ class Dataset(object):
         return root
 
     @property
-    def raw_file_names(self) -> Union[str, Sequence[str]]:
+    def raw_file_names(self) \
+            -> Union[str, Sequence[str], Mapping[str, str]]:
         """The name of the files in the :obj:`self.root_dir` folder that must be
         present in order to skip downloading."""
         return []
 
     @property
-    def required_file_names(self) -> Union[str, Sequence[str]]:
+    def required_file_names(self) \
+            -> Union[str, Sequence[str], Mapping[str, str]]:
         """The name of the files in the :obj:`self.root_dir` folder that must be
         present in order to skip building."""
-        return []
+        return self.raw_file_names
 
     @property
-    def raw_files_paths(self) -> List[str]:
+    def raw_files_paths(self) -> Union[List[str], Mapping[str, str]]:
         """The absolute filepaths that must be present in order to skip
         downloading."""
-        files = ensure_list(self.raw_file_names)
-        return [os.path.join(self.root_dir, f) for f in files]
+        files = self.raw_file_names
+        if not isinstance(files, Mapping):
+            files = ensure_list(files)
+
+        if isinstance(files, list):
+            return [os.path.join(self.root_dir, f) for f in files]
+        else:
+            return {
+                k: os.path.join(self.root_dir, f)
+                for k, f in files.items()
+            }
 
     @property
-    def required_files_paths(self) -> List[str]:
+    def required_files_paths(self) -> Union[List[str], Mapping[str, str]]:
         """The absolute filepaths that must be present in order to skip
         building."""
-        files = ensure_list(self.required_file_names)
-        return [os.path.join(self.root_dir, f) for f in files]
+        files = self.required_file_names
+        if not isinstance(files, Mapping):
+            files = ensure_list(files)
+
+        if isinstance(files, list):
+            return [os.path.join(self.root_dir, f) for f in files]
+        else:
+            return {
+                k: os.path.join(self.root_dir, f)
+                for k, f in files.items()
+            }
+
+    @property
+    def raw_files_paths_list(self) -> List[str]:
+        """The list of absolute filepaths that must be present in order to skip
+        downloading."""
+        files = self.raw_files_paths
+        if isinstance(files, Mapping):
+            files = list(files.values())
+        return files
+
+    @property
+    def required_files_paths_list(self) -> List[str]:
+        """The list of absolute filepaths that are required to load the
+        dataset."""
+        files = self.required_files_paths
+        if isinstance(files, Mapping):
+            files = list(files.values())
+        return files
 
     # Loading pipeline: load() → load_raw() → build() → download()
 
     def maybe_download(self):
-        if not files_exist(self.raw_files_paths):
+        if not files_exist(self.raw_files_paths_list):
             os.makedirs(self.root_dir, exist_ok=True)
             self.download()
 
     def maybe_build(self):
-        if not files_exist(self.required_files_paths):
+        if not files_exist(self.required_files_paths_list):
             os.makedirs(self.root_dir, exist_ok=True)
             self.build()
 
@@ -215,15 +254,16 @@ class Dataset(object):
         return self.load_raw(*args, **kwargs)
 
     def clean_downloads(self):
-        for file in self.raw_files_paths:
-            if file not in self.required_files_paths:
+        for file in self.raw_files_paths_list:
+            if file not in self.required_files_paths_list:
                 os.unlink(file)
 
     def clean_root_dir(self):
         import shutil
+        total_files = self.required_files_paths_list + self.raw_files_paths_list
         for filename in os.listdir(self.root_dir):
             file_path = os.path.join(self.root_dir, filename)
-            if file_path in self.required_files_paths + self.raw_files_paths:
+            if file_path in total_files:
                 continue
             try:
                 if os.path.isfile(file_path) or os.path.islink(file_path):
@@ -241,9 +281,11 @@ class Dataset(object):
         has a dynamic structure."""
         raise NotImplementedError
 
-    def numpy(self, return_idx: bool = False) -> \
-            Union[ndarray, List[ndarray],
-                  Tuple[ndarray, Series], Tuple[List[ndarray], Series]]:
+    def numpy(
+        self,
+        return_idx: bool = False
+    ) -> Union[ndarray, List[ndarray], Tuple[ndarray, Series], Tuple[
+            List[ndarray], Series]]:
         """Returns a numpy representation of the dataset in the form of a
         :class:`~numpy.ndarray`. If :obj:`return_index` is :obj:`True`, it
         returns also a :class:`~pandas.Series` that can be used as index. May

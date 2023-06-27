@@ -1,6 +1,6 @@
 from .adaptive_graph_conv import AdaptiveGraphConv
 from .dense_graph_conv import DenseGraphConv, DenseGraphConvOrderK
-from .diff_conv import DiffConv
+from .diff_conv import DiffConv, DiffusionConv
 from .gat_conv import GATConv
 from .gated_gn import GatedGraphNetwork
 from .gpvar import GraphPolyVAR
@@ -13,6 +13,7 @@ __all__ = [
     'DenseGraphConv',
     'DenseGraphConvOrderK',
     'DiffConv',
+    'DiffusionConv',
     'GraphPolyVAR',
     'MultiHeadGraphAttention',
     'GATConv',
