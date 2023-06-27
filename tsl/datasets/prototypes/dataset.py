@@ -320,7 +320,7 @@ class Dataset(object):
     def compute_similarity(self, method: str,
                            **kwargs) -> Optional[np.ndarray]:
         r"""Implements the options for the similarity matrix :math:`\mathbf{S}
-        \in \mathbb{R}^{N \\times N}` computation, according to :obj:`method`.
+        \in \mathbb{R}^{N \times N}` computation, according to :obj:`method`.
 
         Args:
             method (str): Method for the similarity computation.

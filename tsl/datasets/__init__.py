@@ -7,6 +7,7 @@ from .prototypes import classes as prototype_classes
 from .air_quality import AirQuality
 from .elergone import Elergone
 from .gpvar import GPVARDataset, GPVARDatasetAZ
+from .large_st import LargeST
 from .metr_la import MetrLA
 from .mts_benchmarks import (ElectricityBenchmark, ExchangeBenchmark,
                              SolarBenchmark, TrafficBenchmark)
@@ -24,6 +25,7 @@ dataset_classes = [
     'PeMS04',
     'PeMS07',
     'PeMS08',
+    'LargeST',
     'PvUS',
     'ElectricityBenchmark',
     'TrafficBenchmark',
