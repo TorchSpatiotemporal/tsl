@@ -79,6 +79,10 @@ class BaseModel(nn.Module):
         """Forward function used only for inference."""
         return super(BaseModel, self).__call__(*args, **kwargs)
 
+    def reset_parameters(self):
+        """Reset the parameters of the model."""
+        raise NotImplementedError
+
     @classmethod
     def get_model_signature(cls) -> dict:
         """Get signature of the model's

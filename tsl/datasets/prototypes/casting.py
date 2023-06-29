@@ -87,7 +87,7 @@ def check_time_unit(time_unit: str, include_onehot: bool = False):
     }
     if include_onehot:
         allowed_units.update(
-            {'weekday', 'day_of_week', 'dayofweek', 'weekofyear'})
+            {'month', 'weekday', 'day_of_week', 'dayofweek', 'weekofyear'})
     if time_unit not in allowed_units:
         raise RuntimeError(f"'{time_unit}' is not a valid time unit. "
                            f"Allowed units are {', '.join(allowed_units)}.")

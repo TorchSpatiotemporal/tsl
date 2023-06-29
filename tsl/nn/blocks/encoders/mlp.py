@@ -42,6 +42,13 @@ class MLP(nn.Module):
         else:
             self.register_parameter('readout', None)
 
+    def reset_parameters(self) -> None:
+        """"""
+        for module in self.mlp._modules.values():
+            module.reset_parameters()
+        if self.readout is not None:
+            self.readout.reset_parameters()
+
     def forward(self, x, u=None):
         """"""
         x = maybe_cat_exog(x, u)

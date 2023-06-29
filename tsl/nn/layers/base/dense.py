@@ -39,6 +39,10 @@ class Dense(nn.Module):
         self.activation = utils.get_layer_activation(activation)()
         self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
 
+    def reset_parameters(self) -> None:
+        """"""
+        self.affinity.reset_parameters()
+
     def forward(self, x):
         """"""
         out = self.activation(self.affinity(x))

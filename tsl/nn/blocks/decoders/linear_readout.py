@@ -29,6 +29,10 @@ class LinearReadout(nn.Module):
                                    f=output_size,
                                    h=horizon)
 
+    def reset_parameters(self) -> None:
+        """"""
+        self.readout.reset_parameters()
+
     def forward(self, h: Tensor) -> Tensor:
         """"""
         # h: [batches (steps) nodes features]

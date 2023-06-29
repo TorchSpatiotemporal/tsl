@@ -21,7 +21,7 @@ class GatedGraphNetworkModel(BaseModel):
     Args:
         input_size (int): Size of the input.
         input_window_size (int): Size of the input window (this model cannot
-            process sequences of variable lenght).
+            process sequences of variable length).
         hidden_size (int): Number of hidden units in each hidden layer.
         output_size (int): Size of the output.
         horizon (int): Forecasting steps.

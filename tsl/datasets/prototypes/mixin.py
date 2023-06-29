@@ -145,6 +145,17 @@ class TemporalFeaturesMixin:
                                  columns=units)
         return dummies
 
+    def datetime_idx(self, units: Union[str, List]) -> pd.DataFrame:
+        r"""Transform dataset's temporal index into compact index encoding for
+        each temporal unit specified."""
+        units = ensure_list(units)
+        out = []
+        for unit in units:
+            datetime_onehot = self.datetime_onehot(unit).values
+            datetime_idx = datetime_onehot.argmax(1)
+            out.append(datetime_idx)
+        return pd.DataFrame(np.stack(out, -1), index=self.index, columns=units)
+
     def holidays_onehot(self, country, subdiv=None) -> pd.DataFrame:
         """Returns a DataFrame to indicate if dataset timestamps is holiday.
         See https://python-holidays.readthedocs.io/en/latest/.
