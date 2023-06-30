@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+  - _pems_traffic
+  - _self_
+
+#### Dataset params ###########################################################
+dataset:
+  name: pems3

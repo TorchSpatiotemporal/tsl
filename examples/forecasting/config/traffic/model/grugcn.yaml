@@ -1,9 +1,6 @@
-defaults:
-  - default
-  - _self_
+# @package _global_
 
-batch_size: 256
-
+#### Model params #############################################################
 model:
   name: grugcn
   hparams:
@@ -11,6 +8,9 @@ model:
     enc_layers: 1
     gcn_layers: 2
     norm: mean
+
+#### Config overrides #########################################################
+batch_size: 256
 
 optimizer:
   hparams:

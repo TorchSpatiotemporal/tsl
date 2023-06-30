@@ -1,0 +1,14 @@
+# @package _global_
+
+#### Model params #############################################################
+model:
+  name: agcrn
+  hparams:
+    hidden_size: 64
+    emb_size: 10
+    n_layers: 2
+
+#### Config overrides #########################################################
+optimizer:
+  hparams:
+    lr: 0.003

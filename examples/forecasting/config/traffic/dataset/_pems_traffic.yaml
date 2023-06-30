@@ -1,0 +1,12 @@
+# @package _global_
+
+#### Dataset params ###########################################################
+dataset:
+  name: ???
+  splitting:
+    val_len: 0.2
+    test_len: 0.2
+  connectivity:
+    method: binary
+    include_self: False
+    layout: edge_index

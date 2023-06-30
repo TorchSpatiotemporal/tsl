@@ -1,9 +1,6 @@
-defaults:
-  - default
-  - _self_
+# @package _global_
 
-batch_size: 64
-
+#### Model params #############################################################
 model:
   name: evolvegcn
   hparams:
@@ -14,6 +11,7 @@ model:
     variant: O
     root_weight: True
 
+#### Config overrides #########################################################
 dataset:
   connectivity:
     force_symmetric: True

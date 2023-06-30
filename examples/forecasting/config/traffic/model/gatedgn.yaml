@@ -1,19 +1,17 @@
-defaults:
-  - default
-  - _self_
+# @package _global_
 
-batch_size: 64
-
+#### Model params #############################################################
 model:
   name: gatedgn
   hparams:
-    input_window_size: 12
+    input_window_size: ${window}
     hidden_size: 64
     enc_layers: 2
     gnn_layers: 2
     activation: 'silu'
     full_graph: False
 
+#### Config overrides #########################################################
 optimizer:
   hparams:
     lr: 0.005

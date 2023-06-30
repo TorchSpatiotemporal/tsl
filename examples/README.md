@@ -17,24 +17,20 @@ Running a forecasting experiment using one of the baseline models on a provided
 benchmark dataset is as simple as that:
 
 ```bash
-python forecasting/run_traffic_experiment.py config=dcrnn dataset.name=la
+python forecasting/run_traffic_experiment.py model=dcrnn dataset=la logger=wandb
 ```
 
 Under the hood, we are telling the program to run the traffic experiment using
-the `config/traffic/dcrnn.yaml` config, which is a particular instance of the
-`config/traffic/default.yaml` config. In practice, any parameter not defined in
-the primary `dcrnn.yaml` config file is inherited from the fallback config
-`default.yaml`.
+the default config `config/traffic/default.yaml` instantiated with model config
+`config/traffic/model/dcrnn.yaml`, dataset config `config/traffic/dataset/la.yaml`,
+and logger config `config/traffic/logger/wandb.yaml`. In practice, any parameter
+defined in the subordinate configs `dcrnn.yaml`, `la.yaml`, and `wandb.yaml`
+config files overrides any same parameter in `default.yaml`.
 
-Note that in this latter config, the rows
-```yaml
-dataset:
-  name: ???
-```
-indicate that the name of the dataset is required in order to run the
-experiment. By passing as argument `dataset.name=la` we run the forecasting
+By passing as argument `dataset=la` we run the forecasting
 experiment on the [MetrLA](https://torch-spatiotemporal.readthedocs.io/en/latest/modules/datasets_in_tsl.html#tsl.datasets.MetrLA)
-dataset.
+dataset. Other available dataset options are `bay`, `pems3`, `pems4`, `pems7`,
+and `pems8`.
 
 Check the code in the script file to see other possible options for the
 configuration arguments!

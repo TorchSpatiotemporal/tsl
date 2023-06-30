@@ -1,7 +1,6 @@
-defaults:
-  - default
-  - _self_
+# @package _global_
 
+#### Model params #############################################################
 model:
   name: tcn
   hparams:
@@ -15,8 +14,7 @@ model:
     norm: batch
     dilation: 2
 
+#### Config overrides #########################################################
 optimizer:
   hparams:
     lr: 0.001
-
-lr_scheduler: null
