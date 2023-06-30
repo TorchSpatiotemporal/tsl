@@ -1,0 +1,26 @@
+# @package _global_
+
+#### Model params #############################################################
+model:
+  name: dcrnn
+  hparams:
+    hidden_size: 64
+    ff_size: 128
+    kernel_size: 2
+    root_weight: True
+    add_backward: True
+    n_layers: 1
+    dropout: 0
+    cache_support: True
+
+#### Config overrides #########################################################
+dataset:
+  connectivity:
+    layout: csr  # set this to use efficient message-passing implementation
+                 # (see https://pytorch-geometric.readthedocs.io/en/latest/advanced/sparse_tensor.html)
+
+lr_scheduler:
+  name: MultiStepLR
+  hparams:
+    gamma: 0.1
+    milestones: [ 20, 30, 40 ]

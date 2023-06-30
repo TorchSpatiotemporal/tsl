@@ -1,0 +1,25 @@
+# @package _global_
+
+#### Model params #############################################################
+model:
+  name: stcn
+  hparams:
+    hidden_size: 32
+    ff_size: 256
+    n_layers: 4
+    dropout: 0.1
+    temporal_kernel_size: 2
+    spatial_kernel_size: 2
+    dilation: 2
+    norm: batch
+
+#### Config overrides #########################################################
+dataset:
+  connectivity:
+    layout: csr  # set this to use efficient message-passing implementation
+                 # (see https://pytorch-geometric.readthedocs.io/en/latest/advanced/sparse_tensor.html)
+
+optimizer:
+  hparams:
+    lr: 0.001
+    weight_decay: 0.0001

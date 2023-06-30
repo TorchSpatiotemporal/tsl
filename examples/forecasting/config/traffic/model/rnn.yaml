@@ -1,7 +1,6 @@
-defaults:
-  - default
-  - _self_
+# @package _global_
 
+#### Model params #############################################################
 model:
   name: rnn
   hparams:
@@ -13,8 +12,7 @@ model:
     ff_dropout: 0.1
     cell_type: gru
 
+#### Config overrides #########################################################
 optimizer:
   hparams:
     lr: 0.001
-
-lr_scheduler: null
