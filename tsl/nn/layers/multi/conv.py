@@ -74,3 +74,57 @@ class MultiConv1d(nn.Module):
             out = out + self.bias
 
         return out
+
+
+class MultiTemporalConv(nn.Module):
+    """
+    Multi temporal convolutional filters.
+
+    Inputs are expected to be of shape (batch, steps, n_instances, channels).
+
+
+    Args:
+        input_channels (int): Input size.
+        output_channels (int): Output size.
+        kernel_size (int): Size of the convolution kernel.
+        dilation (int, optional): Spacing between kernel elements.
+        stride (int, optional):  Stride of the convolution.
+        bias (bool, optional): Whether to add a learnable bias to the output of
+            the convolution.
+        padding (int, optional): Padding of the input. Used only of
+            `causal_padding` is `False`.
+        causal_padding (bool, optional): Whether to pad the input as to preserve
+            causality.
+    """
+
+    def __init__(self,
+                 input_channels: int,
+                 output_channels: int,
+                 kernel_size: int,
+                 n_instances: int,
+                 dilation: int = 1,
+                 stride: int = 1,
+                 bias: bool = True,
+                 padding: tuple = 0,
+                 causal_padding: bool = True):
+        super().__init__()
+        self._causal_pad_sizes = (0, 0, 0, 0, (kernel_size - 1) * dilation, 0)
+        if causal_padding:
+            assert padding == 0
+            self.causal_padding = True
+
+        self.conv = MultiConv1d(in_channels=input_channels,
+                                out_channels=output_channels,
+                                n_instances=n_instances,
+                                kernel_size=kernel_size,
+                                stride=stride,
+                                padding=0,
+                                dilation=dilation,
+                                bias=bias)
+
+    def forward(self, x):
+        """"""
+        if self.causal_padding:
+            x = F.pad(x, self._causal_pad_sizes, mode='constant', value=0.)
+        x = self.conv(x)
+        return x
