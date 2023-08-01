@@ -12,21 +12,6 @@ from tsl.ops.graph_generators import build_tri_community_graph
 from .synthetic import GaussianNoiseSyntheticDataset
 
 
-def _gcn_gso(edge_index, num_nodes):
-    """Graph shift operator based on the GCN normalized adjacency matrix from
-    the paper `"Semi-supervised classification with graph convolutional
-    networks." <https://arxiv.org/abs/1609.02907>`_ (Kipf et al., ICLR 2017).
-    """
-    from torch_geometric.utils import degree
-    edge_index, _ = add_self_loops(edge_index=edge_index, num_nodes=num_nodes)
-    row, col = edge_index
-    deg = degree(col, num_nodes)
-    deg_inv_sqrt = deg.pow(-0.5)
-    deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-    edge_weight = deg_inv_sqrt[row] * deg_inv_sqrt[col]
-    return edge_index, edge_weight
-
-
 class _GPVAR(GraphPolyVAR):
 
     def forward(self, x, edge_index, edge_weight=None):
