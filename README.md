@@ -22,8 +22,25 @@
 <p><img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> <b>tsl</b> <em>(Torch Spatiotemporal)</em> is a library built to accelerate research on neural spatiotemporal data processing
 methods, with a focus on Graph Neural Networks.</p>
 
-<p><img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl is built on several libraries of the <b>Python</b> scientific computing ecosystem, with the final objective of providing a straightforward process that goes from data preprocessing to model prototyping.
-In particular, <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl offers a wide range of utilities to develop neural networks in <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pytorch.svg" width="20px" align="center"/> <a href="https://pytorch.org"><b>PyTorch</b></a> for processing spatiotemporal data signals.</p>
+<p>Built upon popular libraries such as <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pytorch.svg" width="20px" align="center"/> <a href="https://pytorch.org"><b>PyTorch</b></a>, <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pyg.svg" width="20px" align="center"/> <a href="https://pyg.org">PyG</a> (PyTorch Geometric), and <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/lightning.svg" width="20px" align="center"/> <a href="https://www.pytorchlightning.ai/">PyTorch Lightning</a>, <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl provides a unified and user-friendly framework for efficient neural spatiotemporal data processing, that goes from data preprocessing to model prototyping.</p>
+
+## Features
+
+* **Create Custom Models and Datasets**&nbsp;&nbsp; Easily build your own custom models and datasets for spatiotemporal data analysis. Whether you're working with sensor networks, environmental data, or any other spatiotemporal domain, <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl's high-level APIs empower you to develop tailored solutions.
+
+* **Access a Wealth of Existing Datasets and Models**&nbsp;&nbsp; Leverage a vast collection of datasets and models from the spatiotemporal data processing literature. Explore and benchmark against state-of-the-art baselines, and test your brand new model on widely used public datasets.
+
+* **Handle Irregularities and Missing Data**&nbsp;&nbsp; Seamlessly manage irregularities in your spatiotemporal data streams, including missing data and variations in network structures. Ensure the robustness and reliability of your data processing pipelines.
+
+* **Streamlined Preprocessing**&nbsp;&nbsp; Automate the preprocessing phase with <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl's methods for scaling, resampling and clustering time series. Spend less time on data preparation and focus on extracting meaningful patterns and insights.
+
+* **Efficient Data Structures**&nbsp;&nbsp; Utilize <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl's straightforward data structures, seamlessly integrated with <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pytorch.svg" width="20px" align="center"/> PyTorch and <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pyg.svg" width="20px" align="center"/> PyG, to accelerate your workflows. Benefit from the flexibility and compatibility of these widely adopted libraries.
+
+* **Scalability with PyTorch Lightning**&nbsp;&nbsp; Scale your computations effortlessly, from a single CPU to clusters of GPUs, with <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl's integration with <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/lightning.svg" width="20px" align="center"/> PyTorch Lightning. Accelerate training and inference across various hardware configurations.
+
+* **Modular Neural Layers**&nbsp;&nbsp; Build powerful and modular neural spatiotemporal models using <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl's collection of specialized layers. Create architectures with ease, leveraging the flexibility and extensibility of the library.
+
+* **Reproducible Experiments**&nbsp;&nbsp; Ensure experiment reproducibility using the <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/hydra.svg" width="25px" align="center"/> <a href="https://hydra.cc/">Hydra</a> framework, a standard in the field. Validate and compare results confidently, promoting rigorous research in spatiotemporal data mining.
 
 ## Getting Started
 
@@ -57,7 +74,19 @@ The best way to start using <img src="https://raw.githubusercontent.com/TorchSpa
 
 ## Documentation
 
+Visit the [documentation](https://torch-spatiotemporal.readthedocs.io/en/latest/) to learn more about the library, including detailed API references, examples, and tutorials.
+
 The documentation is hosted on [readthedocs](https://torch-spatiotemporal.readthedocs.io/en/latest/). For local access, you can build it from the `docs` directory.
+
+## Contributing
+
+Contributions are welcome! For major changes or new features, please open an issue first to discuss your ideas. See the [Contributing guidelines](https://github.com/TorchSpatiotemporal/tsl/blob/dev/.github/CONTRIBUTING.md) for more details on how to get involved. Help us build a better <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl!
+
+Thanks to all contributors! 🧡
+
+<a href="https://github.com/TorchSpatiotemporal/tsl/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=TorchSpatiotemporal/tsl" />
+</a>
 
 ## Citing
 
@@ -76,8 +105,6 @@ If you use Torch Spatiotemporal for your research, please consider citing the li
 
 By [Andrea Cini](https://andreacini.github.io/) and [Ivan Marisca](https://marshka.github.io/).
 
-Thanks to all contributors! Check the [Contributing guidelines](https://github.com/TorchSpatiotemporal/tsl/blob/dev/.github/CONTRIBUTING.md) and help us build a better <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl.
+## License
 
-<a href="https://github.com/TorchSpatiotemporal/tsl/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=TorchSpatiotemporal/tsl" />
-</a>
+This project is licensed under the terms of the MIT license. See the [LICENSE](https://github.com/TorchSpatiotemporal/tsl/blob/main/LICENSE) file for details.

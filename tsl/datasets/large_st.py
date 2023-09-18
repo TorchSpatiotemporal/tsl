@@ -67,8 +67,9 @@ class LargeST(DatetimeDataset):
               (max 8);
             + ``direction``: direction of the highway measured by the sensor
               (one of ``N``, ``S``, ``E``, ``W``).
-        + :obj:`adj`: weighted adjacency matrix :math:`\mathbf{A} \in
-          \mathbb{R}^{N \times N}`built using road distances.
+        + :obj:`adj`: weighted adjacency matrix
+          :math:`\mathbf{A} \in \mathbb{R}^{N \times N}` built using road
+          distances.
 
     Args:
         root (str, optional): The root directory where data will be downloaded
@@ -130,7 +131,7 @@ class LargeST(DatetimeDataset):
             if not len(view_years):
                 raise ValueError(f"Incorrect choice for 'year' ({year}). "
                                  f"Must be a subset of {years_set}.")
-        self.years = view_years
+        self.years = sorted(view_years)
 
         self.imputation_mode = imputation_mode
         assert imputation_mode in ["nearest", "zero", None]
