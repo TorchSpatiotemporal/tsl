@@ -91,11 +91,8 @@ class MetrLA(DatetimeDataset):
         # load traffic data
         traffic_path = os.path.join(self.root_dir, 'metr_la.h5')
         df = pd.read_hdf(traffic_path)
-        # add missing values
-        datetime_idx = sorted(df.index)
-        date_range = pd.date_range(datetime_idx[0],
-                                   datetime_idx[-1],
-                                   freq='5T')
+        # add missing values (index is sorted)
+        date_range = pd.date_range(df.index[0], df.index[-1], freq='5T')
         df = df.reindex(index=date_range)
         # load distance matrix
         path = os.path.join(self.root_dir, 'metr_la_dist.npy')
