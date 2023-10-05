@@ -55,7 +55,7 @@ class MetrLA(DatetimeDataset):
 
     @property
     def required_file_names(self):
-        return ['metr_la.h5', 'metr_la_dist.npy']
+        return ['metr_la.h5', 'metr_la_dist.npy', 'locations.csv']
 
     def download(self) -> None:
         path = download_url(self.url, self.root_dir)
@@ -83,6 +83,9 @@ class MetrLA(DatetimeDataset):
         # Save to built directory
         path = os.path.join(self.root_dir, 'metr_la_dist.npy')
         np.save(path, dist)
+        # Rename locations file
+        os.rename(os.path.join(self.root_dir, 'sensor_locations_la.csv'),
+                  os.path.join(self.root_dir, 'locations.csv'))
         # Remove raw data
         self.clean_downloads()
 

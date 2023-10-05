@@ -56,7 +56,7 @@ class PemsBay(DatetimeDataset):
 
     @property
     def required_file_names(self):
-        return ['pems_bay.h5', 'pems_bay_dist.npy']
+        return ['pems_bay.h5', 'pems_bay_dist.npy', 'locations.csv']
 
     def download(self) -> None:
         path = download_url(self.url, self.root_dir)
@@ -69,6 +69,9 @@ class PemsBay(DatetimeDataset):
         path = os.path.join(self.root_dir, 'pems_bay.h5')
         ids = list(pd.read_hdf(path).columns)
         self.build_distance_matrix(ids)
+        # Rename locations file
+        os.rename(os.path.join(self.root_dir, 'sensor_locations_bay.csv'),
+                  os.path.join(self.root_dir, 'locations.csv'))
         # Remove raw data
         self.clean_downloads()
 
