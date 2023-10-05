@@ -256,7 +256,8 @@ class Dataset(object):
     def clean_downloads(self):
         for file in self.raw_files_paths_list:
             if file not in self.required_files_paths_list:
-                os.unlink(file)
+                if os.path.exists(file):
+                    os.unlink(file)
 
     def clean_root_dir(self):
         import shutil
