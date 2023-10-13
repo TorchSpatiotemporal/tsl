@@ -27,10 +27,12 @@ class GraphConvRNN(RNNBase):
         bias (bool): If :obj:`False`, then the layer will not learn an additive
             bias vector for each gate.
             (default: :obj:`True`)
-        asymmetric_norm (bool): If :obj:`True`, then normalize the edge weights
-            as :math:`a_{j \rightarrow i} =  \frac{a_{j \rightarrow i}}
-            {deg_{i}}`, otherwise apply the GCN normalization.
-            (default: :obj:`True`)
+        norm (str): The normalization used for edges and edge weights. If
+            :obj:`'mean'`, then edge weights are normalized as
+            :math:`a_{j \rightarrow i} =  \frac{a_{j \rightarrow i}} {deg_{i}}`,
+            other available options are: :obj:`'gcn'`, :obj:`'asym'` and
+            :obj:`'none'`.
+            (default: :obj:`'mean'`)
         root_weight (bool): If :obj:`True`, then add a filter (with different
             weights) for the root node itself.
             (default :obj:`True`)
@@ -52,7 +54,7 @@ class GraphConvRNN(RNNBase):
                  return_only_last_state: bool = False,
                  cell: str = 'gru',
                  bias: bool = True,
-                 asymmetric_norm: bool = True,
+                 norm: str = 'mean',
                  root_weight: bool = True,
                  activation: str = None,
                  cached: bool = False,
@@ -70,7 +72,7 @@ class GraphConvRNN(RNNBase):
         rnn_cells = [
             cell(input_size if i == 0 else hidden_size,
                  hidden_size,
-                 asymmetric_norm=asymmetric_norm,
+                 norm=norm,
                  root_weight=root_weight,
                  activation=activation,
                  bias=bias,

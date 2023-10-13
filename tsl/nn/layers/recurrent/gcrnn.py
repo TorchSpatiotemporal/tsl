@@ -15,8 +15,12 @@ class GraphConvGRUCell(GraphGRUCellBase):
         bias (bool): If :obj:`True`, then the layer will learn an additive bias
             for each gate.
             (default: :obj:`True`)
-        norm (str): Normalization used by the graph convolutional layer.
-            (default :obj:`mean`)
+        norm (str): The normalization used for edges and edge weights. If
+            :obj:`'mean'`, then edge weights are normalized as
+            :math:`a_{j \rightarrow i} =  \frac{a_{j \rightarrow i}} {deg_{i}}`,
+            other available options are: :obj:`'gcn'`, :obj:`'asym'` and
+            :obj:`'none'`.
+            (default: :obj:`'mean'`)
         root_weight (bool): If :obj:`True`, then add a filter (with different
             weights) for the root node itself.
             (default :obj:`True`)

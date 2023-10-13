@@ -152,7 +152,8 @@ def az_whiteness_test(
 
     if remove_median:
         x_ = x.copy()
-        x_[np.logical_not(mask)] = np.nan
+        if mask is not None:
+            x_[np.logical_not(mask)] = np.nan
         x_median = np.nanmedian(x_, axis=[T_DIM, N_DIM], keepdims=True)
         x -= x_median
 
