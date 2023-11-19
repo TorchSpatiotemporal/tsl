@@ -116,7 +116,7 @@ class MultiHeadAttention(nn.MultiheadAttention):
                  qdim: Optional[int] = None,
                  kdim: Optional[int] = None,
                  vdim: Optional[int] = None,
-                 axis='steps',
+                 axis='time',
                  dropout=0.,
                  bias=True,
                  add_bias_kv=False,
@@ -124,7 +124,7 @@ class MultiHeadAttention(nn.MultiheadAttention):
                  device=None,
                  dtype=None,
                  causal=False) -> None:
-        if axis in ['steps', 0]:
+        if axis in ['time', 0]:
             shape = 's (b n) c'
         elif axis in ['nodes', 1]:
             if causal:
