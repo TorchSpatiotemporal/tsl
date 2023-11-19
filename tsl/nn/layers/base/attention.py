@@ -132,7 +132,7 @@ class MultiHeadAttention(nn.MultiheadAttention):
                     f'Cannot use causal attention for axis "{axis}".')
             shape = 'n (b s) c'
         else:
-            raise ValueError("Axis can either be 'steps' (0) or 'nodes' (1), "
+            raise ValueError("Axis can either be 'time' (0) or 'nodes' (1), "
                              f"not '{axis}'.")
         self._in_pattern = f'b s n c -> {shape}'
         self._out_pattern = f'{shape} -> b s n c'
