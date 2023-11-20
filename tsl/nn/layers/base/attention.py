@@ -116,7 +116,7 @@ class MultiHeadAttention(nn.MultiheadAttention):
                  qdim: Optional[int] = None,
                  kdim: Optional[int] = None,
                  vdim: Optional[int] = None,
-                 axis='steps',
+                 axis='time',
                  dropout=0.,
                  bias=True,
                  add_bias_kv=False,
@@ -124,7 +124,7 @@ class MultiHeadAttention(nn.MultiheadAttention):
                  device=None,
                  dtype=None,
                  causal=False) -> None:
-        if axis in ['steps', 0]:
+        if axis in ['time', 0]:
             shape = 's (b n) c'
         elif axis in ['nodes', 1]:
             if causal:
@@ -132,7 +132,7 @@ class MultiHeadAttention(nn.MultiheadAttention):
                     f'Cannot use causal attention for axis "{axis}".')
             shape = 'n (b s) c'
         else:
-            raise ValueError("Axis can either be 'steps' (0) or 'nodes' (1), "
+            raise ValueError("Axis can either be 'time' (0) or 'nodes' (1), "
                              f"not '{axis}'.")
         self._in_pattern = f'b s n c -> {shape}'
         self._out_pattern = f'{shape} -> b s n c'
