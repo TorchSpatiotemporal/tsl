@@ -1,0 +1,19 @@
+#########################        SPIN-H CONFIG        #########################
+defaults:
+  - default
+  - _self_
+
+#### Model params #############################################################
+model:
+  name: spin-h
+  hparams:
+    h_size: 32
+    z_size: 128
+    z_heads: 4
+    eta: 3
+    n_layers: 5
+    message_layers: 1
+    update_z_cross: False
+    norm: True
+    reweigh: 'softmax'
+    spatial_aggr: 'softmax'

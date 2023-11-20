@@ -6,6 +6,7 @@ from .graph_wavenet_model import GraphWaveNetModel
 from .grin_model import GRINModel
 from .gru_gcn_model import GRUGCNModel
 from .rnn_gcn_model import RNNEncGCNDecModel
+from .spin_model import SPINHierarchicalModel, SPINModel
 from .stcn_model import STCNModel
 
 __all__ = [
@@ -14,10 +15,12 @@ __all__ = [
     'GatedGraphNetworkModel',
     'RNNEncGCNDecModel',
     'STCNModel',
-    'GRINModel',
     'EvolveGCNModel',
     'GRUGCNModel',
     'AGCRNModel',
+    'GRINModel',
+    'SPINModel',
+    'SPINHierarchicalModel',
 ]
 
 classes = __all__

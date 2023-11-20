@@ -1,0 +1,15 @@
+##########################        SPIN CONFIG        ##########################
+defaults:
+  - default
+  - _self_
+
+#### Model params #############################################################
+model:
+  name: spin
+  hparams:
+    hidden_size: 32
+    eta: 3
+    n_layers: 4
+    message_layers: 1
+    temporal_self_attention: True
+    reweigh: 'softmax'

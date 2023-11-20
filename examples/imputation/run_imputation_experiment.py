@@ -12,7 +12,8 @@ from tsl.engines import Imputer
 from tsl.experiment import Experiment
 from tsl.metrics import numpy as numpy_metrics
 from tsl.metrics import torch as torch_metrics
-from tsl.nn.models import BiRNNImputerModel, GRINModel, RNNImputerModel
+from tsl.nn.models import (BiRNNImputerModel, GRINModel, RNNImputerModel,
+                           SPINHierarchicalModel, SPINModel)
 from tsl.ops.imputation import add_missing_values
 from tsl.transforms import MaskInput
 from tsl.utils.casting import torch_to_numpy
@@ -25,6 +26,10 @@ def get_model_class(model_str):
         model = BiRNNImputerModel
     elif model_str == 'grin':
         model = GRINModel
+    elif model_str == 'spin':
+        model = SPINModel
+    elif model_str == 'spin-h':
+        model = SPINHierarchicalModel
     else:
         raise NotImplementedError(f'Model "{model_str}" not available.')
     return model
@@ -131,6 +136,7 @@ def run_imputation(cfg: DictConfig):
                       metrics=log_metrics,
                       scheduler_class=scheduler_class,
                       scheduler_kwargs=scheduler_kwargs,
+                      scale_target=cfg.scale_target,
                       whiten_prob=cfg.whiten_prob,
                       prediction_loss_weight=cfg.prediction_loss_weight,
                       impute_only_missing=cfg.impute_only_missing,
