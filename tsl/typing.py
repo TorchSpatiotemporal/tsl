@@ -1,4 +1,4 @@
-from typing import Dict, List, Literal, Optional, Tuple, Type, Union
+from typing import Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union
 
 from numpy import ndarray
 from pandas import DataFrame, DatetimeIndex, PeriodIndex, TimedeltaIndex
@@ -33,3 +33,5 @@ FillOptions = Optional[Literal["backfill", "bfill", "ffill", "pad", "mean",
                                "linear"]]
 
 ModelReturnOptions = Type[Union[Tensor, Dict, List, Tuple]]
+
+Slicer = TypeVar("Slicer", slice, type(Ellipsis), int)

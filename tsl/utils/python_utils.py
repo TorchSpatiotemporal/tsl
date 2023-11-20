@@ -1,8 +1,11 @@
 import inspect
 import os
+import re
 from argparse import ArgumentParser
 from typing import (Any, Callable, List, Mapping, Optional, Sequence, Set,
                     Type, Union)
+
+import numpy as np
 
 
 def ensure_list(value: Any) -> List:
@@ -129,3 +132,40 @@ def filter_kwargs(target: Union[Callable, Type], kwargs: Mapping):
             for k, v in kwargs.items() if k in signature['signature']
         }
     return kwargs
+
+
+def parse_slicing_element(e: str) -> type(Ellipsis) | slice | list[Any] | int:
+    """
+    Parses single slicing elements.
+
+    Args:
+        e: string representing the slicing element.
+
+    Returns:
+        The parsed element.
+    """
+    if e == "...":
+        return Ellipsis
+    elif ":" in e:
+        return slice(*(int(i) if not i == "" else None for i in e.split(":")))
+    elif e.startswith("[") and e.endswith("]"):
+        return list(int(i) for i in e[1:-1].split(","))
+    else:
+        return int(e)
+
+
+def parse_slicing_string(s: str) -> tuple[int | slice | type(Ellipsis)]:
+    """
+    Parses slicing elements obtained by splitting a string at each comma
+    considering elements inside square brackets as individual elements.
+
+    Args:
+        s: string to parse.
+
+    Returns:
+        A tuple containing the parsed elements.
+    """
+    return np.index_exp[(
+        parse_slicing_element(e)
+        for e in re.split(r'\s*,\s*(?![^\[\]]*])', s.replace(" ", ""))
+        if not e == "")]
