@@ -1,5 +1,5 @@
 import math
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from einops import rearrange
@@ -94,7 +94,7 @@ class AttentionEncoder(nn.Module):
                 key: OptTensor = None,
                 value: OptTensor = None):
         """"""
-        # inputs: [batches, steps, nodes, channels]
+        # inputs: [batches, time, nodes, channels]
         if key is None:
             key = query
         if value is None:
@@ -108,34 +108,70 @@ class AttentionEncoder(nn.Module):
 class MultiHeadAttention(nn.MultiheadAttention):
     """The multi-head attention from the paper `"Attention Is All You Need"
     <https://arxiv.org/abs/1706.03762>`_ (Vaswani et al., NeurIPS 2017) for
-    spatiotemporal data."""
+    spatiotemporal data.
+
+    Args:
+        embed_dim (int): Size of the hidden dimension associated with each node
+            at each time step.
+        heads (int): Number of parallel attention heads.
+        qdim (int, optional): Size of the query dimension. If :obj:`None`, then
+            defaults to :attr:`embed_dim`.
+            (default: :obj:`None`)
+        kdim (int, optional): Size of the query dimension. If :obj:`None`, then
+            defaults to :attr:`embed_dim`.
+            (default: :obj:`None`)
+        vdim (int, optional): Size of the query dimension. If :obj:`None`, then
+            defaults to :attr:`embed_dim`.
+            (default: :obj:`None`)
+        axis (str): Dimension on which to apply attention to update
+            the representations. Can be either, ``'time'`` or ``'nodes'``.
+            (default: :obj:`'time'`)
+        add_bias_kv (bool): If :obj:`True`, then adds bias to the key and value
+            sequences.
+            (default: :obj:`False`)
+        add_zero_attn (bool): If :obj:`True`, then adds a new batch of zeros to
+            the key and value sequences.
+            (default: :obj:`False`)
+        causal (bool): If :obj:`True`, then causally mask attention
+            scores in temporal attention (has an effect only if :attr:`axis` is
+            :obj:`'time'`).
+            (default: :obj:`False`)
+        dropout (float): Dropout probability.
+            (default: :obj:`0.`)
+        bias (bool): Whether to add a learnable bias.
+            (default: :obj:`True`)
+        device (optional): Device on which store the model.
+            (default: :obj:`None`)
+        dtype (optional): Data Type of the parameters.
+            (default: :obj:`None`)
+    """
 
     def __init__(self,
-                 embed_dim,
-                 heads,
+                 embed_dim: int,
+                 heads: int,
                  qdim: Optional[int] = None,
                  kdim: Optional[int] = None,
                  vdim: Optional[int] = None,
-                 axis='time',
-                 dropout=0.,
-                 bias=True,
-                 add_bias_kv=False,
-                 add_zero_attn=False,
+                 axis: Union[str, int] = 'time',
+                 add_bias_kv: bool = False,
+                 add_zero_attn: bool = False,
+                 causal: bool = False,
+                 dropout: float = 0.,
+                 bias: bool = True,
                  device=None,
-                 dtype=None,
-                 causal=False) -> None:
+                 dtype=None) -> None:
         if axis in ['time', 0]:
-            shape = 's (b n) c'
+            shape = 't (b n) f'
         elif axis in ['nodes', 1]:
             if causal:
                 raise ValueError(
-                    f'Cannot use causal attention for axis "{axis}".')
-            shape = 'n (b s) c'
+                    'Cannot use causal attention for axis "nodes"')
+            shape = 'n (b t) f'
         else:
             raise ValueError("Axis can either be 'time' (0) or 'nodes' (1), "
                              f"not '{axis}'.")
-        self._in_pattern = f'b s n c -> {shape}'
-        self._out_pattern = f'{shape} -> b s n c'
+        self._in_pattern = f'b t n f -> {shape}'
+        self._out_pattern = f'{shape} -> b t n f'
         self.causal = causal
         # Impose batch dimension as the second one
         super(MultiHeadAttention, self).__init__(embed_dim,
@@ -165,7 +201,7 @@ class MultiHeadAttention(nn.MultiheadAttention):
                 need_weights: bool = True,
                 attn_mask: OptTensor = None):
         """"""
-        # inputs: [batches, steps, nodes, channels] -> [s (b n) c]
+        # inputs: [batches, time, nodes, features] -> [t (b n) f]
         if key is None:
             key = query
         if value is None:
@@ -199,7 +235,7 @@ class TemporalSelfAttention(nn.Module):
     """Temporal Self Attention layer.
 
     Args:
-        embed_dim (int): Size of the hidden dimension associeted with each node
+        embed_dim (int): Size of the hidden dimension associated with each node
             at each time step.
         num_heads (int): Number of parallel attention heads.
         dropout (float): Dropout probability.
@@ -235,7 +271,7 @@ class TemporalSelfAttention(nn.Module):
 
         self.attention = MultiHeadAttention(embed_dim,
                                             num_heads,
-                                            axis='steps',
+                                            axis='time',
                                             dropout=dropout,
                                             bias=bias,
                                             device=device,
@@ -247,8 +283,8 @@ class TemporalSelfAttention(nn.Module):
                 key_padding_mask: Optional[Tensor] = None,
                 need_weights: bool = True):
         """"""
-        # x: [batch, steps, nodes, in_channels]
-        x = self.input_encoder(x)  # -> [batch, steps, nodes, embed_dim]
+        # x: [batch, time, nodes, in_channels]
+        x = self.input_encoder(x)  # -> [batch, time, nodes, embed_dim]
         return self.attention(x,
                               attn_mask=attn_mask,
                               key_padding_mask=key_padding_mask,
@@ -259,7 +295,7 @@ class SpatialSelfAttention(nn.Module):
     """Spatial Self Attention layer.
 
     Args:
-        embed_dim (int): Size of the hidden dimension associeted with each node
+        embed_dim (int): Size of the hidden dimension associated with each node
             at each time step.
         num_heads (int): Number of parallel attention heads.
         dropout (float): Dropout probability.
@@ -307,8 +343,8 @@ class SpatialSelfAttention(nn.Module):
                 key_padding_mask: Optional[Tensor] = None,
                 need_weights: bool = True):
         """"""
-        # x: [batch, steps, nodes, in_channels]
-        x = self.input_encoder(x)  # -> [batch, steps, nodes, embed_dim]
+        # x: [batch, time, nodes, in_channels]
+        x = self.input_encoder(x)  # -> [batch, time, nodes, embed_dim]
         return self.attention(x,
                               attn_mask=attn_mask,
                               key_padding_mask=key_padding_mask,
