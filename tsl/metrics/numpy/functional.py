@@ -9,15 +9,15 @@ from tsl.typing import FrameArray
 ReductionType = Literal['mean', 'sum', 'none']
 MetricOutputType = Union[float, np.ndarray]
 
-__all__ = [
-    'mae', 'nmae', 'mape', 'mse', 'rmse', 'nrmse', 'nrmse_2', 'r2', 'mre'
-]
+__all__ = ['mae', 'nmae', 'mape', 'mse', 'rmse', 'nrmse', 'nrmse_2', 'r2', 'mre']
 
 
-def _masked_reduce(x: FrameArray,
-                   reduction: ReductionType,
-                   mask: Optional[FrameArray] = None,
-                   nan_to_zero: bool = False) -> MetricOutputType:
+def _masked_reduce(
+    x: FrameArray,
+    reduction: ReductionType,
+    mask: Optional[FrameArray] = None,
+    nan_to_zero: bool = False,
+) -> MetricOutputType:
     x = framearray_to_numpy(x)  # covert x to ndarray if not already (no copy)
     # 'none': return x with x[i] = 0/nan where mask[i] == False
     if reduction == 'none':
@@ -34,15 +34,19 @@ def _masked_reduce(x: FrameArray,
     elif reduction == 'sum':
         return np.sum(x)
     else:
-        raise ValueError(f"reduction {reduction} not allowed, must be one of "
-                         "['mean', 'sum', 'none'].")
+        raise ValueError(
+            f'reduction {reduction} not allowed, must be one of '
+            "['mean', 'sum', 'none']."
+        )
 
 
-def mae(y_hat: FrameArray,
-        y: FrameArray,
-        mask: Optional[FrameArray] = None,
-        reduction: ReductionType = 'mean',
-        nan_to_zero: bool = False) -> MetricOutputType:
+def mae(
+    y_hat: FrameArray,
+    y: FrameArray,
+    mask: Optional[FrameArray] = None,
+    reduction: ReductionType = 'mean',
+    nan_to_zero: bool = False,
+) -> MetricOutputType:
     r"""Compute the `Mean Absolute Error (MAE)
     <https://en.wikipedia.org/wiki/Mean_absolute_error>`_ between the estimate
     :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -77,11 +81,13 @@ def mae(y_hat: FrameArray,
     return _masked_reduce(err, reduction, mask, nan_to_zero)
 
 
-def nmae(y_hat: FrameArray,
-         y: FrameArray,
-         mask: Optional[FrameArray] = None,
-         reduction: ReductionType = 'mean',
-         nan_to_zero: bool = False) -> MetricOutputType:
+def nmae(
+    y_hat: FrameArray,
+    y: FrameArray,
+    mask: Optional[FrameArray] = None,
+    reduction: ReductionType = 'mean',
+    nan_to_zero: bool = False,
+) -> MetricOutputType:
     r"""Compute the *Normalized Mean Absolute Error* (NMAE) between the estimate
     :math:`\hat{y}` and the true value :math:`y`. The NMAE is the `Mean Absolute
     Error (MAE) <https://en.wikipedia.org/wiki/Mean_absolute_error>`_ scaled by
@@ -119,11 +125,13 @@ def nmae(y_hat: FrameArray,
     return _masked_reduce(err, reduction, mask, nan_to_zero)
 
 
-def mape(y_hat: FrameArray,
-         y: FrameArray,
-         mask: Optional[FrameArray] = None,
-         reduction: ReductionType = 'mean',
-         nan_to_zero: bool = False) -> MetricOutputType:
+def mape(
+    y_hat: FrameArray,
+    y: FrameArray,
+    mask: Optional[FrameArray] = None,
+    reduction: ReductionType = 'mean',
+    nan_to_zero: bool = False,
+) -> MetricOutputType:
     r"""Compute the `Mean Absolute Percentage Error (MAPE).
     <https://en.wikipedia.org/wiki/Mean_absolute_percentage_error>`_ between the
     estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -159,11 +167,55 @@ def mape(y_hat: FrameArray,
     return _masked_reduce(err, reduction, mask, nan_to_zero)
 
 
-def mse(y_hat: FrameArray,
-        y: FrameArray,
-        mask: Optional[FrameArray] = None,
-        reduction: ReductionType = 'mean',
-        nan_to_zero: bool = False) -> MetricOutputType:
+def smape(
+    y_hat: FrameArray,
+    y: FrameArray,
+    mask: Optional[FrameArray] = None,
+    reduction: ReductionType = 'mean',
+    nan_to_zero: bool = False,
+) -> MetricOutputType:
+    r"""Compute the `Symmetric Mean Absolute Percentage Error (MAPE).
+    <https://en.wikipedia.org/wiki/Mean_absolute_percentage_error>`_ between the
+    estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
+
+    .. math::
+
+        \text{SMAPE} = \frac{1}{n} \sum_{i=1}^{n} \frac{2 |y_i - \hat{y}_i|}{|y_i| + |\hat{y}_i|}
+
+    Args:
+        y_hat (FrameArray): The estimated variable.
+        y (FrameArray): The ground-truth variable.
+        mask (FrameArray, optional): If provided, compute the metric using only
+            the values at valid indices (with :attr:`mask` set to :obj:`True`).
+            If :attr:`mask` is not :obj:`None` and :attr:`reduction` is
+            :obj:`'none'`, masked indices are set to :obj:`nan` (see
+            :attr:`nan_to_zero`).
+            (default: :obj:`None`)
+        reduction (str): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
+            be applied, ``'mean'``: the sum of the output will be divided by the
+            number of elements in the output, ``'sum'``: the output will be
+            summed. (default: ``'mean'``)
+        nan_to_zero (bool): If :obj:`True`, then masked values in output are
+            converted to :obj:`0`. This has an effect only when :attr:`mask` is
+            not :obj:`None` and :attr:`reduction` is :obj:`'none'`.
+            (default: :obj:`False`)
+
+    Returns:
+        float | np.ndarray
+    """
+    num = 2 * np.abs((y_hat - y))
+    den = np.abs(y_hat) + np.abs(y) + tsl.epsilon
+    return _masked_reduce(num / den, reduction, mask, nan_to_zero)
+
+
+def mse(
+    y_hat: FrameArray,
+    y: FrameArray,
+    mask: Optional[FrameArray] = None,
+    reduction: ReductionType = 'mean',
+    nan_to_zero: bool = False,
+) -> MetricOutputType:
     r"""Compute the `Mean Squared Error (MSE)
     <https://en.wikipedia.org/wiki/Mean_squared_error>`_ between the
     estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -198,10 +250,12 @@ def mse(y_hat: FrameArray,
     return _masked_reduce(err, reduction, mask, nan_to_zero)
 
 
-def rmse(y_hat: FrameArray,
-         y: FrameArray,
-         mask: Optional[FrameArray] = None,
-         reduction: ReductionType = 'mean') -> MetricOutputType:
+def rmse(
+    y_hat: FrameArray,
+    y: FrameArray,
+    mask: Optional[FrameArray] = None,
+    reduction: ReductionType = 'mean',
+) -> MetricOutputType:
     r"""Compute the `Root Mean Squared Error (RMSE)
     <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
     estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -229,43 +283,47 @@ def rmse(y_hat: FrameArray,
     return np.sqrt(_masked_reduce(err, reduction, mask))
 
 
-def nrmse(y_hat: FrameArray,
-          y: FrameArray,
-          mask: Optional[FrameArray] = None,
-          reduction: ReductionType = 'mean') -> MetricOutputType:
+def nrmse(
+    y_hat: FrameArray,
+    y: FrameArray,
+    mask: Optional[FrameArray] = None,
+    reduction: ReductionType = 'mean',
+) -> MetricOutputType:
     r"""Compute the `Normalized Root Mean Squared Error (NRMSE)
-        <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
-        estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
-        Normalization is by the max-min range of the data
+    <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
+    estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
+    Normalization is by the max-min range of the data
 
-        .. math::
+    .. math::
 
-            \text{NRMSE} = \frac{\sqrt{\frac{\sum_{i=1}^n (\hat{y}_i - y_i)^2}
-            {n}} }{\max y - \min y}
+        \text{NRMSE} = \frac{\sqrt{\frac{\sum_{i=1}^n (\hat{y}_i - y_i)^2}
+        {n}} }{\max y - \min y}
 
-        Args:
-            y_hat (FrameArray): The estimated variable.
-            y (FrameArray): The ground-truth variable.
-            mask (FrameArray, optional): If provided, compute the metric using
-                only the values at valid indices (with :attr:`mask` set to
-                :obj:`True`).
-            reduction (str): Specifies the reduction to apply to the output:
-                ``'mean'`` | ``'sum'``. ``'mean'``: the sum of the output will
-                be divided by the number of elements in the output, ``'sum'``:
-                the output will be summed.
-                (default: ``'mean'``)
+    Args:
+        y_hat (FrameArray): The estimated variable.
+        y (FrameArray): The ground-truth variable.
+        mask (FrameArray, optional): If provided, compute the metric using
+            only the values at valid indices (with :attr:`mask` set to
+            :obj:`True`).
+        reduction (str): Specifies the reduction to apply to the output:
+            ``'mean'`` | ``'sum'``. ``'mean'``: the sum of the output will
+            be divided by the number of elements in the output, ``'sum'``:
+            the output will be summed.
+            (default: ``'mean'``)
 
-        Returns:
-            float: The range-normalzized NRMSE
-        """
+    Returns:
+        float: The range-normalzized NRMSE
+    """
     delta = np.max(y) - np.min(y) + tsl.epsilon
     return rmse(y_hat, y, mask, reduction) / delta
 
 
-def nrmse_2(y_hat: FrameArray,
-            y: FrameArray,
-            mask: Optional[FrameArray] = None,
-            reduction: ReductionType = 'mean') -> MetricOutputType:
+def nrmse_2(
+    y_hat: FrameArray,
+    y: FrameArray,
+    mask: Optional[FrameArray] = None,
+    reduction: ReductionType = 'mean',
+) -> MetricOutputType:
     r"""Compute the `Normalized Root Mean Squared Error (NRMSE)
     <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
     estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -298,12 +356,14 @@ def nrmse_2(y_hat: FrameArray,
     return rmse(y_hat, y, mask, reduction) / power_y
 
 
-def r2(y_hat: FrameArray,
-       y: FrameArray,
-       mask: Optional[FrameArray] = None,
-       reduction: ReductionType = 'mean',
-       nan_to_zero: bool = False,
-       mean_axis: Union[int, Tuple] = None) -> float:
+def r2(
+    y_hat: FrameArray,
+    y: FrameArray,
+    mask: Optional[FrameArray] = None,
+    reduction: ReductionType = 'mean',
+    nan_to_zero: bool = False,
+    mean_axis: Union[int, Tuple] = None,
+) -> float:
     r"""Compute the `coefficient of determination
     <https://en.wikipedia.org/wiki/Coefficient_of_determination>`_ :math:`R^2`
     between the estimate :math:`\hat{y}` and the true value :math:`y`, i.e.
@@ -338,12 +398,10 @@ def r2(y_hat: FrameArray,
     mse_ = mse(y_hat, y, mask, reduction, nan_to_zero)
     mean_val = np.mean(y, axis=mean_axis, keepdims=True)
     variance = mse(mean_val, y, mask, reduction, nan_to_zero)
-    return 1. - (mse_ / variance)
+    return 1.0 - (mse_ / variance)
 
 
-def mre(y_hat: FrameArray,
-        y: FrameArray,
-        mask: Optional[FrameArray] = None) -> float:
+def mre(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None) -> float:
     r"""Compute the MAE normalized by the L1-norm of the true signal :math:`y`,
     i.e.
 

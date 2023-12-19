@@ -2,7 +2,14 @@ from . import functional
 from .functional import *
 from .metric_base import MaskedMetric, convert_to_masked_metric
 from .metric_wrappers import MaskedMetricWrapper, SelectMetricWrapper
-from .metrics import MaskedMAE, MaskedMAPE, MaskedMRE, MaskedMSE
+from .metrics import (
+    MaskedMAE,
+    MaskedMAPE,
+    MaskedMetric,
+    MaskedMRE,
+    MaskedMSE,
+    MaskedSMAPE,
+)
 from .pinball_loss import MaskedPinballLoss
 
 functional_methods = functional.__all__
@@ -20,8 +27,8 @@ masked_metric_classes = [
     'MaskedMSE',
     'MaskedMRE',
     'MaskedMAPE',
+    'MaskedSMAPE',
     'MaskedPinballLoss',
 ]
 
-__all__ = masked_metric_classes + functional_methods + \
-          wrappers_classes + utils_methods
+__all__ = masked_metric_classes + functional_methods + wrappers_classes + utils_methods
