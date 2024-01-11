@@ -51,6 +51,9 @@ class DisjointGraphLoader(data.DataLoader):
             del kwargs["collate_fn"]
 
         # Save for PyTorch Lightning...
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.force_batch = force_batch
         self.follow_batch = follow_batch
         self.exclude_keys = exclude_keys
 

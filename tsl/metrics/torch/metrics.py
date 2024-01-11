@@ -6,7 +6,7 @@ from torchmetrics.utilities.checks import _check_same_shape
 
 import tsl
 
-from .functional import mape
+from .functional import mape, smape
 from .metric_base import MaskedMetric
 
 
@@ -25,17 +25,15 @@ class MaskedMAE(MaskedMetric):
     higher_is_better: bool = False
     full_state_update: bool = False
 
-    def __init__(self,
-                 mask_nans=False,
-                 mask_inf=False,
-                 at=None,
-                 **kwargs: Any):
-        super(MaskedMAE, self).__init__(metric_fn=F.l1_loss,
-                                        mask_nans=mask_nans,
-                                        mask_inf=mask_inf,
-                                        metric_fn_kwargs={'reduction': 'none'},
-                                        at=at,
-                                        **kwargs)
+    def __init__(self, mask_nans=False, mask_inf=False, at=None, **kwargs: Any):
+        super(MaskedMAE, self).__init__(
+            metric_fn=F.l1_loss,
+            mask_nans=mask_nans,
+            mask_inf=mask_inf,
+            metric_fn_kwargs={'reduction': 'none'},
+            at=at,
+            **kwargs,
+        )
 
 
 class MaskedMAPE(MaskedMetric):
@@ -52,13 +50,38 @@ class MaskedMAPE(MaskedMetric):
     full_state_update: bool = False
 
     def __init__(self, mask_nans=False, at=None, **kwargs: Any):
-        super(MaskedMAPE,
-              self).__init__(metric_fn=mape,
-                             mask_nans=mask_nans,
-                             mask_inf=True,
-                             metric_fn_kwargs={'reduction': 'none'},
-                             at=at,
-                             **kwargs)
+        super(MaskedMAPE, self).__init__(
+            metric_fn=mape,
+            mask_nans=mask_nans,
+            mask_inf=True,
+            metric_fn_kwargs={'reduction': 'none'},
+            at=at,
+            **kwargs,
+        )
+
+
+class MaskedSMAPE(MaskedMetric):
+    """Symmetric Mean Absolute Percentage Error Metric.
+
+    Args:
+        mask_nans (bool, optional): Whether to automatically mask nan values.
+        at (int, optional): Whether to compute the metric only w.r.t. a certain
+            time step.
+    """
+
+    is_differentiable: bool = True
+    higher_is_better: bool = False
+    full_state_update: bool = False
+
+    def __init__(self, mask_nans=False, at=None, **kwargs: Any):
+        super(MaskedSMAPE, self).__init__(
+            metric_fn=smape,
+            mask_nans=mask_nans,
+            mask_inf=True,
+            metric_fn_kwargs={'reduction': 'none'},
+            at=at,
+            **kwargs,
+        )
 
 
 class MaskedMSE(MaskedMetric):
@@ -76,17 +99,15 @@ class MaskedMSE(MaskedMetric):
     higher_is_better: bool = False
     full_state_update: bool = False
 
-    def __init__(self,
-                 mask_nans=False,
-                 mask_inf=False,
-                 at=None,
-                 **kwargs: Any):
-        super(MaskedMSE, self).__init__(metric_fn=F.mse_loss,
-                                        mask_nans=mask_nans,
-                                        mask_inf=mask_inf,
-                                        metric_fn_kwargs={'reduction': 'none'},
-                                        at=at,
-                                        **kwargs)
+    def __init__(self, mask_nans=False, mask_inf=False, at=None, **kwargs: Any):
+        super(MaskedMSE, self).__init__(
+            metric_fn=F.mse_loss,
+            mask_nans=mask_nans,
+            mask_inf=mask_inf,
+            metric_fn_kwargs={'reduction': 'none'},
+            at=at,
+            **kwargs,
+        )
 
 
 class MaskedMRE(MaskedMetric):
@@ -104,20 +125,18 @@ class MaskedMRE(MaskedMetric):
     higher_is_better: bool = False
     full_state_update: bool = False
 
-    def __init__(self,
-                 mask_nans=False,
-                 mask_inf=False,
-                 at=None,
-                 **kwargs: Any):
-        super(MaskedMRE, self).__init__(metric_fn=F.l1_loss,
-                                        mask_nans=mask_nans,
-                                        mask_inf=mask_inf,
-                                        metric_fn_kwargs={'reduction': 'none'},
-                                        at=at,
-                                        **kwargs)
-        self.add_state('tot',
-                       dist_reduce_fx='sum',
-                       default=torch.tensor(0., dtype=torch.float))
+    def __init__(self, mask_nans=False, mask_inf=False, at=None, **kwargs: Any):
+        super(MaskedMRE, self).__init__(
+            metric_fn=F.l1_loss,
+            mask_nans=mask_nans,
+            mask_inf=mask_inf,
+            metric_fn_kwargs={'reduction': 'none'},
+            at=at,
+            **kwargs,
+        )
+        self.add_state(
+            'tot', dist_reduce_fx='sum', default=torch.tensor(0.0, dtype=torch.float)
+        )
 
     def _compute_masked(self, y_hat, y, mask):
         _check_same_shape(y_hat, y)
