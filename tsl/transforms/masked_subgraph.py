@@ -10,10 +10,5 @@ class MaskedSubgraph(BaseTransform):
         if not data.has_mask:
             return data
         live_nodes = data.mask.any(0).any(-1)
-        node_index = live_nodes.nonzero().squeeze()
-
-        if node_index.ndim < 1:
-            # handle case of only one live node (ndim must be 1)   
-            node_index = node_index.unsqueeze(0)
-        
+        node_index = live_nodes.nonzero().squeeze(dim=1)
         return data.subgraph_(node_index)
