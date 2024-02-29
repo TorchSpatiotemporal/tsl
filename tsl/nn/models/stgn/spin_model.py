@@ -40,9 +40,11 @@ class SPINPositionalEncoder(nn.Module):
                 node_index: OptTensor = None) -> Tensor:
         if node_emb is None:
             node_emb = self.node_emb(node_index=node_index)
-        # x: [b s c], node_emb: [n c] -> [b s n c]
+        # x: [b t (n) f], node_emb: [n f] -> [b t n f] (broadcasting)
         x = self.lin(x)
-        x = self.activation(x.unsqueeze(-2) + node_emb)
+        if x.ndim == 3:
+            x = x.unsqueeze(-2)  # x: [b t f] -> [b t 1 f]
+        x = self.activation(x + node_emb)
         out = self.mlp(x)
         out = self.positional(out)
         return out

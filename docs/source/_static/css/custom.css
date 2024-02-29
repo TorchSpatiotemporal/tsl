@@ -1,3 +1,5 @@
+/* General */
+
 a {
     overflow-wrap: break-word;
     word-wrap: break-word;
@@ -73,6 +75,8 @@ section#torch-spatiotemporal h1 {
     transform: unset;
 }
 
+/* Tables */
+
 table.docutils {
     box-shadow: unset;
 }
@@ -88,12 +92,14 @@ table.docutils caption {
     margin-right: 0.3rem;
 }
 
-code.literal {
-    font-weight: 600;
+.longtable {
+    width: 100%;
 }
 
-#furo-sidebar-ad-placement {
-    display: none;
+/* Code */
+
+code.literal {
+    font-weight: 600;
 }
 
 /* Logos */
@@ -110,4 +116,10 @@ img.inline-logo.with-text {
 
 img.inline-logo.tsl {
     width: 1.3em;
+}
+
+/* Other */
+
+#furo-sidebar-ad-placement {
+    display: none;
 }

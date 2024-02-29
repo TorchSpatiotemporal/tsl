@@ -318,10 +318,9 @@ class TabularDataset(Dataset, TabularParsingMixin):
                  as_dataframe: bool = False) -> FrameArray:
         mask = self.mask if self.has_mask else ~np.isnan(self.numpy())
         if dtype is not None:
-            assert dtype in ['bool', 'uint8', bool, np.bool, np.uint8]
+            assert dtype in ['bool', 'uint8', bool, np.uint8]
             mask = mask.astype(dtype)
         if as_dataframe:
-            assert self.is_target_dataframe
             data = mask.reshape(self.length, -1)
             mask = pd.DataFrame(data,
                                 index=self.index,

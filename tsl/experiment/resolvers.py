@@ -39,3 +39,11 @@ def register_resolvers():
     OmegaConf.register_new_resolver(name='ternary', resolver=ternary_resolver)
     # ${cat:1,2,[3,[4]]} -> [1,2,3,[4]]
     OmegaConf.register_new_resolver(name='cat', resolver=cat_resolver)
+    # ${join:[1,2,3,4],','} -> 1,2,3,4
+    OmegaConf.register_new_resolver(name='join',
+                                    resolver=lambda x, j: j.join(x))
+    # String case operations
+    for op in ['lower', 'upper', 'title', 'capitalize']:
+        OmegaConf.register_new_resolver(name=op,
+                                        resolver=lambda x: getattr(str(x), op)
+                                        ())
