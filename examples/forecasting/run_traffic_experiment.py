@@ -146,7 +146,7 @@ def run_traffic(cfg: DictConfig):
     model_cls.filter_model_args_(model_kwargs)
     model_kwargs.update(cfg.model.hparams)
 
-    loss_fn = torch_metrics.MaskedMAE(compute_on_step=True)
+    loss_fn = torch_metrics.MaskedMAE()
 
     log_metrics = {
         'mae': torch_metrics.MaskedMAE(),
