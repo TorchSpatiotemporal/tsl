@@ -8,9 +8,9 @@ class MaskInput(BaseTransform):
     :attr:`mask_key`.
 
     Args:
-        input_key (str): The key in ``Data`` to be masked.
+        input_key (str): The key in :class:`~tsl.data.Data` to be masked.
             (default: :obj:`'input_key'`)
-        mask_key (str): The key in ``Data`` to serve as mask.
+        mask_key (str): The key in :class:`~tsl.data.Data` to serve as mask.
             (default: :obj:`'mask_key'`)
     """
 

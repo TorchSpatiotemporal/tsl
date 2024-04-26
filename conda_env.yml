@@ -2,21 +2,21 @@ name: tsl
 channels:
   - pytorch
   - pyg
-  - nvidia
+  - nvidia                    # remove for cpu installation
   - conda-forge
   - defaults
 dependencies:
   - python=3.10
   - pytorch>=2.0.0
-  - pytorch-cuda=11.7
+  - pytorch-cuda>=11.7         # remove for cpu installation
   - pyg
   - pytorch-scatter
   - pytorch-sparse
+  - lightning
   - pip
   - pip:
       - einops
       - hydra-core
-      - lightning
       - numpy>1.20.3
       - omegaconf
       - pandas>=1.4
