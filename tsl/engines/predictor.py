@@ -127,7 +127,7 @@ class Predictor(pl.LightningModule):
             assert model_cls == self.model_cls
             if model_kwargs is not None:
                 for k, v in model_kwargs.items():
-                    assert v == self.model_kwargs[k]
+                    assert v == self.model_kwargs[k], f'{v}'
         else:
             logger.warning("Predictor with already instantiated model is "
                            f"loading a state_dict from {filename}. Cannot "
@@ -157,8 +157,8 @@ class Predictor(pl.LightningModule):
             model_args = self._model_fwd_signature['signature']
             filtered = set(kwargs).difference(model_args)
             forwarded = set(kwargs).intersection(model_args)
-            msg = f"Only args {list(forwarded)} are forwarded to the model " \
-                  f"({self.model.__class__.__name__}). "
+            msg = (f"Only args {list(forwarded)} are forwarded to the model "
+                   f"({self.model.__class__.__name__}).")
             if len(filtered):
                 msg = f"Arguments {list(filtered)} are filtered out. " + msg
             logger.warning(msg)

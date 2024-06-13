@@ -4,15 +4,11 @@
     <h3>Neural spatiotemporal forecasting with PyTorch</h3>
     <hr>
     <p>
-    <a href='https://pypi.org/project/torch-spatiotemporal/'>
-        <img alt="PyPI" src="https://img.shields.io/pypi/v/torch-spatiotemporal">
-    </a>
+    <a href='https://pypi.org/project/torch-spatiotemporal/'><img alt="PyPI" src="https://img.shields.io/pypi/v/torch-spatiotemporal"></a>
     <img alt="PyPI - Python Version" src="https://img.shields.io/badge/python-%3E%3D3.8-blue">
     <!-- img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/torch-spatiotemporal" -->
     <img alt="Total downloads" src="https://static.pepy.tech/badge/torch-spatiotemporal">
-    <a href='https://torch-spatiotemporal.readthedocs.io/en/latest/?badge=latest'>
-        <img src='https://readthedocs.org/projects/torch-spatiotemporal/badge/?version=latest' alt='Documentation Status' />
-    </a>
+    <a href='https://torch-spatiotemporal.readthedocs.io/en/latest/?badge=latest'><img src='https://readthedocs.org/projects/torch-spatiotemporal/badge/?version=latest' alt='Documentation Status' /></a>
     </p>
     <p>
     🚀 <a href="https://torch-spatiotemporal.readthedocs.io/en/latest/usage/quickstart.html">Getting Started</a> - 📚 <a href="https://torch-spatiotemporal.readthedocs.io/en/latest/">Documentation</a> - 💻 <a href="https://torch-spatiotemporal.readthedocs.io/en/latest/notebooks/a_gentle_introduction_to_tsl.html">Introductory notebook</a>
