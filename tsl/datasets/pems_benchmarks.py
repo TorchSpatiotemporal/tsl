@@ -135,7 +135,7 @@ class PeMS03(_PeMS):
     name = 'PeMS03'
     start_date = '09-01-2018 00:00'
     num_sensors = 358
-    url = 'https://drive.switch.ch/index.php/s/B5xDMtNs4M7pzsn/download'
+    url = 'https://drive.switch.ch/index.php/s/z4cMrY19EMN7AZA/download'
 
     @property
     def raw_file_names(self):
@@ -194,7 +194,7 @@ class PeMS04(_PeMS):
     name = 'PeMS04'
     start_date = '01-01-2018 00:00'
     num_sensors = 307
-    url = 'https://drive.switch.ch/index.php/s/swNbaB5rPrBmAZQ/download'
+    url = 'https://drive.switch.ch/index.php/s/6nMenRqUe0i6nt8/download'
 
     @property
     def raw_file_names(self):
@@ -228,7 +228,7 @@ class PeMS07(_PeMS):
     name = 'PeMS07'
     start_date = '05-01-2017 00:00'
     num_sensors = 883
-    url = 'https://drive.switch.ch/index.php/s/VcyirewUufrN57h/download'
+    url = 'https://drive.switch.ch/index.php/s/rLQzOhOFF2jIBAk/download'
 
     @property
     def raw_file_names(self):
@@ -269,7 +269,7 @@ class PeMS08(_PeMS):
     name = 'PeMS08'
     start_date = '07-01-2016 00:00'
     num_sensors = 170
-    url = 'https://drive.switch.ch/index.php/s/AUGNn9Rx9zMz3vg/download'
+    url = 'https://drive.switch.ch/index.php/s/X0nkiDgb8oacOD0/download'
 
     @property
     def raw_file_names(self):

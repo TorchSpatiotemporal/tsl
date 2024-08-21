@@ -36,7 +36,7 @@ predictor = Predictor(
     model_kwargs={'input_size': 2, 'output_size': 4, 'horizon': 8},
     optim_class=torch.optim.Adam,
     optim_kwargs={'lr': 0.001},
-    loss_fn=MaskedMAE(compute_on_step=True),
+    loss_fn=MaskedMAE(),
     scale_target=False,
     metrics=metrics_res,
 )
