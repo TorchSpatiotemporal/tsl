@@ -178,12 +178,12 @@ def temporal_mean(x: FrameArray, index: pd.DatetimeIndex = None) \
     cond1 = [df_mean.index.year, df_mean.index.month, df_mean.index.hour]
     conditions = [cond0, cond1, cond1[1:], cond1[2:]]
     while df_mean.isna().values.sum() and len(conditions):
-        nan_mean = df_mean.groupby(conditions[0]).transform(np.nanmean)
+        nan_mean = df_mean.groupby(conditions[0]).transform("mean")
         df_mean = df_mean.fillna(nan_mean)
         conditions = conditions[1:]
     if df_mean.isna().values.sum():
-        df_mean = df_mean.fillna(method='ffill')
-        df_mean = df_mean.fillna(method='bfill')
+        df_mean = df_mean.ffill()
+        df_mean = df_mean.bfill()
     if isinstance(x, np.ndarray):
         df_mean = df_mean.values.reshape(shape)
     return df_mean

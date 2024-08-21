@@ -12,8 +12,8 @@ Torch Spatiotemporal
             <p class="hero-lead">Neural spatiotemporal forecasting with PyTorch</p>
         </div>
     </div>
-    <script src="_static/js/particles.js"></script>
-    <script src="_static/js/particles_config.js"></script>
+    <script src="_static/js/particles.js" defer></script>
+    <script src="_static/js/particles_config.js" defer></script>
 
 :tsl:`null` **Torch Spatiotemporal** (tsl) is a python library for **neural spatiotemporal data processing**, with a focus on Graph Neural Networks.
 
@@ -112,6 +112,18 @@ Get started
 
         In the index, you can find the main API for each submodule.
 
+Contributing
+------------
+
+:tsl:`tsl` is an open-source project and we welcome contributions of all kinds.
+
+Thanks to all contributors so far! 🧡
+
+.. raw:: html
+
+    <div class="gh-contributors" data-repo="TorchSpatiotemporal/tsl">
+    </div>
+
 
 .. toctree::
    :glob:
@@ -147,3 +159,8 @@ Get started
 
    genindex
    py-modindex
+
+
+.. raw:: html
+
+    <script src="_static/js/scripts.js" defer></script>

@@ -7,8 +7,6 @@ model:
     hidden_size: 64
     ff_size: 128
     kernel_size: 2
-    root_weight: True
-    add_backward: True
     n_layers: 1
     dropout: 0
     cache_support: True

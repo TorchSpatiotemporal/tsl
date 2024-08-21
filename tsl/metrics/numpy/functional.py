@@ -6,10 +6,23 @@ import tsl
 from tsl.ops.framearray import framearray_to_numpy
 from tsl.typing import FrameArray
 
-ReductionType = Literal['mean', 'sum', 'none']
+ReductionType = Literal["mean", "sum", "none"]
 MetricOutputType = Union[float, np.ndarray]
 
-__all__ = ['mae', 'nmae', 'mape', 'mse', 'rmse', 'nrmse', 'nrmse_2', 'r2', 'mre']
+__all__ = [
+    "mae",
+    "nmae",
+    "mape",
+    "smape",
+    "mse",
+    "rmse",
+    "nrmse",
+    "nrmse_2",
+    "r2",
+    "mre",
+    "mase_time",
+    "rae",
+]
 
 
 def _masked_reduce(
@@ -20,7 +33,7 @@ def _masked_reduce(
 ) -> MetricOutputType:
     x = framearray_to_numpy(x)  # covert x to ndarray if not already (no copy)
     # 'none': return x with x[i] = 0/nan where mask[i] == False
-    if reduction == 'none':
+    if reduction == "none":
         if mask is not None:
             masked_idxs = np.logical_not(framearray_to_numpy(mask))
             x[masked_idxs] = 0 if nan_to_zero else np.nan
@@ -29,13 +42,13 @@ def _masked_reduce(
     if mask is not None:
         mask = framearray_to_numpy(mask).astype(bool)
         x = x[mask]
-    if reduction == 'mean':
+    if reduction == "mean":
         return np.mean(x)
-    elif reduction == 'sum':
+    elif reduction == "sum":
         return np.sum(x)
     else:
         raise ValueError(
-            f'reduction {reduction} not allowed, must be one of '
+            f"reduction {reduction} not allowed, must be one of "
             "['mean', 'sum', 'none']."
         )
 
@@ -44,7 +57,7 @@ def mae(
     y_hat: FrameArray,
     y: FrameArray,
     mask: Optional[FrameArray] = None,
-    reduction: ReductionType = 'mean',
+    reduction: ReductionType = "mean",
     nan_to_zero: bool = False,
 ) -> MetricOutputType:
     r"""Compute the `Mean Absolute Error (MAE)
@@ -85,7 +98,7 @@ def nmae(
     y_hat: FrameArray,
     y: FrameArray,
     mask: Optional[FrameArray] = None,
-    reduction: ReductionType = 'mean',
+    reduction: ReductionType = "mean",
     nan_to_zero: bool = False,
 ) -> MetricOutputType:
     r"""Compute the *Normalized Mean Absolute Error* (NMAE) between the estimate
@@ -129,7 +142,7 @@ def mape(
     y_hat: FrameArray,
     y: FrameArray,
     mask: Optional[FrameArray] = None,
-    reduction: ReductionType = 'mean',
+    reduction: ReductionType = "mean",
     nan_to_zero: bool = False,
 ) -> MetricOutputType:
     r"""Compute the `Mean Absolute Percentage Error (MAPE).
@@ -171,7 +184,7 @@ def smape(
     y_hat: FrameArray,
     y: FrameArray,
     mask: Optional[FrameArray] = None,
-    reduction: ReductionType = 'mean',
+    reduction: ReductionType = "mean",
     nan_to_zero: bool = False,
 ) -> MetricOutputType:
     r"""Compute the `Symmetric Mean Absolute Percentage Error (MAPE).
@@ -213,7 +226,7 @@ def mse(
     y_hat: FrameArray,
     y: FrameArray,
     mask: Optional[FrameArray] = None,
-    reduction: ReductionType = 'mean',
+    reduction: ReductionType = "mean",
     nan_to_zero: bool = False,
 ) -> MetricOutputType:
     r"""Compute the `Mean Squared Error (MSE)
@@ -254,7 +267,7 @@ def rmse(
     y_hat: FrameArray,
     y: FrameArray,
     mask: Optional[FrameArray] = None,
-    reduction: ReductionType = 'mean',
+    reduction: ReductionType = "mean",
 ) -> MetricOutputType:
     r"""Compute the `Root Mean Squared Error (RMSE)
     <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
@@ -287,7 +300,7 @@ def nrmse(
     y_hat: FrameArray,
     y: FrameArray,
     mask: Optional[FrameArray] = None,
-    reduction: ReductionType = 'mean',
+    reduction: ReductionType = "mean",
 ) -> MetricOutputType:
     r"""Compute the `Normalized Root Mean Squared Error (NRMSE)
     <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
@@ -322,7 +335,7 @@ def nrmse_2(
     y_hat: FrameArray,
     y: FrameArray,
     mask: Optional[FrameArray] = None,
-    reduction: ReductionType = 'mean',
+    reduction: ReductionType = "mean",
 ) -> MetricOutputType:
     r"""Compute the `Normalized Root Mean Squared Error (NRMSE)
     <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ between the
@@ -360,7 +373,7 @@ def r2(
     y_hat: FrameArray,
     y: FrameArray,
     mask: Optional[FrameArray] = None,
-    reduction: ReductionType = 'mean',
+    reduction: ReductionType = "mean",
     nan_to_zero: bool = False,
     mean_axis: Union[int, Tuple] = None,
 ) -> float:
@@ -402,7 +415,8 @@ def r2(
 
 
 def mre(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None) -> float:
-    r"""Compute the MAE normalized by the L1-norm of the true signal :math:`y`,
+    r"""Compute the MAE normalized by the L1-norm of the true signal :math:`y`.
+    Also known as WAPE.
     i.e.
 
     .. math::
@@ -426,5 +440,52 @@ def mre(y_hat: FrameArray, y: FrameArray, mask: Optional[FrameArray] = None) -> 
         if mask.dtype != bool:
             mask = mask.astype(bool)
         den = np.sum(np.abs(y[mask])) + tsl.epsilon
-    err = mae(y_hat, y, mask, reduction='sum')
+    err = mae(y_hat, y, mask, reduction="sum")
     return err / den
+
+
+def mase_time(
+    y_hat: np.ndarray, y: np.ndarray, mask: Optional[np.ndarray] = None
+) -> float:
+    """
+    Computes the Mean Absolute Scaled Error (MASE) on a time sequence of values.
+    Uses the naive one lag forecast for the normalization.
+
+    Parameters:
+    - y_hat: Predicted values.
+    - y: Actual values.
+    - mask: Optional boolean array indicating valid entries for computation.
+
+    Returns:
+    - MASE value as a float.
+    """
+    if mask is not None:
+        if mask.dtype != bool:
+            mask = mask.astype(bool)
+        y_hat = y_hat[mask]
+        y = y[mask]
+    errors = np.abs(y_hat - y)
+    scale = np.mean(np.abs(np.diff(y)))
+    return np.mean(errors) / scale
+
+
+def rae(y_hat: np.ndarray, y: np.ndarray, mask: Optional[np.ndarray] = None) -> float:
+    """
+    Computes the Relative Absolute Error (RAE) also known as Normalized Absolute Error.
+
+    Parameters:
+    - y_hat: Predicted values.
+    - y: Actual values.
+    - mask: Optional boolean array indicating valid entries for computation.
+
+    Returns:
+    - RAE value as a float.
+    """
+    if mask is not None:
+        if mask.dtype != bool:
+            mask = mask.astype(bool)
+        y_hat = y_hat[mask]
+        y = y[mask]
+    numerator = np.sum(np.abs(y - y_hat))
+    denominator = np.sum(np.abs(y - np.mean(y)))
+    return numerator / denominator
