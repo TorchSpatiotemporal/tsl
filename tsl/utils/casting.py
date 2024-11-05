@@ -56,7 +56,7 @@ def torch_to_numpy(tensors: Any) -> Any:
         tensors: A tensor or a list or dictionary containing tensors.
 
     Returns:
-        Tensors casted to numpy arrays.
+        Tensors cast to numpy arrays.
     """
     return recursive_apply(tensors, lambda t: t.detach().cpu().numpy())
 
