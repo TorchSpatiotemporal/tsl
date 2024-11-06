@@ -49,6 +49,7 @@ class MaskedMetric(Metric):
     is_differentiable: bool = None
     higher_is_better: bool = None
     full_state_update: bool = None
+    shape_check: bool = True
 
     def __init__(self,
                  metric_fn,
@@ -94,14 +95,16 @@ class MaskedMetric(Metric):
         return mask
 
     def _compute_masked(self, y_hat, y, mask):
-        _check_same_shape(y_hat, y)
+        if self.shape_check:
+            _check_same_shape(y_hat, y)
         val = self.metric_fn(y_hat, y)
         mask = self._check_mask(mask, val)
         val = torch.where(mask, val, torch.zeros_like(val))
         return val.sum(), mask.sum()
 
     def _compute_std(self, y_hat, y):
-        _check_same_shape(y_hat, y)
+        if self.shape_check:
+            _check_same_shape(y_hat, y)
         val = self.metric_fn(y_hat, y)
         return val.sum(), val.numel()
 
