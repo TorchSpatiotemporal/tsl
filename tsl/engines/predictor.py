@@ -80,7 +80,7 @@ class Predictor(pl.LightningModule):
         self.scheduler_kwargs = scheduler_kwargs or dict()
 
         if loss_fn is not None:
-            self.loss_fn = self._check_metric(loss_fn, on_step=True)
+            self.loss_fn = self._check_metric(loss_fn)
         else:
             self.loss_fn = None
 
@@ -183,14 +183,13 @@ class Predictor(pl.LightningModule):
         return predict_fn(*args, **kwargs)
 
     @staticmethod
-    def _check_metric(metric, on_step=False):
+    def _check_metric(metric):
         if not isinstance(metric, MaskedMetric):
             if 'reduction' in inspect.getfullargspec(metric).args:
                 metric_kwargs = {'reduction': 'none'}
             else:
                 metric_kwargs = dict()
             return MaskedMetric(metric,
-                                compute_on_step=on_step,
                                 metric_fn_kwargs=metric_kwargs)
         metric = metric.clone()
         metric.reset()
