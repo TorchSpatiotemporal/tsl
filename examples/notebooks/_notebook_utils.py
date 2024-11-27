@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 from matplotlib import pyplot as plt
-from tsl.data import SynchMode
+from tsl.data import SpatioTemporalDataset, SynchMode
 
 # Plotting functions ###############
 pd.options.display.float_format = '{:.2f}'.format
