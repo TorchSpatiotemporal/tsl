@@ -10,7 +10,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 from tsl.data import SpatioTemporalDataModule, SpatioTemporalDataset
 from tsl.data.preprocessing import StandardScaler
-from tsl.datasets import MetrLA, PemsBay
+from tsl.datasets import MetrLA, PemsBay, EngRad
 from tsl.datasets.pems_benchmarks import PeMS03, PeMS04, PeMS07, PeMS08
 from tsl.engines import Predictor
 from tsl.metrics import numpy as numpy_metrics
@@ -64,6 +64,8 @@ def get_dataset(dataset_name):
         dataset = PeMS07()
     elif dataset_name == 'pems8':
         dataset = PeMS08()
+    elif dataset_name == 'engrad':
+        dataset = EngRad()
     else:
         raise ValueError(f"Dataset {dataset_name} not available.")
     return dataset
@@ -215,3 +217,6 @@ def test_example_forecasting():
     assert np.isclose(res_test[0]['test_mape'], res_functional['test_mape'])
     assert np.isclose(res_val[0]['val_mae'], res_functional['val_mae'])
     assert np.isclose(res_val[0]['val_mape'], res_functional['val_mape'])
+
+if __name__ == '__main__':
+    test_example_forecasting()
