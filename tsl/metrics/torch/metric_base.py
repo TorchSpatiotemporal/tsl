@@ -87,7 +87,8 @@ class MaskedMetric(Metric):
             mask = torch.ones_like(val, dtype=torch.bool)
         else:
             mask = mask.bool()
-            _check_same_shape(mask, val)
+            if self.shape_check:
+                _check_same_shape(mask, val)
         if self.mask_nans:
             mask = mask & ~torch.isnan(val)
         if self.mask_inf:
