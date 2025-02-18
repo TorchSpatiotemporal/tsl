@@ -442,7 +442,7 @@ class ScalerModule(Module):
     def transform_tensor(self, x: Tensor) -> Tensor:
         r"""Apply transformation :math:`f(x) = (x - \mu) / \sigma` to tensor
         :obj:`x`."""
-        return (x - self.bias) / self.scale + tsl.epsilon
+        return (x - self.bias) / (self.scale + tsl.epsilon)
 
     def inverse_transform_tensor(self, x: Tensor) -> Tensor:
         r"""Apply inverse transformation
