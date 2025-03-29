@@ -42,7 +42,7 @@ doc_requires = full_install_requires + [
     'sphinxext-opengraph',
     'sphinx-hoverxref',
     'myst-nb',
-    'furo',
+    'furo==2024.04.27',
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
