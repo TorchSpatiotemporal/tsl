@@ -6,6 +6,8 @@ from torch.nn import LayerNorm
 from torch.nn import functional as F
 from torch_geometric.nn import Linear, MessagePassing
 from torch_geometric.typing import Adj, OptTensor, PairTensor
+from torch_scatter import scatter
+from torch_scatter.utils import broadcast
 
 from tsl.nn.functional import sparse_softmax
 
@@ -123,9 +125,6 @@ class MLPAttention(MessagePassing):
             weights = weights.masked_fill(torch.logical_not(mask), fill_value)
         # optional reweighing
         if self.reweigh == 'l1':
-            from torch_scatter import scatter
-            from torch_scatter.utils import broadcast
-
             expanded_index = broadcast(index, weights, self.node_dim)
             weights_sum = scatter(weights,
                                   expanded_index,
