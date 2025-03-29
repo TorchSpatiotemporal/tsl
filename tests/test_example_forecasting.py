@@ -65,7 +65,7 @@ def get_dataset(dataset_name):
     elif dataset_name == 'pems8':
         dataset = PeMS08()
     elif dataset_name == 'engrad':
-        dataset = EngRad()
+        dataset = EngRad(mask_zero_radiance=True, precipitation_unit="cm")
     else:
         raise ValueError(f"Dataset {dataset_name} not available.")
     return dataset
@@ -217,6 +217,3 @@ def test_example_forecasting():
     assert np.isclose(res_test[0]['test_mape'], res_functional['test_mape'])
     assert np.isclose(res_val[0]['val_mae'], res_functional['val_mae'])
     assert np.isclose(res_val[0]['val_mape'], res_functional['val_mape'])
-
-if __name__ == '__main__':
-    test_example_forecasting()

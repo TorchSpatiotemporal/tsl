@@ -56,12 +56,13 @@ def get_dataset(dataset_name: str, p_fault=0., p_noise=0.):
                                   max_seq=12 * 4,
                                   seed=56789)
     if dataset_name == 'engrad':
-        return add_missing_values(EngRad(),
+        return add_missing_values(EngRad(mask_zero_radiance=True,
+                                         precipitation_unit="cm"),
                                   p_fault=p_fault,
                                   p_noise=p_noise,
-                                  min_seq=12,
-                                  max_seq=12 * 4,
-                                  seed=69)
+                                  min_seq=4,
+                                  max_seq=12,
+                                  seed=487)
     raise ValueError(f"Dataset {dataset_name} not available in this setting.")
 
 
@@ -210,6 +211,3 @@ def test_example_imputation():
     assert np.isclose(res_test[0]['test_mape'], res_functional['test_mape'])
     assert np.isclose(res_val[0]['val_mae'], res_functional['val_mae'])
     assert np.isclose(res_val[0]['val_mape'], res_functional['val_mape'])
-
-if __name__ == '__main__':
-    test_example_imputation()

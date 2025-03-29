@@ -72,12 +72,13 @@ class EngRadSplitter(Splitter):
 
 
 class EngRad(DatetimeDataset):
-    r"""This dataset was originally proposed in the paper:
-    `"Graph-based Forecasting with Missing Data through Spatiotemporal 
-    Downsampling" <https://arxiv.org/abs/2402.10634>`_.
+    r"""The EngRAD dataset from the paper `"Graph-based Forecasting with
+    Missing Data through Spatiotemporal Downsampling"
+    <https://arxiv.org/abs/2402.10634>`_ (Marisca et al., ICML 2024).
     
     The dataset consists of weather measurements collected hourly in 722 cities 
-    spread across England from 2018 to 2020.
+    spread across England from 2018 to 2020. The dataset is available through
+    `Zenodo <https://zenodo.org/records/12760772>`_.
 
     Data provider: https://open-meteo.com/
 
@@ -104,7 +105,7 @@ class EngRad(DatetimeDataset):
         + :obj:`distances`: :math:`N \times N` matrix of pairwise distances
           between the locations.
     """
-    url = "https://drive.switch.ch/index.php/s/xJDsxGsOPC7zabW/download"
+    url = "https://zenodo.org/records/12760772/files/data.h5?download=1"
 
     similarity_options = {'distance', 'grid'}
 
@@ -159,9 +160,7 @@ class EngRad(DatetimeDataset):
         return {'data': self.raw_file_names[0], 'distances': 'dist.npy'}
 
     def download(self):
-        path = download_url(self.url, self.root_dir, 'data.zip')
-        extract_zip(path, self.root_dir)
-        os.unlink(path)
+        download_url(self.url, self.root_dir, 'data.h5')
 
     def build(self):
         self.maybe_download()
