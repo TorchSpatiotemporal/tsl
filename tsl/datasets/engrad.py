@@ -1,13 +1,13 @@
 import math
-import os
-from typing import List, Optional, Union, Literal
+from typing import List, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
+
 from tsl.data import Splitter
 from tsl.data.datamodule.splitters import indices_between
 from tsl.datasets.prototypes import DatetimeDataset
-from tsl.utils import download_url, extract_zip, ensure_list
+from tsl.utils import download_url, ensure_list
 
 
 class EngRadSplitter(Splitter):
@@ -28,7 +28,8 @@ class EngRadSplitter(Splitter):
         test_idxs = indices_between(dataset, first_ts=self.first_test_step)
         # Get validation indices
         if self.first_val_step is not None:
-            val_idxs = indices_between(dataset, first_ts=self.first_val_step,
+            val_idxs = indices_between(dataset,
+                                       first_ts=self.first_val_step,
                                        last_ts=self.first_test_step)
         else:
             val_idxs = np.setdiff1d(np.arange(len(dataset)), test_idxs)
@@ -75,8 +76,8 @@ class EngRad(DatetimeDataset):
     r"""The EngRAD dataset from the paper `"Graph-based Forecasting with
     Missing Data through Spatiotemporal Downsampling"
     <https://arxiv.org/abs/2402.10634>`_ (Marisca et al., ICML 2024).
-    
-    The dataset consists of weather measurements collected hourly in 722 cities 
+
+    The dataset consists of weather measurements collected hourly in 722 cities
     spread across England from 2018 to 2020. The dataset is available through
     `Zenodo <https://zenodo.org/records/12760772>`_.
 
@@ -122,8 +123,7 @@ class EngRad(DatetimeDataset):
         # Load data
         df, metadata, dist, mask = self.load(self.mask_zero_radiance)
         # Set covariates
-        covariates = dict(metadata=(metadata, 'n f'),
-                          distances=(dist, 'n n'))
+        covariates = dict(metadata=(metadata, 'n f'), distances=(dist, 'n n'))
         # Optionally filter channels
         target = df
         if target_channels is not None and target_channels != 'all':
@@ -157,7 +157,7 @@ class EngRad(DatetimeDataset):
 
     @property
     def required_file_names(self) -> dict[str, str]:
-        return {'data': self.raw_file_names[0], 'distances': 'dist.npy'}
+        return {'data': 'data.h5', 'distances': 'dist.npy'}
 
     def download(self):
         download_url(self.url, self.root_dir, 'data.h5')
