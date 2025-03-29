@@ -35,14 +35,14 @@ full_install_requires = plot_requires + experiment_requires + [
 ]
 
 doc_requires = full_install_requires + [
-    'docutils==0.19',
-    'sphinx==7',
-    'sphinx-design==0.5',
-    'sphinx-copybutton==0.5',
-    'sphinxext-opengraph==0.9',
-    'sphinx-hoverxref==1.3',
-    'myst-nb==1.0',
-    'furo==2024.04.27',
+    'docutils',
+    'sphinx>=6',
+    'sphinx-design',
+    'sphinx-copybutton',
+    'sphinxext-opengraph',
+    'sphinx-hoverxref',
+    'myst-nb',
+    'furo',
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
