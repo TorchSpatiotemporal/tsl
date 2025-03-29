@@ -3,12 +3,9 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
+import tsl
 from torch import Tensor
 from torch_geometric.utils.num_nodes import maybe_num_nodes
-from torch_scatter import gather_csr, scatter, segment_csr
-from torch_scatter.utils import broadcast
-
-import tsl
 
 __all__ = [
     'expand_then_cat',
@@ -84,6 +81,9 @@ def sparse_softmax(src: Tensor,
             dimension.
             (default: :obj:`-2`)
     """
+    from torch_scatter import gather_csr, scatter, segment_csr
+    from torch_scatter.utils import broadcast
+
     if ptr is not None:
         dim = dim + src.dim() if dim < 0 else dim
         size = ([1] * dim) + [-1]
@@ -144,6 +144,8 @@ def sparse_multi_head_attention(q: Tensor,
         Output: attention values have shape :math:`(B, Nt, E)`; attention
             weights have shape :math:`(S, H)`
     """
+    from torch_scatter.utils import broadcast
+
     dim = 0
     B, H, E = q.shape
     N = maybe_num_nodes(index, dim_size)
