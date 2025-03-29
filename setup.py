@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 install_requires = [
     'einops',
-    'numpy>1.20.3',
+    'numpy>1.20.3,<2',
     'pandas>=1.4',
     'pytorch_lightning>=1.8',
     'PyYAML',
@@ -36,7 +36,7 @@ full_install_requires = plot_requires + experiment_requires + [
 
 doc_requires = full_install_requires + [
     'docutils',
-    'sphinx',
+    'sphinx==7',
     'sphinx-design',
     'sphinx-copybutton',
     'sphinxext-opengraph',
