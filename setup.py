@@ -16,7 +16,7 @@ install_requires = [
     'scipy',
     'tables',
     'torchmetrics>=0.7',
-    'tqdm',
+    'tqdm>=4.66.3',
 ]
 
 plot_requires = [
