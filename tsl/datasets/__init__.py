@@ -6,6 +6,7 @@ from .prototypes import classes as prototype_classes
 # Datasets
 from .air_quality import AirQuality
 from .elergone import Elergone
+from .engrad import EngRad
 from .gpvar import GPVARDataset, GPVARDatasetAZ
 from .large_st import LargeST
 from .metr_la import MetrLA
@@ -19,6 +20,7 @@ from .synthetic import GaussianNoiseSyntheticDataset
 dataset_classes = [
     'AirQuality',
     'Elergone',
+    'EngRad',
     'MetrLA',
     'PemsBay',
     'PeMS03',
