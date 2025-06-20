@@ -90,7 +90,8 @@ def az_whiteness_test(
     edge_weight_temporal: Optional[float] = None,
     lamb: float = 0.5,
     multivariate: bool = False,
-    remove_median: bool = False
+    remove_median: bool = False,
+    any_feat: bool = True
 ) -> Union[AZWhitenessTestResult, AZWhitenessMultiTestResult]:
     """Implementation of the AZ-whiteness test from the paper `"AZ-whiteness
     test: a test for uncorrelated noise on spatio-temporal graphs"
@@ -133,6 +134,12 @@ def az_whiteness_test(
         remove_median (bool): whether to manually fulfill --- where possible ---
             the assumption of null median or not.
             (default: :obj:`False`)
+        any_feat (bool): Determines how masked features affect edge sign 
+            computation. If :obj:`True`, edge signs are still computed even 
+            when some node features are masked, by treating masked values as 
+            :math:`0.0`. If :obj:`False`, an edge is excluded from computation
+            if *any* of its associated node features are masked.
+            (default: :obj:`True`)
 
     Returns:
         AZWhitenessTestResult or AZWhitenessMultiTestResult: The test
@@ -167,7 +174,8 @@ def az_whiteness_test(
                         edge_index_spatial=edge_index_spatial,
                         edge_weight_spatial=edge_weight_spatial,
                         edge_weight_temporal=edge_weight_temporal,
-                        lamb=lamb)
+                        lamb=lamb,
+                        any_feat=any_feat)
 
     if multivariate:
         # Single test with edge statistic: `sign( (xu * xv).sum() )`.
@@ -190,12 +198,16 @@ def az_whiteness_test(
         return AZWhitenessMultiTestResult(C_multi, pval, res)
 
 
-def _az_whiteness_test(x, mask, pattern, edge_index_spatial,
-                       edge_weight_spatial, edge_weight_temporal, lamb):
-    """Core computation of the AZ-whiteness test.
-
-    All parameters are assumed to be `numpy.ndarray` or `float`.
-    """
+def _az_whiteness_test(
+    x: TensArray, 
+    mask: OptTensArray, 
+    pattern: str, edge_index_spatial,
+    edge_weight_spatial: Optional[Union[TensArray, float]], 
+    edge_weight_temporal: Optional[float], 
+    lamb: float, 
+    any_feat: bool
+) -> AZWhitenessTestResult:
+    """Core computation of the AZ-whiteness test."""
 
     # retrieve pattern
     dims = pattern.strip().split(' ')
@@ -229,9 +241,15 @@ def _az_whiteness_test(x, mask, pattern, edge_index_spatial,
         mask = np.ones_like(x)
     mask = mask.astype(int)
     assert np.all(np.logical_or(mask == 0, mask == 1))
-    mask_node = mask.max(axis=F_DIM)
+    if any_feat:
+        mask_node = mask.max(axis=F_DIM) 
+    else:
+        mask_node = mask.min(axis=F_DIM) 
     # Mask data
-    x = x * mask
+    if any_feat:
+        x = x * mask
+    else:
+        x = x * mask_node[..., None] 
     # Edge mask:
     #  - repeat node mask for every source node
     #  - repeat node mask for every target node
@@ -255,6 +273,10 @@ def _az_whiteness_test(x, mask, pattern, edge_index_spatial,
         assert T_DIM == 0
         # num of temporal edges
         num_temporal_edge_masked = (mask[1:] * mask[:-1]).max(axis=F_DIM).sum()
+        if any_feat:
+            num_temporal_edge_masked = (mask[1:] * mask[:-1]).max(axis=F_DIM).sum()
+        else:
+            num_temporal_edge_masked = (mask[1:] * mask[:-1]).min(axis=F_DIM).sum()
         # default temporal weight
         if edge_weight_temporal == "auto" or edge_weight_temporal is None:
             edge_weight_temporal = np.sqrt(W_spatial /
