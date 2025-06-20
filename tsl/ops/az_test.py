@@ -254,7 +254,7 @@ def _az_whiteness_test(x, mask, pattern, edge_index_spatial,
     else:
         assert T_DIM == 0
         # num of temporal edges
-        num_temporal_edge_masked = (mask[1:] * mask[:-1]).sum()
+        num_temporal_edge_masked = (mask[1:] * mask[:-1]).max(axis=F_DIM).sum()
         # default temporal weight
         if edge_weight_temporal == "auto" or edge_weight_temporal is None:
             edge_weight_temporal = np.sqrt(W_spatial /
