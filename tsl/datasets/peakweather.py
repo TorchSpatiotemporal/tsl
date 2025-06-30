@@ -19,7 +19,8 @@ class PeakWeather(DatetimeDataset):
                 If not provided, the data will be downloaded in the current working directory. Defaults to None.
             target_channels (Union[str, List[str]], optional): Defines which channels (variables) are considered targets. 
                 Defaults to "all".
-            covariate_channels (Optional[Union[str, List[str]]], optional): Defines which channels (variables) are considered covariates. 
+            covariate_channels (Optional[Union[str, List[str]]], optional): Defines which channels (variables) are considered covariates. Use 'other' to select all non-target channels as
+            covariates.
                 Defaults to None.
             years (Optional[Union[int, Sequence[int]]], optional): Specifies the years to load. If not provided, all years are used. 
                 Defaults to None.
