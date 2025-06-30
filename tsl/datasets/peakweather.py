@@ -6,7 +6,13 @@ from tsl.datasets.prototypes import DatetimeDataset
 from tsl.ops.similarities import geographical_distance, gaussian_kernel
 from tsl.utils import ensure_list
 
-from peakweather import PeakWeatherDataset
+try:
+    from peakweather import PeakWeatherDataset
+except ImportError as e:
+    raise ModuleNotFoundError(
+        "The 'peakweather' package is required to use this dataset."
+        "Please install tsl with `peakweather` or `peakweather-topography` extras."
+    ) from e
 
 
 class PeakWeather(DatetimeDataset):
