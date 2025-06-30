@@ -12,3 +12,5 @@ torch>=2.0
 torch_geometric>=2.3
 torchmetrics>=0.7
 tqdm
+# peakweather @ git+https://github.com/MeteoSwiss/PeakWeather.git
+# peakweather[topography] @ git+https://github.com/MeteoSwiss/PeakWeather@main
