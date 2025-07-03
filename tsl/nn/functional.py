@@ -27,11 +27,12 @@ def expand_then_cat(tensors: Union[Tuple[Tensor, ...], List[Tensor]],
         dim (int): Dimension along which to concatenate.
             (default: -1)
     """
-    shapes = [t.shape for t in tensors]
-    expand_dims = torch.max(torch.tensor(shapes), 0).values
-    expand_dims[dim] = -1
-    tensors = [t.expand(*expand_dims) for t in tensors]
-    return torch.cat(tensors, dim=dim)
+    # Get the maximum shape across all tensors
+    max_shape = [max(sizes) for sizes in zip(*(t.shape for t in tensors))]
+    max_shape[dim] = -1  # Keep the concatenation dimension flexible
+    # Expand each tensor to the maximum shape
+    expanded_tensors = [torch.broadcast_to(t, max_shape) for t in tensors]
+    return torch.cat(expanded_tensors, dim=dim)
 
 
 @torch.jit.script

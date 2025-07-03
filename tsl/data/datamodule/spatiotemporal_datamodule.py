@@ -172,8 +172,15 @@ class SpatioTemporalDataModule(LightningDataModule):
                     if self.torch_dataset.mask is not None:
                         mask = self.torch_dataset.get_mask()[self.train_slice]
 
-                scaler = scaler.fit(data, mask=mask, keepdims=True)
-                tsl.logger.info(f'Fit and set scaler for {key}: {scaler}')
+                if hasattr(scaler, "fit") and callable(scaler.fit):
+                    try:
+                        tsl.logger.info(f"Fit and set scaler for {key}: {scaler}")
+                        scaler = scaler.fit(data, mask=mask, keepdims=True)
+                    except Exception as e:
+                        tsl.logger.warning(
+                            f"Fit scaler for key {key} raised exception: {e}"
+                        )
+
             self.torch_dataset.add_scaler(key, scaler)
 
     def get_dataloader(self, split: Literal['train', 'val', 'test'] = None,
