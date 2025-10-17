@@ -27,6 +27,8 @@ class MLPDecoder(nn.Module):
         dropout (float, optional): Dropout probability applied in the hidden
             layers.
             (default: ``0``)
+        residual_connections (bool, optional): Whether to use residual connections.
+            (default: ``False``)
     """
 
     def __init__(self,
@@ -45,7 +47,7 @@ class MLPDecoder(nn.Module):
         if residual_connections:
             self.readout = ResidualMLP(input_size=receptive_field * input_size,
                                        hidden_size=hidden_size,
-                                       output_size=output_size,
+                                       output_size=output_size * horizon,
                                        n_layers=n_layers,
                                        dropout=dropout,
                                        activation=activation)
