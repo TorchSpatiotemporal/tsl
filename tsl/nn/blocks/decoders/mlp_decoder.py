@@ -2,6 +2,7 @@ from einops import rearrange
 from einops.layers.torch import Rearrange
 from torch import nn
 
+from tsl.nn.blocks import ResidualMLP
 from tsl.nn.blocks.encoders.mlp import MLP
 
 
@@ -37,16 +38,25 @@ class MLPDecoder(nn.Module):
                  n_layers: int = 1,
                  receptive_field: int = 1,
                  activation: str = 'relu',
-                 dropout: float = 0.):
+                 dropout: float = 0.,
+                 residual_connections: bool = False):
         super(MLPDecoder, self).__init__()
 
         self.receptive_field = receptive_field
-        self.readout = MLP(input_size=receptive_field * input_size,
-                           hidden_size=hidden_size,
-                           output_size=output_size * horizon,
-                           n_layers=n_layers,
-                           dropout=dropout,
-                           activation=activation)
+        if residual_connections:
+            self.readout = ResidualMLP(input_size=receptive_field * input_size,
+                                       hidden_size=hidden_size,
+                                       output_size=output_size,
+                                       n_layers=n_layers,
+                                       dropout=dropout,
+                                       activation=activation)
+        else:
+            self.readout = MLP(input_size=receptive_field * input_size,
+                               hidden_size=hidden_size,
+                               output_size=output_size * horizon,
+                               n_layers=n_layers,
+                               dropout=dropout,
+                               activation=activation)
         self.rearrange = Rearrange('b n (h f) -> b h n f',
                                    f=output_size,
                                    h=horizon)
