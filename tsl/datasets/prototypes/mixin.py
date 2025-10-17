@@ -121,7 +121,7 @@ class TemporalFeaturesMixin:
         each unit."""
         self.__check_temporal_index()
         units = ensure_list(units)
-        index_nano = self.index.view(np.int64)
+        index_nano = self.index.tz_localize(None).astype("datetime64[ns]").view(np.int64)
         datetime = dict()
         for unit in units:
             nano_unit = casting.time_unit_to_nanoseconds(unit)
