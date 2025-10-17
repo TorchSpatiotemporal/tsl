@@ -2,8 +2,7 @@ from einops import rearrange
 from einops.layers.torch import Rearrange
 from torch import nn
 
-from tsl.nn.blocks import ResidualMLP
-from tsl.nn.blocks.encoders.mlp import MLP
+from tsl.nn.blocks.encoders.mlp import MLP, ResidualMLP
 
 
 class MLPDecoder(nn.Module):
