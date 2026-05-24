@@ -88,9 +88,9 @@ class LargeST(DatetimeDataset):
             fill missing values with :obj:`0`; if :obj:`None`, do not impute
             (leave :obj:`nan`).
             (default: :obj:`"zero"`)
-        freq (str): The sampling rate used for resampling (e.g., :obj:`"15T"`
+        freq (str): The sampling rate used for resampling (e.g., :obj:`"15min"`
             for 15-minutes intervals resampling).
-            (default: :obj:`"15T"`)
+            (default: :obj:`"15min"`)
         precision (int or str): The float precision of the dataset.
             (default: :obj:`32`)
     """
@@ -111,7 +111,7 @@ class LargeST(DatetimeDataset):
                  subset: SubsetType = "CA",
                  year: Optional[Union[int, Sequence[int]]] = 2019,
                  imputation_mode: Literal["nearest", "zero", None] = "zero",
-                 freq: str = "15T",
+                 freq: str = "15min",
                  precision: Union[int, str] = 32):
         # set root path
         self.root = root
@@ -213,7 +213,7 @@ class LargeST(DatetimeDataset):
             # align to authors' preprocessing
             if self.freq is not None:
                 data_df = data_df.resample(self.freq).mean()
-                # in authors' code: data_df.resample('15T').mean().round(0)
+                # in authors' code: data_df.resample('15min').mean().round(0)
             readings.append(data_df)
 
         readings = (
