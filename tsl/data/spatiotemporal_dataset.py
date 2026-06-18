@@ -1319,7 +1319,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         """
         covariates = dataset._covariates
         if covariate_keys is not None:
-            covariates = {k: v for k, v in covariates if k in covariate_keys}
+            covariates = {k: v for k, v in covariates.items() if k in covariate_keys}
         return cls(target=dataset.target,
                    index=dataset.index,
                    mask=dataset.mask,

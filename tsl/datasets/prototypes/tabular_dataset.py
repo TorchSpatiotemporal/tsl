@@ -104,7 +104,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
         from .datetime_dataset import DatetimeDataset
         if not isinstance(self, DatetimeDataset) \
                 and casting.is_datetime_like_index(self.index):
-            logger.warn(
+            logger.warning(
                 "It seems you have timestamped data. You may "
                 "consider to use tsl.datasets.DatetimeDataset instead.")
 

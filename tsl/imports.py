@@ -34,5 +34,3 @@ def _module_available(module_path: str) -> bool:
 
 
 _HYDRA_AVAILABLE = _package_available("hydra")
-_NEPTUNE_AVAILABLE = _package_available("neptune")
-_FAST_TRANSFORMER_AVAILABLE = _package_available("pytorch_fast_transformers")
