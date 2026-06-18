@@ -190,14 +190,31 @@ class FixedIndicesSplitter(Splitter):
 
 
 class TemporalSplitter(Splitter):
-    r"""Split the data sequentially with specified lengths."""
+    r"""Split the data sequentially with specified lengths.
+
+    Args:
+        val_len (int or float): Length of the validation set.
+        test_len (int or float): Length of the test set.
+        offset (str): How to size the offset separating the splits so that samples
+            do not leak across sets.
+
+            - :obj:`'window'`: separate splits by :obj:`dataset.samples_offset` positions,
+              so their lookback windows just touch. This avoids leakage (no target step shared
+              across splits) as long as the horizon is short enough relative to the window.
+            - :obj:`'sample'`: separate splits by :obj:`ceil(sample_span / stride)` positions,
+              so that adjacent splits share no time step in any role, for any window/horizon/delay/stride.
+
+            (default: :obj:`'window'`)
+    """
 
     def __init__(self,
                  val_len: Union[int, float] = None,
-                 test_len: Union[int, float] = None):
+                 test_len: Union[int, float] = None,
+                 offset: str = 'window'):
         super(TemporalSplitter, self).__init__()
         self._val_len = val_len
         self._test_len = test_len
+        self.offset = offset
 
     def fit(self, dataset: SpatioTemporalDataset):
         idx = np.arange(len(dataset))
@@ -208,8 +225,28 @@ class TemporalSplitter(Splitter):
             val_len = int(val_len * (len(idx) - test_len))
         test_start = len(idx) - test_len
         val_start = test_start - val_len
-        self.set_indices(idx[:val_start - dataset.samples_offset],
-                         idx[val_start:test_start - dataset.samples_offset],
+
+        if self.offset == 'window':
+            # Separate the closest train and val/test samples by
+            # ``samples_offset`` positions, so their windows just touch.
+            # This avoids leakage iff that separation also covers the horizon.
+            offset = dataset.samples_offset - 1
+            assert (offset + 1) * dataset.stride >= dataset.horizon, (
+                f"offset='window' separates split horizons by "
+                f"{(offset + 1) * dataset.stride} steps < horizon="
+                f"{dataset.horizon} (window={dataset.window}, "
+                f"stride={dataset.stride}): target steps would be shared across "
+                f"splits.")
+        elif self.offset == 'sample':
+            # Separate the closest split samples by ``ceil(sample_span / stride)``
+            # positions: splits share no time step in any role, for any window/horizon/delay/stride.
+            offset = int(np.ceil(dataset.sample_span / dataset.stride)) - 1
+        else:
+            raise ValueError(f"Unknown offset '{self.offset}', must be "
+                             "'window' or 'sample'.")
+
+        self.set_indices(idx[:val_start - offset],
+                         idx[val_start:test_start - offset],
                          idx[test_start:])
 
     @staticmethod
