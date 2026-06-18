@@ -12,7 +12,7 @@ from tsl.data.preprocessing import StandardScaler
 from tsl.datasets import MetrLA, PemsBay
 from tsl.datasets.pems_benchmarks import PeMS03, PeMS04, PeMS07, PeMS08
 from tsl.engines import Predictor
-from tsl.experiment import Experiment, NeptuneLogger
+from tsl.experiment import Experiment
 from tsl.metrics import numpy as numpy_metrics
 from tsl.metrics import torch as torch_metrics
 from tsl.nn import models
@@ -83,13 +83,6 @@ def get_logger(cfg: DictConfig, exp: Experiment) -> Optional[Logger]:
                                  project=cfg.logger.project,
                                  config=exp.get_config_dict(),
                                  tags=cfg.tags)
-    elif cfg.logger.backend == 'neptune':
-        exp_logger = NeptuneLogger(project_name=cfg.neptune.project,
-                                   experiment_name=cfg.run.name,
-                                   save_dir=cfg.run.dir,
-                                   tags=cfg.tags,
-                                   params=exp.get_config_dict(),
-                                   debug=cfg.neptune.offline)
     elif cfg.logger.backend == 'tensorboard':
         exp_name = f'{cfg.run.name}_{"_".join(cfg.tags)}'
         exp_logger = TensorBoardLogger(save_dir=cfg.run.dir, name=exp_name)

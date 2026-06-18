@@ -31,7 +31,6 @@ experiment_requires = [
 
 full_install_requires = plot_requires + experiment_requires + [
     'holidays',
-    'neptune-client>=0.14',
 ]
 
 doc_requires = full_install_requires + [
