@@ -74,6 +74,10 @@ class BatchMap(Mapping):
     def __getitem__(self, k):
         return self.__dict__[k]
 
+    # TODO: implement __delitem__ so callers can `del batch_map[key]` directly.
+    # BatchMap subclasses the immutable Mapping ABC, so for now deletion has to
+    # go through self.__dict__ (see SpatioTemporalDataset.remove_covariate).
+
     def __len__(self) -> int:
         return len(self.__dict__)
 

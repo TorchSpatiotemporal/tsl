@@ -257,6 +257,13 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             self._window_range = torch.arange(0, self.window, self.window_lag)
         if key in _WINDOWING_['horizon'] and \
                 all([hasattr(self, attr) for attr in _WINDOWING_['horizon']]):
+            if self.horizon_offset < 0:
+                raise ValueError(
+                    "horizon_offset (window + delay) must be non-negative, but "
+                    f"got window={self.window} + delay={self.delay} = "
+                    f"{self.horizon_offset}. A negative horizon_offset places "
+                    "the horizon before the sample's first step (target step "
+                    "< 0).")
             self._horizon_range = torch.arange(
                 self.horizon_offset, self.horizon_offset + self.horizon,
                 self.horizon_lag)
@@ -295,14 +302,27 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         """Number of channels in dataset's target."""
         return self.target.size(-1)
 
+    def _is_coo_edge_index(self) -> bool:
+        r"""Whether :obj:`edge_index` is stored in COO format (a :math:`[2, E]`
+        integer tensor), as opposed to a dense :math:`[N, N]` adjacency matrix or
+        a :class:`~torch_sparse.SparseTensor`. A COO edge_index holds integer
+        node indices while a dense adjacency holds (float) weights, so the dtype
+        also disambiguates the :math:`[2, 2]` two-node corner case."""
+        ei = self.edge_index
+        return (isinstance(ei, Tensor) and ei.dim() == 2 and ei.size(0) == 2
+                and not torch.is_floating_point(ei))
+
     @property
     def n_edges(self) -> Optional[int]:
         """Number of edges in the dataset, if a connectivity is set."""
-        if isinstance(self.edge_index, Tensor):
-            return self.edge_index.size(1)
-        elif isinstance(self.edge_index, SparseTensor):
+        if self.edge_index is None:
+            return None
+        if isinstance(self.edge_index, SparseTensor):
             return self.edge_index.numel()
-        return None
+        if self._is_coo_edge_index():
+            return self.edge_index.size(1)
+        # dense adjacency matrix: count the nonzero entries
+        return int((self.edge_index != 0).sum())
 
     @property
     def shape(self) -> tuple:
@@ -327,8 +347,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             patterns['mask'] = 't n f'
         # add connectivity patterns
         if self.edge_index is not None:
-            patterns['edge_index'] = '2 e' if isinstance(
-                self.edge_index, Tensor) else 'n n'
+            patterns['edge_index'] = ('2 e' if self._is_coo_edge_index()
+                                      else 'n n')
             if self.edge_weight is not None:
                 patterns['edge_weight'] = 'e'
         # add covariates patterns
@@ -359,8 +379,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             patterns['mask'] = 't n f'
         # add connectivity patterns
         if self.edge_index is not None:
-            patterns['edge_index'] = '2 e' if isinstance(
-                self.edge_index, Tensor) else 'n n'
+            patterns['edge_index'] = ('2 e' if self._is_coo_edge_index()
+                                      else 'n n')
             if self.edge_weight is not None:
                 patterns['edge_weight'] = 'e'
         # add target map patterns
@@ -732,6 +752,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         mask = self.mask if self.has_mask else ~torch.isnan(self.target)
         if dtype is not None:
             assert dtype in ['bool', 'uint8', bool, torch.bool, torch.uint8]
+            if isinstance(dtype, str):
+                dtype = {'bool': torch.bool, 'uint8': torch.uint8}[dtype]
             mask = mask.to(dtype)
         return mask
 
@@ -987,9 +1009,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                 del self.scalers[name]
             # ATTENTION! remove entirely map item with covariate in keys
             for _map in [self.input_map, self.target_map, self.auxiliary_map]:
-                for _map_item in _map:
+                for _map_key, _map_item in list(_map.items()): # use list(...) to avoid changes to the dict while iterating
                     if name in _map_item.keys:
-                        del _map[_map_item]
+                        del _map.__dict__[_map_key]
         except Exception as e:
             raise e
 
@@ -1065,7 +1087,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             if 'target' in self.scalers:
                 if self.__target_bias is None:
                     self.__target_bias = self.scalers['target'].bias
-                self.scalers['target'].bias = trend
+                # combine the scaler's fitted bias with the trend
+                self.scalers['target'].bias = self.__target_bias + trend
         else:
             if 'target' in self.scalers:
                 self.scalers['target'].bias = self.__target_bias
@@ -1156,18 +1179,21 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         node_index = self._get_node_index(node_index, layout='index')
         try:
             if self.edge_index is not None and node_index is not None:
-                self.edge_index, self.edge_weight = reduce_graph(
+                # reduce_graph returns the relabeled edge_index and a mask of the
+                # kept edges; apply that mask to the (separate) edge weights.
+                self.edge_index, edge_mask = reduce_graph(
                     node_index,
                     self.edge_index,
-                    self.edge_weight,
                     num_nodes=self.n_nodes)
-            self.target = self.target[time_slice, node_slice]
-            if self.index is not None:
+                if self.edge_weight is not None and edge_mask is not None:
+                    self.edge_weight = self.edge_weight[edge_mask]
+            self.target = self.target[time_slice][:, node_slice]
+            if self.index is not None and time_index is not None:
                 self.index = self.index[time_index.numpy()]
             if self.mask is not None:
-                self.mask = self.mask[time_slice, node_slice]
+                self.mask = self.mask[time_slice][:, node_slice]
             if self.trend is not None:
-                self.trend = self.trend[time_slice, node_slice]
+                self.trend = self.trend[time_slice][:, node_slice]
             for name, attr in self._covariates.items():
                 x, scaler = self.get_tensor(name,
                                             time_index=time_index,
