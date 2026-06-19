@@ -41,11 +41,10 @@ class Dataset(object):
                  default_splitting_method: str = 'temporal'):
         # Set name
         self.name = name if name is not None else self.__class__.__name__
-        # Set similarity method
-        if self.similarity_options is not None:
-            if similarity_score not in self.similarity_options:
-                raise ValueError("{} is not a valid similarity method.".format(
-                    similarity_score))
+        options = self.similarity_options or set()
+        if similarity_score is not None and similarity_score not in options:
+            raise ValueError("{} is not a valid similarity method.".format(
+                similarity_score))
         self.similarity_score = similarity_score
         # Set aggregation methods
         self.temporal_aggregation = temporal_aggregation
@@ -357,7 +356,7 @@ class Dataset(object):
         """
         if method is None:
             method = self.similarity_score
-        if method not in self.similarity_options:
+        if method not in (self.similarity_options or set()):
             raise ValueError("Similarity method '{}' not valid".format(method))
         if save:
             enc = hash_dict(

@@ -195,12 +195,11 @@ class LargeST(DatetimeDataset):
         # possibly select subset, "CA" stands for no subset (whole California)
         node_mask = slice(None)
         if self.subset == "GLA":  # Greater Los Angeles
-            node_mask = ((metadata.District == 7) | (metadata.District == 8) |
-                         (metadata.District == 12)).values
+            node_mask = (metadata['district'].isin([7, 8, 12])).values
         elif self.subset == "GBA":  # Greater Bay Area
-            node_mask = (metadata.District == 4).values
+            node_mask = (metadata['district'] == 4).values
         elif self.subset == "SD":  # San Diego
-            node_mask = (metadata.District == 11).values
+            node_mask = (metadata['district'] == 11).values
         metadata = metadata.loc[node_mask]
 
         # load traffic data only for requested years

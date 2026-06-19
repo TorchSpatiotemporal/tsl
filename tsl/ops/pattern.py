@@ -239,6 +239,7 @@ def broadcast(x: Union[np.ndarray, torch.Tensor],
         raise RuntimeError(f"Shape {left_dims} cannot be "
                            f"broadcasted to {rght.strip()}.")
 
+    backend = _infer_backend(x, backend)
     select = _get_select_fn(backend)
     expand = _get_expand_fn(backend)
     time_index, node_index, edge_index = _parse_indices(backend,

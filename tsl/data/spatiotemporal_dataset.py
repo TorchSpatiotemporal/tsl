@@ -322,7 +322,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         if self._is_coo_edge_index():
             return self.edge_index.size(1)
         # dense adjacency matrix: count the nonzero entries
-        return int((self.edge_index != 0).sum())
+        return int(torch.count_nonzero(self.edge_index))
 
     @property
     def shape(self) -> tuple:

@@ -346,7 +346,7 @@ class TabularDataset(Dataset, TabularParsingMixin):
                 channels = getattr(obj, axis).unique(level)
                 channel_indexer = channels.get_indexer(channel_index)
                 if any(channel_indexer < 0):
-                    unmatch = channel_index[channel_indexer < 0]
+                    unmatch = np.asarray(channel_index)[channel_indexer < 0]
                     raise KeyError(f"Channels {unmatch} not in {key}.")
                 channel_index = channel_indexer
             x = x.take(channel_index, dim)
