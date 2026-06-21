@@ -58,7 +58,7 @@ class _PeMS(DatetimeDataset):
         fp.close()
         index = pd.date_range(start=self.start_date,
                               periods=len(data),
-                              freq='5T')
+                              freq='5min')
 
         df_flow = pd.DataFrame(data=data[..., 0],
                                index=index).astype('float32')
