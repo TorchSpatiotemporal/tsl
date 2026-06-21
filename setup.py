@@ -79,6 +79,12 @@ setup(
         'experiment': experiment_requires,
         'full': full_install_requires,
         'doc': doc_requires,
+        'peakweather': [
+            "peakweather @ git+https://github.com/MeteoSwiss/PeakWeather.git"
+        ],
+        'peakweather-topography': [
+            "peakweather[topography] @ git+https://github.com/MeteoSwiss/PeakWeather@main"
+        ],
     },
     packages=find_packages(exclude=['examples*']),
 )

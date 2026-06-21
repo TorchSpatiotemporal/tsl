@@ -26,3 +26,5 @@ dependencies:
       - tables
       - torchmetrics>=0.7
       - tqdm
+      # "peakweather @ git+https://github.com/MeteoSwiss/PeakWeather.git"
+      # "peakweather[topography] @ git+https://github.com/MeteoSwiss/PeakWeather@main"

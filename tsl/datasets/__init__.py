@@ -12,6 +12,7 @@ from .large_st import LargeST
 from .metr_la import MetrLA
 from .mts_benchmarks import (ElectricityBenchmark, ExchangeBenchmark,
                              SolarBenchmark, TrafficBenchmark)
+from .peakweather import PeakWeather
 from .pems_bay import PemsBay
 from .pems_benchmarks import PeMS03, PeMS04, PeMS07, PeMS08
 from .pv_us import PvUS
@@ -22,6 +23,7 @@ dataset_classes = [
     'Elergone',
     'EngRad',
     'MetrLA',
+    'PeakWeather',
     'PemsBay',
     'PeMS03',
     'PeMS04',
