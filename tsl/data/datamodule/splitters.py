@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Callable, Mapping, Optional, Tuple, Union
 
 import numpy as np
+from pandas import DatetimeIndex
 
 from tsl.utils.python_utils import ensure_list
 
@@ -249,57 +250,137 @@ class TemporalSplitter(Splitter):
                          idx[val_start:test_start - offset],
                          idx[test_start:])
 
-    @staticmethod
-    def add_argparse_args(parser):
-        parser.add_argument('--val-len', type=float or int, default=0.1)
-        parser.add_argument('--test-len', type=float or int, default=0.2)
-        return parser
-
 
 class AtTimeStepSplitter(Splitter):
     r"""Split the data at given time steps (only for
     :class:`~tsl.data.SpatioTemporalDataset` with
-    :class:`~pandas.DatetimeIndex` index)."""
+    :class:`~pandas.DatetimeIndex` index).
+
+    Each split is defined by a (``first_ts``, ``last_ts``) timestamp range.
+    The validation and test ranges must be provided; the training range
+    defaults to the whole series before the held-out splits.
+
+    Splits are kept separated so they do not leak across each other. The
+    separation is controlled by :obj:`min_offset`, using the same vocabulary as
+    :class:`TemporalSplitter`:
+
+    - :obj:`'sample'`: separate the closest splits by
+      at least :obj:`ceil(sample_span / stride)` positions, so that they share no time
+      step in any role (input window or prediction horizon), for any
+      window/horizon/delay/stride.
+    - :obj:`'window'`: separate the closest splits by at least :obj:`samples_offset`
+      positions, so their lookback windows just touch. This avoids leakage (no
+      target step shared across splits) as long as the horizon is short enough
+      relative to the window.
+
+    (default: :obj:`'sample'`)
+
+    When :obj:`last_train_ts` is not given, the training range ends at the last
+    position that keeps it separated from the validation and test splits. When
+    it (or :obj:`first_train_ts`) is given, the resulting splits are checked and
+    a :class:`ValueError` is raised if any two are closer than :obj:`min_offset`.
+
+    Args:
+        first_val_ts, last_val_ts: Bounds of the validation range.
+        first_test_ts, last_test_ts: Bounds of the test range.
+        first_train_ts (optional): Start of the training range. Defaults to the
+            beginning of the series.
+        last_train_ts (optional): End of the training range. Defaults to the
+            last position keeping training separated from validation and test.
+        min_offset (str): Minimum separation between the closest splits, either
+            :obj:`'sample'` or :obj:`'window'`. (default: :obj:`'sample'`)
+    """
 
     def __init__(self,
                  first_val_ts: Union[Tuple, datetime] = None,
-                 first_test_ts: Union[Tuple, datetime] = None,
                  last_val_ts: Union[Tuple, datetime] = None,
+                 first_test_ts: Union[Tuple, datetime] = None,
                  last_test_ts: Union[Tuple, datetime] = None,
-                 drop_following_steps: bool = True):
+                 first_train_ts: Union[Tuple, datetime] = None,
+                 last_train_ts: Union[Tuple, datetime] = None,
+                 min_offset: str = 'sample'):
         super(AtTimeStepSplitter, self).__init__()
         self.first_val_ts = first_val_ts
-        self.first_test_ts = first_test_ts
         self.last_val_ts = last_val_ts
+        self.first_test_ts = first_test_ts
         self.last_test_ts = last_test_ts
-        self.drop_following_steps = drop_following_steps
+        self.first_train_ts = first_train_ts
+        self.last_train_ts = last_train_ts
+        self.min_offset = min_offset
 
     def fit(self, dataset: SpatioTemporalDataset):
-        test_idx = indices_between(dataset,
-                                   first_ts=self.first_test_ts,
-                                   last_ts=self.last_test_ts)
-        val_idx = indices_between(dataset,
-                                  first_ts=self.first_val_ts,
-                                  last_ts=self.last_val_ts)
-        if self.drop_following_steps:
-            val_idx = val_idx[val_idx < test_idx.min()]
-            train_idx = np.arange(val_idx.min())
+        if not isinstance(dataset.index, DatetimeIndex):
+            raise ValueError(
+                "AtTimeStepSplitter requires a SpatioTemporalDataset with a "
+                "pandas.DatetimeIndex index, but the dataset's index is "
+                f"{type(dataset.index).__name__}.")
+
+        # Minimum gap (in positions) required between two splits.
+        if self.min_offset == 'sample':
+            # Full footprint (window + horizon) disjointness.
+            offset = int(np.ceil(dataset.sample_span / dataset.stride))
+        elif self.min_offset == 'window':
+            # Lookback windows just touch; safe iff the gap also covers horizon.
+            offset = dataset.samples_offset
+            assert offset * dataset.stride >= dataset.horizon, (
+                f"offset='window' separates splits by "
+                f"{offset * dataset.stride} steps < horizon={dataset.horizon} "
+                f"(window={dataset.window}, stride={dataset.stride}): target "
+                f"steps would be shared across splits.")
         else:
-            val_idx = np.setdiff1d(val_idx, test_idx)
-            train_idx = np.setdiff1d(np.arange(len(dataset)), test_idx)
-        train_idx = np.setdiff1d(train_idx, val_idx)
+            raise ValueError(f"Unknown offset '{self.min_offset}', must be "
+                             "'sample' or 'window'.")
+
+        # An unspecified split (both bounds ``None``) is empty -- not the whole
+        # series, which is what ``indices_between(None, None)`` would return.
+        def split_range(first_ts, last_ts):
+            if first_ts is None and last_ts is None:
+                return np.array([], dtype=int)
+            return indices_between(dataset, first_ts=first_ts, last_ts=last_ts)
+
+        val_idx = split_range(self.first_val_ts, self.last_val_ts)
+        test_idx = split_range(self.first_test_ts, self.last_test_ts)
+
+        # Training start position (inclusive).
+        if self.first_train_ts is not None:
+            after = indices_between(dataset, first_ts=self.first_train_ts)
+            train_start = int(after.min()) if len(after) else dataset.n_samples
+        else:
+            train_start = 0
+        # Training end position (inclusive).
+        if self.last_train_ts is not None:
+            before = indices_between(dataset, last_ts=self.last_train_ts)
+            train_end = int(before.max()) if len(before) else -1
+        else:
+            # Last position that stays disjoint from the earliest held-out split.
+            held_out_starts = [int(s.min()) for s in (val_idx, test_idx)
+                               if len(s)]
+            train_end = (min(held_out_starts) -
+                         offset) if held_out_starts else dataset.n_samples - 1
+        train_idx = np.arange(train_start, train_end + 1)
+
+        self._check_separated(offset,
+                              train=train_idx,
+                              val=val_idx,
+                              test=test_idx)
         return self.set_indices(train_idx, val_idx, test_idx)
 
     @staticmethod
-    def add_argparse_args(parser):
-        parser.add_argument('--first-val-ts', type=list or tuple, default=None)
-        parser.add_argument('--first-test-ts',
-                            type=list or tuple,
-                            default=None)
-        return parser
-
-
-###
+    def _check_separated(offset, **splits):
+        """Raise if any two splits are closer than ``offset`` positions."""
+        splits = {name: np.asarray(idxs)
+                  for name, idxs in splits.items() if len(idxs)}
+        names = list(splits)
+        for i, a in enumerate(names):
+            for b in names[i + 1:]:
+                lo, hi = sorted((splits[a], splits[b]), key=lambda s: s.min())
+                gap = int(hi.min()) - int(lo.max())
+                if gap < offset:
+                    raise ValueError(
+                        f"'{a}' and '{b}' splits are not separated enough: they "
+                        f"are {gap} positions apart but at least {offset} are "
+                        "required to avoid sharing time steps across splits. "
+                        "Adjust the timestamp ranges.")
 
 
 def indices_between(dataset: SpatioTemporalDataset,
@@ -320,16 +401,6 @@ def indices_between(dataset: SpatioTemporalDataset,
     indices_before = dataset.indices < last_sample_loc
     indices = np.nonzero(indices_after & indices_before).ravel()
     return indices
-
-
-def split_at_ts(dataset, ts, mask=None):
-    from_day_idxs = indices_between(dataset, first_ts=ts)
-    prev_idxs = np.arange(
-        from_day_idxs[0] if len(from_day_idxs) else len(dataset))
-    if mask is not None:
-        from_day_idxs = np.setdiff1d(from_day_idxs, mask)
-        prev_idxs = np.setdiff1d(prev_idxs, mask)
-    return prev_idxs, from_day_idxs
 
 
 def disjoint_months(dataset, months=None, synch_mode=SynchMode.WINDOW):
@@ -358,122 +429,6 @@ def disjoint_months(dataset, months=None, synch_mode=SynchMode.WINDOW):
     idxs_in_months = start_in_months & end_in_months
     prev_idxs = idxs[idxs_in_months]
     return prev_idxs, after_idxs
-
-
-# SPLIT FUNCTIONS
-
-
-def split_function_builder(fn, *args, name=None, **kwargs):
-
-    def wrapper_split_fn(dataset, length=None, mask=None):
-        return fn(dataset, length=length, mask=mask, *args, **kwargs)
-
-    wrapper_split_fn.__name__ = name or "wrapped__%s" % fn.__name__
-    return wrapper_split_fn
-
-
-def subset_len(length, set_size, period=None):
-    if period is None:
-        period = set_size
-    if length is None or length <= 0:
-        length = 0
-    if 0. < length < 1.:
-        length = max(int(length * period), 1)
-    elif period <= length < set_size:
-        length = int(length / set_size * period)
-    elif length > set_size:
-        raise ValueError("Provided length of %i is greater than set_size %i" %
-                         (length, set_size))
-    return length
-
-
-def tail_of_period(iterable, length, mask=None, period=None):
-    size = len(iterable)
-    period = period or size
-    if mask is None:
-        mask = []
-    indices = np.arange(size)
-    length = subset_len(length, size, period)
-
-    prev_idxs, after_idxs = [], []
-    for batch_idxs in [indices[i:i + period] for i in range(0, size, period)]:
-        batch_idxs = np.setdiff1d(batch_idxs, mask)
-        prev_idxs.extend(batch_idxs[:len(batch_idxs) - length])
-        after_idxs.extend(batch_idxs[len(batch_idxs) - length:])
-
-    return np.array(prev_idxs), np.array(after_idxs)
-
-
-def random(iterable, length, mask=None):
-    size = len(iterable)
-    if mask is None:
-        mask = []
-    indices = np.setdiff1d(np.arange(size), mask)
-    np.random.shuffle(indices)
-    split_at = len(indices) - subset_len(length, size)
-    res = [np.sort(indices[:split_at]), np.sort(indices[split_at:])]
-    return res
-
-
-def past_pretest_days(dataset, length, mask):
-    # get the first day of testing, as the first step of the horizon
-    keep_until = np.min(mask)
-    first_testing_day_idx = dataset._indices[keep_until]
-    first_testing_day = dataset.index[first_testing_day_idx +
-                                      dataset.lookback + dataset.delay]
-
-    # extract samples before first day of testing through the years
-    tz_info = dataset.index.tzinfo
-    years = sorted(set(dataset.index.year))
-    yearly_testing_loc = []
-    for year in years:
-        ftd_year = datetime(year,
-                            first_testing_day.month,
-                            first_testing_day.day,
-                            tzinfo=tz_info)
-        yearly_testing_loc.append(dataset.index.slice_locs(ftd_year)[0])
-    yearly_train_samples = [
-        np.where(dataset._indices < ytl - dataset.lookback - dataset.delay)[0]
-        for ytl in yearly_testing_loc
-    ]
-    # filter the years in which there are no such samples
-    yearly_train_samples = [
-        yts for yts in yearly_train_samples if len(yts) > 0
-    ]
-
-    # for each year but the last take the last "val_len // n_years" samples
-    yearly_val_len = length // len(yearly_train_samples)
-    yearly_val_lens = [
-        min(yearly_val_len, len(yts)) for yts in yearly_train_samples[:-1]
-    ]
-    # For the last year, take the remaining number of samples needed to reach
-    # val_len. This value is always greater or equals to the other, so we have
-    # at least the same number of validation samples coming from the last year
-    # than the maximum among all the other years.
-    yearly_val_lens.append(length - sum(yearly_val_lens))
-    # finally extracts the validation samples
-    val_idxs = [
-        idxs[-val_len:]
-        for idxs, val_len in zip(yearly_train_samples, yearly_val_lens)
-    ]
-    val_idxs = np.concatenate(val_idxs)
-
-    # recompute training and test indices
-    all_idxs = np.arange(len(dataset))
-    train_idxs = np.setdiff1d(all_idxs, val_idxs)
-
-    return train_idxs, val_idxs
-
-
-def last_month(dataset, mask=None):
-    if mask is not None:
-        keep_until = np.min(mask)
-        last_day_idx = dataset._indices[keep_until]
-        last_day = dataset.index[last_day_idx]
-    else:
-        last_day = dataset.index[-1]
-    split_day = (last_day.year, last_day.month, 1)
-    return split_at_ts(dataset, split_day, mask)
 
 
 # aliases
