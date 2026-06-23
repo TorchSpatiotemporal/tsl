@@ -15,17 +15,3 @@ Experiment
 
 .. autoclass:: tsl.experiment.Experiment
    :members:
-
-Loggers
--------
-
-.. currentmodule:: tsl.experiment.loggers
-
-.. autosummary::
-   :nosignatures:
-   {% for cls in tsl.experiment.loggers.logger_classes %}
-     {{ cls }}
-   {% endfor %}
-
-.. automodule:: tsl.experiment.loggers
-   :members:
