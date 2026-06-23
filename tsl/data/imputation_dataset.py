@@ -155,6 +155,8 @@ class ImputationDataset(SpatioTemporalDataset):
 
     def reset_input_map(self):
         super().reset_input_map()
+        if 'eval_mask' in self.input_map:
+            del self.input_map.__dict__['eval_mask']
         if self.mask is not None:
             self.input_map['mask'] = BatchMapItem('mask',
                                                   synch_mode=WINDOW,
