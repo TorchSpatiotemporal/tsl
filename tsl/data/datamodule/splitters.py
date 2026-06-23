@@ -256,37 +256,46 @@ class AtTimeStepSplitter(Splitter):
     :class:`~tsl.data.SpatioTemporalDataset` with
     :class:`~pandas.DatetimeIndex` index).
 
-    Each split is defined by a (``first_ts``, ``last_ts``) timestamp range.
-    The validation and test ranges must be provided; the training range
-    defaults to the whole series before the held-out splits.
+    Each split is defined by a (``first_ts``, ``last_ts``) timestamp range,
+    following the chronological order ``train`` -> ``val`` -> ``test``. A split
+    is active when at least one of its bounds is given (training is always
+    active); the remaining bounds are then inferred:
+
+    - A missing inner boundary is placed ``min_offset`` positions away from the
+      adjacent split (e.g. an open-ended :obj:`last_val_ts` ends just before the
+      test range, and a missing :obj:`first_test_ts` starts just after
+      validation).
+    - A missing outer boundary falls back to the edge of the series: training
+      defaults to start at the beginning, and the latest split extends to the
+      end.
+    - A held-out (validation or test) split with no bounds at all is left empty.
 
     Splits are kept separated so they do not leak across each other. The
     separation is controlled by :obj:`min_offset`, using the same vocabulary as
     :class:`TemporalSplitter`:
 
-    - :obj:`'sample'`: separate the closest splits by
-      at least :obj:`ceil(sample_span / stride)` positions, so that they share no time
+    - :obj:`'sample'`: separate the closest splits by at least
+      :obj:`ceil(sample_span / stride)` positions, so that they share no time
       step in any role (input window or prediction horizon), for any
       window/horizon/delay/stride.
-    - :obj:`'window'`: separate the closest splits by at least :obj:`samples_offset`
-      positions, so their lookback windows just touch. This avoids leakage (no
-      target step shared across splits) as long as the horizon is short enough
-      relative to the window.
+    - :obj:`'window'`: separate the closest splits by at least
+      :obj:`samples_offset` positions, so their lookback windows just touch.
+      This avoids leakage (no target step shared across splits) as long as the
+      horizon is short enough relative to the window, and raises otherwise.
 
     (default: :obj:`'sample'`)
 
-    When :obj:`last_train_ts` is not given, the training range ends at the last
-    position that keeps it separated from the validation and test splits. When
-    it (or :obj:`first_train_ts`) is given, the resulting splits are checked and
-    a :class:`ValueError` is raised if any two are closer than :obj:`min_offset`.
+    After resolving the ranges, the splits are checked and a
+    :class:`ValueError` is raised if any two are closer than :obj:`min_offset`
+    (e.g. when explicit boundaries would make the splits overlap).
 
     Args:
-        first_val_ts, last_val_ts: Bounds of the validation range.
-        first_test_ts, last_test_ts: Bounds of the test range.
+        first_val_ts, last_val_ts (optional): Bounds of the validation range.
+        first_test_ts, last_test_ts (optional): Bounds of the test range.
         first_train_ts (optional): Start of the training range. Defaults to the
             beginning of the series.
         last_train_ts (optional): End of the training range. Defaults to the
-            last position keeping training separated from validation and test.
+            last position keeping training separated from the held-out splits.
         min_offset (str): Minimum separation between the closest splits, either
             :obj:`'sample'` or :obj:`'window'`. (default: :obj:`'sample'`)
     """
@@ -314,12 +323,20 @@ class AtTimeStepSplitter(Splitter):
                 "AtTimeStepSplitter requires a SpatioTemporalDataset with a "
                 "pandas.DatetimeIndex index, but the dataset's index is "
                 f"{type(dataset.index).__name__}.")
+        offset = self._min_gap(dataset)
+        train_idx, val_idx, test_idx = self._resolve_ranges(dataset, offset)
+        self._check_separated(offset,
+                              train=train_idx,
+                              val=val_idx,
+                              test=test_idx)
+        return self.set_indices(train_idx, val_idx, test_idx)
 
-        # Minimum gap (in positions) required between two splits.
+    def _min_gap(self, dataset: SpatioTemporalDataset) -> int:
+        """Minimum separation (in positions) required between two splits."""
         if self.min_offset == 'sample':
             # Full footprint (window + horizon) disjointness.
-            offset = int(np.ceil(dataset.sample_span / dataset.stride))
-        elif self.min_offset == 'window':
+            return int(np.ceil(dataset.sample_span / dataset.stride))
+        if self.min_offset == 'window':
             # Lookback windows just touch; safe iff the gap also covers horizon.
             offset = dataset.samples_offset
             assert offset * dataset.stride >= dataset.horizon, (
@@ -327,10 +344,13 @@ class AtTimeStepSplitter(Splitter):
                 f"{offset * dataset.stride} steps < horizon={dataset.horizon} "
                 f"(window={dataset.window}, stride={dataset.stride}): target "
                 f"steps would be shared across splits.")
-        else:
-            raise ValueError(f"Unknown offset '{self.min_offset}', must be "
-                             "'sample' or 'window'.")
+            return offset
+        raise ValueError(f"Unknown offset '{self.min_offset}', must be "
+                         "'sample' or 'window'.")
 
+    def _resolve_ranges(self, dataset: SpatioTemporalDataset, offset: int):
+        """Resolve the train/val/test position ranges, inferring unspecified
+        boundaries from the adjacent splits and the edges of the series."""
         n = dataset.n_samples
 
         # First/last sample position of a (half-open) timestamp bound, or
@@ -347,51 +367,50 @@ class AtTimeStepSplitter(Splitter):
             idx = indices_between(dataset, last_ts=ts)
             return int(idx.max()) if len(idx) else -1
 
+        def as_idx(present, start, end):
+            return (np.arange(start, end + 1) if present
+                    else np.array([], dtype=int))
+
         val_present = (self.first_val_ts is not None
                        or self.last_val_ts is not None)
         test_present = (self.first_test_ts is not None
                         or self.last_test_ts is not None)
         vf, vl = first_pos(self.first_val_ts), last_pos(self.last_val_ts)
         tf, tl = first_pos(self.first_test_ts), last_pos(self.last_test_ts)
+        train_last = last_pos(self.last_train_ts)
 
-        # Infer missing held-out boundaries from the adjacent split, ``offset``
-        # positions away (chronological order train -> val -> test); outer
-        # boundaries fall back to the edges of the series.
+        # Validation: a missing end is placed ``offset`` before the test split
+        # (chronological order train -> val -> test); edges fall back to the
+        # series bounds.
         if val_present and vl is None:
             vl = (tf - offset) if tf is not None else n - 1
-        if test_present and tf is None:
-            tf = (vl + offset) if vl is not None else 0
-        val_start, val_end = (vf if vf is not None else 0,
-                              vl if vl is not None else n - 1)
-        test_start, test_end = (tf if tf is not None else 0,
-                                tl if tl is not None else n - 1)
+        val_start = vf if vf is not None else 0
+        val_end = vl if vl is not None else n - 1
 
-        val_idx = (np.arange(val_start, val_end + 1) if val_present
-                   else np.array([], dtype=int))
-        test_idx = (np.arange(test_start, test_end + 1) if test_present
-                    else np.array([], dtype=int))
+        # Test: a missing start is placed ``offset`` after validation. An
+        # unspecified test (no bounds) is left empty.
+        test_start, test_end = 0, n - 1
+        if test_present:
+            test_start = tf if tf is not None else \
+                (val_end + offset if val_present else 0)
+            test_end = tl if tl is not None else n - 1
 
-        # Training start position (inclusive).
+        # Training: starts at the series beginning and ends ``offset`` before the
+        # earliest held-out split, unless an explicit bound is given.
         train_start = first_pos(self.first_train_ts)
         if train_start is None:
             train_start = 0
-        # Training end position (inclusive).
-        if self.last_train_ts is not None:
-            train_end = last_pos(self.last_train_ts)
-            train_end = train_end if train_end is not None else -1
+        if train_last is not None:
+            train_end = train_last
         else:
-            # Last position that stays separated from the earliest held-out split.
             held_out_starts = ([val_start] if val_present else []) + \
                               ([test_start] if test_present else [])
             train_end = (min(held_out_starts) - offset) if held_out_starts \
                 else n - 1
-        train_idx = np.arange(train_start, train_end + 1)
 
-        self._check_separated(offset,
-                              train=train_idx,
-                              val=val_idx,
-                              test=test_idx)
-        return self.set_indices(train_idx, val_idx, test_idx)
+        return (as_idx(True, train_start, train_end),
+                as_idx(val_present, val_start, val_end),
+                as_idx(test_present, test_start, test_end))
 
     @staticmethod
     def _check_separated(offset, **splits):
