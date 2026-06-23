@@ -331,32 +331,60 @@ class AtTimeStepSplitter(Splitter):
             raise ValueError(f"Unknown offset '{self.min_offset}', must be "
                              "'sample' or 'window'.")
 
-        # An unspecified split (both bounds ``None``) is empty -- not the whole
-        # series, which is what ``indices_between(None, None)`` would return.
-        def split_range(first_ts, last_ts):
-            if first_ts is None and last_ts is None:
-                return np.array([], dtype=int)
-            return indices_between(dataset, first_ts=first_ts, last_ts=last_ts)
+        n = dataset.n_samples
 
-        val_idx = split_range(self.first_val_ts, self.last_val_ts)
-        test_idx = split_range(self.first_test_ts, self.last_test_ts)
+        # First/last sample position of a (half-open) timestamp bound, or
+        # ``None`` when the bound is unspecified.
+        def first_pos(ts):
+            if ts is None:
+                return None
+            idx = indices_between(dataset, first_ts=ts)
+            return int(idx.min()) if len(idx) else n
+
+        def last_pos(ts):
+            if ts is None:
+                return None
+            idx = indices_between(dataset, last_ts=ts)
+            return int(idx.max()) if len(idx) else -1
+
+        val_present = (self.first_val_ts is not None
+                       or self.last_val_ts is not None)
+        test_present = (self.first_test_ts is not None
+                        or self.last_test_ts is not None)
+        vf, vl = first_pos(self.first_val_ts), last_pos(self.last_val_ts)
+        tf, tl = first_pos(self.first_test_ts), last_pos(self.last_test_ts)
+
+        # Infer missing held-out boundaries from the adjacent split, ``offset``
+        # positions away (chronological order train -> val -> test); outer
+        # boundaries fall back to the edges of the series.
+        if val_present and vl is None:
+            vl = (tf - offset) if tf is not None else n - 1
+        if test_present and tf is None:
+            tf = (vl + offset) if vl is not None else 0
+        val_start, val_end = (vf if vf is not None else 0,
+                              vl if vl is not None else n - 1)
+        test_start, test_end = (tf if tf is not None else 0,
+                                tl if tl is not None else n - 1)
+
+        val_idx = (np.arange(val_start, val_end + 1) if val_present
+                   else np.array([], dtype=int))
+        test_idx = (np.arange(test_start, test_end + 1) if test_present
+                    else np.array([], dtype=int))
 
         # Training start position (inclusive).
-        if self.first_train_ts is not None:
-            after = indices_between(dataset, first_ts=self.first_train_ts)
-            train_start = int(after.min()) if len(after) else dataset.n_samples
-        else:
+        train_start = first_pos(self.first_train_ts)
+        if train_start is None:
             train_start = 0
         # Training end position (inclusive).
         if self.last_train_ts is not None:
-            before = indices_between(dataset, last_ts=self.last_train_ts)
-            train_end = int(before.max()) if len(before) else -1
+            train_end = last_pos(self.last_train_ts)
+            train_end = train_end if train_end is not None else -1
         else:
-            # Last position that stays disjoint from the earliest held-out split.
-            held_out_starts = [int(s.min()) for s in (val_idx, test_idx)
-                               if len(s)]
-            train_end = (min(held_out_starts) -
-                         offset) if held_out_starts else dataset.n_samples - 1
+            # Last position that stays separated from the earliest held-out split.
+            held_out_starts = ([val_start] if val_present else []) + \
+                              ([test_start] if test_present else [])
+            train_end = (min(held_out_starts) - offset) if held_out_starts \
+                else n - 1
         train_idx = np.arange(train_start, train_end + 1)
 
         self._check_separated(offset,
