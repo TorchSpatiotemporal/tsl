@@ -3,54 +3,7 @@ import pytest
 
 from tsl.data import SpatioTemporalDataset, TemporalSplitter
 
-
-# -- helpers ----------------------------------------------------------------
-# Footprints are computed from the dataset's own indexing.
-
-def _steps(dataset, indices, which):
-    if len(indices) == 0:
-        return set()
-    expanded = dataset.expand_indices(np.asarray(indices))
-    return set(expanded[which].numpy().ravel().tolist())
-
-
-def _targets(dataset, indices):
-    """Time steps used as prediction targets (horizon) by the given samples."""
-    return _steps(dataset, indices, 'horizon')
-
-
-def _footprint(dataset, indices):
-    """All time steps touched (input window + target horizon) by the samples."""
-    steps = _steps(dataset, indices, 'horizon')
-    if dataset.window > 0:
-        steps |= _steps(dataset, indices, 'window')
-    return steps
-
-
-def _make_dataset(window, horizon, stride=1, delay=0,
-                  window_lag=1, horizon_lag=1, n_steps=1500):
-    return SpatioTemporalDataset(target=np.arange(n_steps).astype('float32'),
-                                 window=window,
-                                 horizon=horizon,
-                                 stride=stride,
-                                 delay=delay,
-                                 window_lag=window_lag,
-                                 horizon_lag=horizon_lag)
-
-
-# window/horizon/stride/delay grid for the leakage sweeps. ``window=0`` covers
-# horizon-only datasets; large ``stride`` exercises the ceil rounding of the
-# offset; delays span negative (down to -window, i.e. horizon_offset == 0) to
-# large positive. Keep only horizon_offset = window + delay >= 0: a negative
-# horizon_offset puts the horizon before the window (target steps < 0 for the
-# first sample), which the dataset cannot represent and is outside the
-# splitter's supported range.
-CONFIGS = [(w, h, s, d)
-           for w in (0, 1, 4, 12)
-           for h in (1, 2, 3, 12, 24)
-           for s in (1, 2, 3, 5)
-           for d in sorted({-1, 0, 3, w, h, s, -w})
-           if w + d >= 0]
+from .helpers import CONFIGS, _footprint, _make_dataset, _targets
 
 
 # -- exact-count test (independent reference computation) -------------------
@@ -173,6 +126,15 @@ def test_window_offset_boundary_is_horizon_eq_window(horizon):
 
 
 # -- edge cases -------------------------------------------------------------
+
+def test_zero_val_len_gives_empty_val():
+    # val_len=0 is a valid degenerate request: no validation samples, while
+    # train and test stay populated.
+    dataset = _make_dataset(window=4, horizon=4)
+    idxs = TemporalSplitter(val_len=0, test_len=0.2).split(dataset)
+    assert len(idxs['val']) == 0
+    assert len(idxs['train']) and len(idxs['test'])
+
 
 def test_unknown_offset_raises():
     with pytest.raises(ValueError):

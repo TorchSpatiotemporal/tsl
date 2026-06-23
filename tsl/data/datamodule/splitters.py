@@ -433,6 +433,29 @@ class AtTimeStepSplitter(Splitter):
 def indices_between(dataset: SpatioTemporalDataset,
                     first_ts: Union[Tuple, datetime] = None,
                     last_ts: Union[Tuple, datetime] = None):
+    r"""Return the positions of the samples whose prediction horizon falls
+    within the :obj:`[first_ts, last_ts)` time interval.
+
+    The bounds are aligned by the horizon (the predicted steps), not the input
+    window: a sample is selected when its horizon starts at or after
+    :obj:`first_ts` and before :obj:`last_ts`. As a consequence the input window
+    of a selected sample may extend before :obj:`first_ts`.
+
+    Args:
+        dataset (SpatioTemporalDataset): Dataset with a
+            :class:`~pandas.DatetimeIndex` index.
+        first_ts (tuple or datetime, optional): Lower bound (inclusive). A tuple
+            is passed to :class:`~datetime.datetime` (e.g. :obj:`(2019, 3, 1)`).
+            If :obj:`None`, the interval is open on the left.
+            (default: :obj:`None`)
+        last_ts (tuple or datetime, optional): Upper bound (exclusive). If
+            :obj:`None`, the interval is open on the right.
+            (default: :obj:`None`)
+
+    Returns:
+        numpy.ndarray: The (sorted) sample positions in the interval. With both
+        bounds :obj:`None`, all the dataset's positions are returned.
+    """
     if first_ts is not None:
         if not isinstance(first_ts, datetime):
             # first_ts must be (tuple, list) and len(first_ts) >= 3
@@ -451,6 +474,30 @@ def indices_between(dataset: SpatioTemporalDataset,
 
 
 def disjoint_months(dataset, months=None, synch_mode=SynchMode.WINDOW):
+    r"""Partition the dataset's samples by calendar month into two disjoint
+    groups: those falling entirely within :obj:`months` and those falling
+    entirely outside them.
+
+    Whether a sample belongs to :obj:`months` is decided by the months of the
+    steps selected by :obj:`synch_mode` (its input window or its prediction
+    horizon). Both the first and last step of that span must lie in
+    :obj:`months` (resp. outside) for the sample to be assigned; samples that
+    straddle the boundary are dropped from both groups, so the two groups never
+    share a sample.
+
+    Args:
+        dataset (SpatioTemporalDataset): Dataset with a
+            :class:`~pandas.DatetimeIndex` index.
+        months (int or list, optional): Month(s) (:obj:`1`-:obj:`12`) defining
+            the held-out group. (default: :obj:`None`)
+        synch_mode (SynchMode): Whether to test the months of each sample's
+            input window (:obj:`SynchMode.WINDOW`) or prediction horizon
+            (:obj:`SynchMode.HORIZON`). (default: :obj:`SynchMode.WINDOW`)
+
+    Returns:
+        tuple: :obj:`(prev_idxs, after_idxs)`, the positions of the samples
+        outside and inside :obj:`months` respectively.
+    """
     idxs = np.arange(len(dataset))
     months = ensure_list(months)
     # divide indices according to window or horizon
