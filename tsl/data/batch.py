@@ -73,7 +73,7 @@ def static_graph_collate(data_list: List[Data],
 
     pattern = elem.pattern
 
-    for key in elem.keys:
+    for key in elem.keys():
         if key == 'transform':
             out[key] = static_scaler_collate([data[key] for data in data_list])
         elif key in pattern:
@@ -485,6 +485,9 @@ class DisjointBatch(Batch):
         data.transform.update(scalers)
 
         for key, dims in self._repeated_keys.items():
+            # 'dims' can be a single axis (int) or a list of axes to drop
+            if isinstance(dims, int):
+                dims = [dims]
             idx = [
                 0 if i in dims else slice(None)  # e.g. dims=[1] -> [:, 0, :]
                 for i in range(data[key].ndim)

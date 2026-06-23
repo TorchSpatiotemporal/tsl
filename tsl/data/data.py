@@ -318,6 +318,11 @@ class Data(PyGData):
         else:
             num_nodes = subset.size(0)
 
+        # work on a fresh 'transform' mapping so that slicing the scalers does
+        # not mutate a dict shared with other 'Data' objects.
+        if self.transform is not None:
+            self.transform = dict(self.transform)
+
         for key, value in self:
             if key == 'edge_index':
                 self.edge_index = edge_index

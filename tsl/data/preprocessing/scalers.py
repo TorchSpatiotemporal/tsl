@@ -154,6 +154,8 @@ class Scaler:
                 filename = filename + '.pt'
             torch.save(params, filename)
         else:
+            if not filename.endswith('.npz'):
+                filename = filename + '.npz'
             np.savez_compressed(filename, **params)
         return os.path.abspath(filename)
 
