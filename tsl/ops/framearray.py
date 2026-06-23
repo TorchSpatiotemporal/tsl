@@ -128,8 +128,12 @@ def fill_nan(x: FrameArray,
         x = x.fillna(value=x.mean(axis=axis), axis=axis, inplace=False)
     elif method == 'linear':
         x = x.interpolate("linear", axis=axis, inplace=False)
+    elif method == 'backfill' or method == 'bfill':
+        x = x.bfill(axis=axis, inplace=False)
+    elif method == 'ffill' or method == 'pad':
+        x = x.ffill(axis=axis, inplace=False)
     else:
-        x = x.fillna(value=value, method=method, axis=axis, inplace=False)
+        x = x.fillna(value=value, axis=axis, inplace=False)
     if to_numpy:
         x = framearray_to_numpy(x)
     return x
@@ -177,11 +181,11 @@ def temporal_mean(x: FrameArray, index: pd.DatetimeIndex = None) \
     ]
     cond1 = [df_mean.index.year, df_mean.index.month, df_mean.index.hour]
     conditions = [cond0, cond1, cond1[1:], cond1[2:]]
-    while df_mean.isna().values.sum() and len(conditions):
+    while df_mean.isna().values.any() and len(conditions):
         nan_mean = df_mean.groupby(conditions[0]).transform("mean")
         df_mean = df_mean.fillna(nan_mean)
         conditions = conditions[1:]
-    if df_mean.isna().values.sum():
+    if df_mean.isna().values.any():
         df_mean = df_mean.ffill()
         df_mean = df_mean.bfill()
     if isinstance(x, np.ndarray):

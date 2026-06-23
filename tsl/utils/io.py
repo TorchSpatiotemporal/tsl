@@ -74,25 +74,6 @@ def load_pickle(filename: str) -> Any:
     return data
 
 
-def save_figure(fig, filename: str, as_html=False, as_pickle=False):
-    if filename.endswith('.html'):
-        as_html = True
-        filename = filename[:-5]
-    elif filename.endswith('.pkl'):
-        as_pickle = True
-        filename = filename[:-4]
-    if not (as_html or as_pickle):
-        as_html = False  # save as html if nothing is specified
-    if as_html:
-        import mpld3
-        with open(filename + '.html', 'w') as fp:
-            mpld3.save_html(fig, fp)
-    if as_pickle:
-        import pickle
-        with open(filename + '.pkl', 'wb') as fp:
-            pickle.dump(fig, fp)
-
-
 class DownloadProgressBar(tqdm):
     # From https://stackoverflow.com/a/53877507
     def update_to(self, b=1, bsize=1, tsize=None):

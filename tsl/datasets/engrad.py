@@ -1,5 +1,5 @@
 import math
-from typing import List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -156,7 +156,7 @@ class EngRad(DatetimeDataset):
         return ['data.h5']
 
     @property
-    def required_file_names(self) -> dict[str, str]:
+    def required_file_names(self) -> Dict[str, str]:
         return {'data': 'data.h5', 'distances': 'dist.npy'}
 
     def download(self):

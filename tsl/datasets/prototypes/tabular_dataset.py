@@ -189,9 +189,10 @@ class TabularDataset(Dataset, TabularParsingMixin):
         patterns = {'target': 't n f'}
         if self.mask is not None:
             patterns['mask'] = 't n f'
-        patterns.update(
-            {name: attr['pattern']
-             for name, attr in self._covariates.items()})
+        patterns.update({
+            name: attr['pattern']
+            for name, attr in self._covariates.items()
+        })
         return patterns
 
     # Covariates properties
@@ -346,7 +347,11 @@ class TabularDataset(Dataset, TabularParsingMixin):
                 channels = getattr(obj, axis).unique(level)
                 channel_indexer = channels.get_indexer(channel_index)
                 if any(channel_indexer < 0):
-                    unmatch = np.asarray(channel_index)[channel_indexer < 0]
+                    unmatch = {
+                        c
+                        for idx, c in zip(channel_indexer, channel_index)
+                        if idx < 0
+                    }
                     raise KeyError(f"Channels {unmatch} not in {key}.")
                 channel_index = channel_indexer
             x = x.take(channel_index, dim)
@@ -550,9 +555,9 @@ class TabularDataset(Dataset, TabularParsingMixin):
         ds.aggregate_(node_index, aggr, mask_tolerance)
         return ds
 
-    def reduce_(self, time_index=None, node_index=None):
-        time_index = self._get_time_index(time_index, layout='mask')
-        node_index = self._get_node_index(node_index, layout='mask')
+    def reduce_(self, time_index=None, node_index=None, layout='mask'):
+        time_index = self._get_time_index(time_index, layout=layout)
+        node_index = self._get_node_index(node_index, layout=layout)
         try:
             self.target = reduce(self.target, time_index, axis=0)
             self.target = reduce(self.target, node_index, axis=1, level=0)

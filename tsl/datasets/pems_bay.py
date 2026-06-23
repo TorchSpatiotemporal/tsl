@@ -11,9 +11,8 @@ from .prototypes import DatetimeDataset
 
 
 class PemsBay(DatetimeDataset):
-    r"""The dataset contains 6 months of traffic readings from 01/01/2017 to
-    05/31/2017 collected every 5 minutes by 325 traffic sensors in San Francisco
-    Bay Area.
+    r"""The dataset contains 6 months of traffic readings from January to June 2017
+    collected every 5 minutes by 325 traffic sensors in San Francisco Bay Area.
 
     The measurements are provided by California Transportation Agencies
     (CalTrans) Performance Measurement System (PeMS). A benchmark dataset for
@@ -81,7 +80,7 @@ class PemsBay(DatetimeDataset):
         traffic_path = os.path.join(self.root_dir, 'pems_bay.h5')
         df = pd.read_hdf(traffic_path)
         # add missing values (index is sorted)
-        date_range = pd.date_range(df.index[0], df.index[-1], freq='5T')
+        date_range = pd.date_range(df.index[0], df.index[-1], freq='5min')
         df = df.reindex(index=date_range)
         # load distance matrix
         path = os.path.join(self.root_dir, 'pems_bay_dist.npy')
@@ -93,7 +92,7 @@ class PemsBay(DatetimeDataset):
         mask = ~np.isnan(df.values)
         if mask_zeros:
             mask &= df.values != 0
-        df.fillna(method='ffill', axis=0, inplace=True)
+        df.ffill(axis=0, inplace=True)
         return df, dist, mask
 
     def build_distance_matrix(self, ids):

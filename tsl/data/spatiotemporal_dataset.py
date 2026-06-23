@@ -352,9 +352,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             if self.edge_weight is not None:
                 patterns['edge_weight'] = 'e'
         # add covariates patterns
-        patterns.update(
-            {name: attr['pattern']
-             for name, attr in self._covariates.items()})
+        patterns.update({
+            name: attr['pattern']
+            for name, attr in self._covariates.items()
+        })
         return patterns
 
     @property
@@ -384,9 +385,15 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             if self.edge_weight is not None:
                 patterns['edge_weight'] = 'e'
         # add target map patterns
-        patterns.update(
-            {name: attr.pattern
-             for name, attr in self.target_map.items()})
+        patterns.update({
+            name: attr.pattern
+            for name, attr in self.target_map.items()
+        })
+        # add auxiliary map patterns
+        patterns.update({
+            name: attr.pattern
+            for name, attr in self.auxiliary_map.items()
+        })
         return patterns
 
     @property
@@ -1009,7 +1016,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                 del self.scalers[name]
             # ATTENTION! remove entirely map item with covariate in keys
             for _map in [self.input_map, self.target_map, self.auxiliary_map]:
-                for _map_key, _map_item in list(_map.items()): # use list(...) to avoid changes to the dict while iterating
+                # use list(...) to avoid changes to the dict while iterating
+                for _map_key, _map_item in list(_map.items()):
                     if name in _map_item.keys:
                         del _map.__dict__[_map_key]
         except Exception as e:
@@ -1182,9 +1190,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
                 # reduce_graph returns the relabeled edge_index and a mask of the
                 # kept edges; apply that mask to the (separate) edge weights.
                 self.edge_index, edge_mask = reduce_graph(
-                    node_index,
-                    self.edge_index,
-                    num_nodes=self.n_nodes)
+                    node_index, self.edge_index, num_nodes=self.n_nodes)
                 if self.edge_weight is not None and edge_mask is not None:
                     self.edge_weight = self.edge_weight[edge_mask]
             self.target = self.target[time_slice][:, node_slice]
@@ -1345,7 +1351,10 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         """
         covariates = dataset._covariates
         if covariate_keys is not None:
-            covariates = {k: v for k, v in covariates.items() if k in covariate_keys}
+            covariates = {
+                k: v
+                for k, v in covariates.items() if k in covariate_keys
+            }
         return cls(target=dataset.target,
                    index=dataset.index,
                    mask=dataset.mask,
