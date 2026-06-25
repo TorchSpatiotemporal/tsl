@@ -142,7 +142,7 @@ def prediction_dataframe(y, index, columns=None, aggregate_by='mean'):
         if aggr_by == 'mean':
             dfs.append(preds_by_step.mean())
         elif aggr_by == 'central':
-            dfs.append(preds_by_step.aggregate(lambda x: x[int(len(x) // 2)]))
+            dfs.append(preds_by_step.aggregate(lambda x: x.iloc[int(len(x) // 2)]))
         elif aggr_by == 'smooth_central':
             from scipy.signal import gaussian
             dfs.append(
@@ -150,7 +150,7 @@ def prediction_dataframe(y, index, columns=None, aggregate_by='mean'):
                     lambda x: np.average(x, weights=gaussian(len(x), 1))))
         elif aggr_by == 'last':
             # first imputation has missing value in last position
-            dfs.append(preds_by_step.aggregate(lambda x: x[0]))
+            dfs.append(preds_by_step.aggregate(lambda x: x.iloc[0]))
         else:
             raise ValueError("aggregate_by can only be one of "
                              "['mean', 'central', 'smooth_central', 'last']")

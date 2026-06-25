@@ -225,36 +225,65 @@ def get_trend(df, period='week', train_len=None, valid_mask=None):
     return df - means, means
 
 
-def normalize(x: FrameArray, by: Any = None, axis: int = 0, level: int = 0):
-    r"""Normalize input :class:`~numpy.ndarray` or :class:`~pandas.DataFrame`
-    using mean and standard deviation. If :obj:`x` is a
-    :class:`~pandas.DataFrame`, normalization can be done on a specific
-    group.
+def normalize(x: FrameArray,
+              by: Any = None,
+              axis: int = 0,
+              level: Optional[int] = None):
+    r"""Standardize an input :class:`~numpy.ndarray` or
+    :class:`~pandas.DataFrame` by subtracting the mean and dividing by the
+    standard deviation.
+
+    The statistics can be computed globally (default) or within groups. For a
+    :class:`~pandas.DataFrame`, groups can be defined either by an external
+    key (:obj:`by`) or by a level of the (Multi)Index along :obj:`axis`
+    (:obj:`level`); :obj:`by` and :obj:`level` are mutually exclusive and are
+    not supported for :class:`~numpy.ndarray` inputs.
 
     Args:
         x (FrameArray): the FrameArray to be normalized.
-        by: the conditions used to determine the groups for the
-            :meth:`~pandas.DataFrame.groupby`.
+        by: keys passed to :meth:`~pandas.DataFrame.groupby` to standardize
+            each row group independently. A key given as a column label is
+            consumed and dropped from the output. Only valid for
+            :class:`~pandas.DataFrame` inputs.
             (default :obj:`None`)
-        axis (int): axis for the function to be applied on.
+        axis (int): axis along which the statistics are computed (:obj:`0` for
+            the index, :obj:`1` for the columns).
             (default 0)
-        level (int): level of axis for the function to be applied on (for
-            MultiIndexed DataFrames).
-            (default 0)
+        level (int, optional): if not :obj:`None`, standardize each group
+            sharing the same label at level :obj:`level` of the :obj:`axis`
+            index independently. Requires a :class:`~pandas.MultiIndex` on the
+            selected axis and is only valid for :class:`~pandas.DataFrame`
+            inputs.
+            (default :obj:`None`)
 
     Returns:
         FrameArray: the normalized FrameArray
     """
     if isinstance(x, pd.DataFrame):
+        assert axis in (0, 1), f"`axis` must be 0 or 1, not {axis}."
+        assert by is None or level is None, \
+            "`by` and `level` are mutually exclusive."
         if by is not None:
+            # group rows by an external key (a column label key is dropped)
             groups = x.groupby(by)
-            mean = groups.transform(np.nanmean)
-            std = groups.transform(np.nanstd)
+            mean = groups.transform('mean')
+            std = groups.transform('std')
             x = x[mean.columns]
+        elif level is not None:
+            ax_index = x.index if axis == 0 else x.columns
+            assert isinstance(ax_index, pd.MultiIndex), \
+                f"`level` normalization requires a MultiIndex on axis {axis}."
+            groups = x.groupby(level=level, axis=axis)
+            mean = groups.transform('mean')
+            std = groups.transform('std')
         else:
-            mean = x.mean(axis=axis, level=level, skipna=True)
-            std = x.std(axis=axis, level=level, skipna=True)
+            # global standardization along `axis` (NaN-skipping)
+            mean = x.mean(axis=axis, skipna=True)
+            std = x.std(axis=axis, skipna=True)
     else:
+        if by is not None or level is not None:
+            raise ValueError("`by` and `level` are only supported for "
+                             "`pandas.DataFrame` inputs.")
         x = np.asarray(x)
         mean = x.mean(axis=axis, keepdims=True)
         std = x.std(axis=axis, keepdims=True)

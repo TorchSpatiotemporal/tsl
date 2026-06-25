@@ -238,7 +238,7 @@ def weighted_degree(index: TensArray,
         out.scatter_add_(0, index, weights)
     else:
         if weights is None:
-            weights = np.ones(index.shape[0], dtype=np.int)
+            weights = np.ones(index.shape[0], dtype=np.int32)
         out = np.zeros(N, dtype=weights.dtype)
         np.add.at(out, index, weights)
     return out

@@ -40,7 +40,7 @@ def correntropy(x, period, mask=None, gamma=0.05):
     from sklearn.metrics.pairwise import rbf_kernel
 
     if mask is None:
-        mask = 1 - np.isnan(x, dtype='uint8')
+        mask = 1 - np.isnan(x).astype('uint8')
         mask = mask[..., None]
 
     sim = np.zeros((x.shape[1], x.shape[1]))
