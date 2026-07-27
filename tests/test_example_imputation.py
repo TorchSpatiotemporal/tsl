@@ -1,6 +1,3 @@
-import os
-import shutil
-
 import numpy as np
 import pytest
 import torch
@@ -66,26 +63,21 @@ def get_dataset(dataset_name: str, p_fault=0., p_noise=0.):
     raise ValueError(f"Dataset {dataset_name} not available in this setting.")
 
 
-def init_experiment():
-    from datetime import datetime
-    exp_id = 'imputation_' + datetime.now().strftime("%Y%m%d%H%M%S")
-    # create temporary logging directory
-    base_dir = os.path.dirname(__file__)
-    log_dir = os.path.join(base_dir, exp_id)
-    os.makedirs(log_dir, exist_ok=True)
+def init_experiment(tmp_path):
+    log_dir = tmp_path / 'imputation'
+    log_dir.mkdir()
     # load cfg with hydra
-    path_to_yamls = os.path.join('.', 'config')
-    with initialize(config_path=path_to_yamls,
+    with initialize(config_path='config',
                     job_name='test_example_imputation',
                     version_base=None):
         cfg = compose(config_name='test_imputation', overrides=[])
-    return cfg, log_dir
+    return cfg, str(log_dir)
 
 
 @pytest.mark.slow
 @pytest.mark.integration
-def test_example_imputation():
-    cfg, log_dir = init_experiment()
+def test_example_imputation(tmp_path):
+    cfg, log_dir = init_experiment(tmp_path)
     ########################################
     # data module                          #
     ########################################
@@ -203,9 +195,6 @@ def test_example_imputation():
         dict(val_mae=numpy_metrics.mae(y_hat, y_true, mask),
              val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
              val_mape=numpy_metrics.mape(y_hat, y_true, mask)))
-
-    # clean out directory
-    shutil.rmtree(log_dir)
 
     assert np.isclose(res_test[0]['test_mae'], res_functional['test_mae'])
     assert np.isclose(res_test[0]['test_mape'], res_functional['test_mape'])

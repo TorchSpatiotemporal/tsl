@@ -127,10 +127,8 @@ def test_mask_scaling_uses_only_valid_train_values():
                   splitter=TemporalSplitter(0.1, 0.2), mask_scaling=True)
     bias = ds.scalers['target'].bias.numpy()
     ts = dm.train_slice.numpy()
-    tt, tm = target[ts], mask[ts]
-    for n in range(3):
-        valid = tt[:, n, 0][tm[:, n, 0]]
-        assert abs(bias[0, n, 0] - valid.mean()) < 1e-3
+    ref = np.nanmean(np.where(mask[ts], target[ts], np.nan), axis=0)
+    np.testing.assert_allclose(bias.ravel(), ref.ravel(), atol=1e-3)
 
 
 # ===========================================================================

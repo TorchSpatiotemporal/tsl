@@ -138,12 +138,9 @@ class ImputationDataset(SpatioTemporalDataset):
                                                        pattern='t n f',
                                                        preprocess=False)
 
-        # ensure evaluation datapoints are removed from input
+        # set mask and add to input map; set_mask strips eval cells
         if mask is None:
             mask = ~torch.isnan(self.target)
-        mask = torch.logical_not(self.eval_mask) & mask
-
-        # set mask and add to input map
         self.set_mask(mask, add_to_input_map=True)
 
     def reset_auxiliary_map(self):
@@ -166,6 +163,9 @@ class ImputationDataset(SpatioTemporalDataset):
     def set_mask(self,
                  mask: Optional[DataArray],
                  add_to_input_map: bool = True):
+        # never let evaluation cells reach the input mask
+        if mask is not None and hasattr(self, 'eval_mask'):
+            mask = torch.as_tensor(mask) & torch.logical_not(self.eval_mask)
         super().set_mask(mask, add_to_auxiliary_map=False)
         if mask is not None and add_to_input_map:
             self.input_map['mask'] = BatchMapItem('mask',

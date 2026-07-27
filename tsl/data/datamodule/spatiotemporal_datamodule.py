@@ -159,9 +159,16 @@ class SpatioTemporalDataModule(LightningDataModule):
                 raise RuntimeError("Cannot find a tensor to scale matching "
                                    f"key '{key}'.")
             # set scalers
-            if stage == 'predict':
+            if stage in ('validate', 'test', 'predict'):
                 tsl.logger.info(f'Set scaler for {key}: {scaler}')
             else:  # fit scalers before training
+                if self.train_slice is None:
+                    raise RuntimeError(
+                        f"Cannot fit scaler for '{key}': no training slice "
+                        "is available. Configure a `splitter` on the "
+                        "datamodule, or fit scalers externally and call "
+                        "setup(stage=...) with one of "
+                        "'validate'/'test'/'predict'.")
                 data = getattr(self.torch_dataset, key)
                 # get only training slice
                 if 't' in self.torch_dataset.patterns[key]:

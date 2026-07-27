@@ -171,10 +171,10 @@ class Data(PyGData):
             (default: :obj:`None`)
         transform (Mapping, optional): Named mapping of
             :class:`~tsl.data.preprocessing.Scaler` associated with entries in
-            :attr:`input` or :attr:`output`.
+            :attr:`input` or :attr:`target`.
             (default: :obj:`None`)
         pattern (Mapping, optional): Map of the pattern of each entry in
-            :attr:`input` or :attr:`output`.
+            :attr:`input` or :attr:`target`.
             (default: :obj:`None`)
         **kwargs: Any keyword argument for :class:`~torch_geometric.data.Data`.
     """
