@@ -143,7 +143,7 @@ class MaskedMRE(MaskedMetric):
         val = self.metric_fn(y_hat, y)
         mask = self._check_mask(mask, val)
         val = torch.where(mask, val, torch.zeros_like(val))
-        y_masked = torch.where(mask, y, torch.zeros_like(y))
+        y_masked = torch.where(mask, torch.abs(y), torch.zeros_like(y))
         return val.sum(), mask.sum(), y_masked.sum()
 
     def _compute_std(self, y_hat, y):
