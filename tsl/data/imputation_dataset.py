@@ -82,48 +82,51 @@ class ImputationDataset(SpatioTemporalDataset):
         name (str, optional): The (optional) name of the dataset.
     """
 
-    def __init__(self,
-                 target: DataArray,
-                 eval_mask: DataArray,
-                 index: Optional[TemporalIndex] = None,
-                 mask: Optional[DataArray] = None,
-                 connectivity: Optional[Union[SparseTensArray,
-                                              Tuple[DataArray]]] = None,
-                 covariates: Optional[Mapping[str, DataArray]] = None,
-                 input_map: Optional[Union[Mapping, BatchMap]] = None,
-                 target_map: Optional[Union[Mapping, BatchMap]] = None,
-                 auxiliary_map: Optional[Union[Mapping, BatchMap]] = None,
-                 scalers: Optional[Mapping[str, Scaler]] = None,
-                 trend: Optional[DataArray] = None,
-                 transform: Optional[Callable] = None,
-                 window: int = 12,
-                 stride: int = 1,
-                 window_lag: int = 1,
-                 precision: Union[int, str] = 32,
-                 name: Optional[str] = None):
+    def __init__(
+        self,
+        target: DataArray,
+        eval_mask: DataArray,
+        index: Optional[TemporalIndex] = None,
+        mask: Optional[DataArray] = None,
+        connectivity: Optional[Union[SparseTensArray, Tuple[DataArray]]] = None,
+        covariates: Optional[Mapping[str, DataArray]] = None,
+        input_map: Optional[Union[Mapping, BatchMap]] = None,
+        target_map: Optional[Union[Mapping, BatchMap]] = None,
+        auxiliary_map: Optional[Union[Mapping, BatchMap]] = None,
+        scalers: Optional[Mapping[str, Scaler]] = None,
+        trend: Optional[DataArray] = None,
+        transform: Optional[Callable] = None,
+        window: int = 12,
+        stride: int = 1,
+        window_lag: int = 1,
+        precision: Union[int, str] = 32,
+        name: Optional[str] = None,
+    ):
         horizon = window
         delay = -window
         horizon_lag = window_lag
 
-        super(ImputationDataset, self).__init__(target,
-                                                index=index,
-                                                mask=None,
-                                                connectivity=connectivity,
-                                                covariates=covariates,
-                                                input_map=input_map,
-                                                target_map=target_map,
-                                                auxiliary_map=auxiliary_map,
-                                                trend=trend,
-                                                transform=transform,
-                                                scalers=scalers,
-                                                window=window,
-                                                horizon=horizon,
-                                                delay=delay,
-                                                stride=stride,
-                                                window_lag=window_lag,
-                                                horizon_lag=horizon_lag,
-                                                precision=precision,
-                                                name=name)
+        super(ImputationDataset, self).__init__(
+            target,
+            index=index,
+            mask=None,
+            connectivity=connectivity,
+            covariates=covariates,
+            input_map=input_map,
+            target_map=target_map,
+            auxiliary_map=auxiliary_map,
+            trend=trend,
+            transform=transform,
+            scalers=scalers,
+            window=window,
+            horizon=horizon,
+            delay=delay,
+            stride=stride,
+            window_lag=window_lag,
+            horizon_lag=horizon_lag,
+            precision=precision,
+            name=name,
+        )
         # add eval_mask as covariate
         self.add_covariate(
             name='eval_mask',
@@ -131,12 +134,12 @@ class ImputationDataset(SpatioTemporalDataset):
             pattern='t n f',
             add_to_input_map=False,  # NB
             synch_mode=HORIZON,
-            preprocess=False)
+            preprocess=False,
+        )
         # add eval_mask to auxiliary map
-        self.auxiliary_map['eval_mask'] = BatchMapItem('eval_mask',
-                                                       synch_mode=HORIZON,
-                                                       pattern='t n f',
-                                                       preprocess=False)
+        self.auxiliary_map['eval_mask'] = BatchMapItem(
+            'eval_mask', synch_mode=HORIZON, pattern='t n f', preprocess=False
+        )
 
         # set mask and add to input map; set_mask strips eval cells
         if mask is None:
@@ -145,31 +148,29 @@ class ImputationDataset(SpatioTemporalDataset):
 
     def reset_auxiliary_map(self):
         self._clear_batch_map('auxiliary')
-        self.auxiliary_map['eval_mask'] = BatchMapItem('eval_mask',
-                                                       synch_mode=HORIZON,
-                                                       pattern='t n f',
-                                                       preprocess=False)
+        self.auxiliary_map['eval_mask'] = BatchMapItem(
+            'eval_mask', synch_mode=HORIZON, pattern='t n f', preprocess=False
+        )
 
     def reset_input_map(self):
         super().reset_input_map()
         if 'eval_mask' in self.input_map:
             del self.input_map.__dict__['eval_mask']
         if self.mask is not None:
-            self.input_map['mask'] = BatchMapItem('mask',
-                                                  synch_mode=WINDOW,
-                                                  pattern='t n f',
-                                                  preprocess=False)
+            self.input_map['mask'] = BatchMapItem(
+                'mask', synch_mode=WINDOW, pattern='t n f', preprocess=False
+            )
 
-    def set_mask(self,
-                 mask: Optional[DataArray],
-                 add_to_input_map: bool = True):
+    def set_mask(self, mask: Optional[DataArray], add_to_input_map: bool = True):
         # never let evaluation cells reach the input mask
         if mask is not None and hasattr(self, 'eval_mask'):
             mask = torch.as_tensor(mask) & torch.logical_not(self.eval_mask)
         super().set_mask(mask, add_to_auxiliary_map=False)
         if mask is not None and add_to_input_map:
-            self.input_map['mask'] = BatchMapItem('mask',
-                                                  synch_mode=WINDOW,
-                                                  pattern='t n f',
-                                                  preprocess=False,
-                                                  shape=self.mask.shape)
+            self.input_map['mask'] = BatchMapItem(
+                'mask',
+                synch_mode=WINDOW,
+                pattern='t n f',
+                preprocess=False,
+                shape=self.mask.shape,
+            )

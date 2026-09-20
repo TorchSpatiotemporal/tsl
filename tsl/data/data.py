@@ -1,6 +1,16 @@
 import copy
-from typing import (Any, Callable, Dict, Iterable, Iterator, List, Mapping,
-                    Optional, Tuple, Union)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import torch
 from einops import rearrange
@@ -23,15 +33,15 @@ def get_size(x: Union[Tensor, SparseTensor]) -> Tuple:
         return tuple(x.sizes())
 
 
-def pattern_size_repr(key: str,
-                      x: Union[Tensor, SparseTensor],
-                      pattern: str = None):
+def pattern_size_repr(key: str, x: Union[Tensor, SparseTensor], pattern: str = None):
     if pattern is not None:
         pattern = pattern.replace(' ', '')
-        out = str([
-            f'{token}={size}' if not token.isnumeric() else str(size)
-            for token, size in zip(pattern, get_size(x))
-        ])
+        out = str(
+            [
+                f'{token}={size}' if not token.isnumeric() else str(size)
+                for token, size in zip(pattern, get_size(x))
+            ]
+        )
     else:
         out = str(list(get_size(x)))
     out = f"{key}={out}".replace("'", '')
@@ -39,7 +49,6 @@ def pattern_size_repr(key: str,
 
 
 class StorageView(BaseStorage):
-
     def __init__(self, store, keys: Optional[Iterable] = None):
         self.__keys = tuple()
         super(StorageView, self).__init__()
@@ -183,22 +192,22 @@ class Data(PyGData):
     target: StorageView
     pattern: dict
 
-    def __init__(self,
-                 input: Optional[Mapping] = None,
-                 target: Optional[Mapping] = None,
-                 edge_index: Optional[Adj] = None,
-                 edge_weight: Optional[Tensor] = None,
-                 mask: Optional[Tensor] = None,
-                 transform: Optional[Mapping] = None,
-                 pattern: Optional[Mapping] = None,
-                 **kwargs):
+    def __init__(
+        self,
+        input: Optional[Mapping] = None,
+        target: Optional[Mapping] = None,
+        edge_index: Optional[Adj] = None,
+        edge_weight: Optional[Tensor] = None,
+        mask: Optional[Tensor] = None,
+        transform: Optional[Mapping] = None,
+        pattern: Optional[Mapping] = None,
+        **kwargs,
+    ):
         input = input if input is not None else dict()
         target = target if target is not None else dict()
-        super(Data, self).__init__(**input,
-                                   **target,
-                                   edge_index=edge_index,
-                                   edge_weight=edge_weight,
-                                   **kwargs)
+        super(Data, self).__init__(
+            **input, **target, edge_index=edge_index, edge_weight=edge_weight, **kwargs
+        )
         # Set 'input' as view on input keys
         self.__dict__['input'] = StorageView(self._store, input.keys())
         # Set 'target' as view on target keys
@@ -216,13 +225,11 @@ class Data(PyGData):
     def __repr__(self) -> str:
         cls = self.__class__.__name__
         inputs = [
-            pattern_size_repr(k, v, self.pattern.get(k))
-            for k, v in self.input.items()
+            pattern_size_repr(k, v, self.pattern.get(k)) for k, v in self.input.items()
         ]
         inputs = 'input=({})'.format(', '.join(inputs))
         targets = [
-            pattern_size_repr(k, v, self.pattern.get(k))
-            for k, v in self.target.items()
+            pattern_size_repr(k, v, self.pattern.get(k)) for k, v in self.target.items()
         ]
         targets = 'target=({})'.format(', '.join(targets))
         info = [inputs, targets, "has_mask={}".format(self.has_mask)]
@@ -238,7 +245,8 @@ class Data(PyGData):
                     return tuple(
                         dim
                         for dim, tkn in enumerate(self.pattern[key].split(' '))
-                        if tkn == 'n')
+                        if tkn == 'n'
+                    )
                 return self.pattern[key].split(' ').index('n')
             elif 'e' in self.pattern[key]:  # cat along edge dimension
                 return self.pattern[key].split(' ').index('e')
@@ -283,7 +291,7 @@ class Data(PyGData):
 
     def rearrange_element(self, key: str, pattern: str, **axes_lengths):
         r"""Rearrange key in Data according to the provided patter
-         using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
+        using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
         key_pattern = self.pattern[key]
         if '->' in pattern:
             start_pattern, end_pattern = pattern.split('->')
@@ -292,7 +300,8 @@ class Data(PyGData):
             if key_pattern != start_pattern:
                 raise RuntimeError(
                     f"Starting pattern {start_pattern} does not "
-                    f"match with key patter {key_pattern}.")
+                    f"match with key patter {key_pattern}."
+                )
         else:
             end_pattern = pattern
             pattern = key_pattern + ' -> ' + pattern
@@ -303,15 +312,15 @@ class Data(PyGData):
 
     def rearrange(self, patterns: Mapping):
         r"""Rearrange all keys in Data according to the provided pattern
-         using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
+        using `einops.rearrange <https://einops.rocks/api/rearrange/>`_."""
         for key, pattern in patterns.items():
             self.rearrange_element(key, pattern)
         return self
 
     def subgraph_(self, subset: Tensor):
-        edge_index, edge_mask = reduce_graph(subset,
-                                             edge_index=self.edge_index,
-                                             num_nodes=self.num_nodes)
+        edge_index, edge_mask = reduce_graph(
+            subset, edge_index=self.edge_index, num_nodes=self.num_nodes
+        )
 
         if subset.dtype == torch.bool:
             num_nodes = int(subset.sum())
@@ -332,10 +341,9 @@ class Data(PyGData):
                 self.num_nodes = num_nodes
             # prefer pattern indexing if available
             elif key in self.pattern:
-                self[key] = take(value,
-                                 self.pattern[key],
-                                 node_index=subset,
-                                 edge_mask=edge_mask)
+                self[key] = take(
+                    value, self.pattern[key], node_index=subset, edge_mask=edge_mask
+                )
             # fallback to PyG indexing (cannot index on multiple node dim)
             elif isinstance(value, Tensor):
                 if self.is_node_attr(key):

@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 from tsl.data import ImputationDataset, SpatioTemporalDataModule
 from tsl.data.preprocessing import StandardScaler
-from tsl.datasets import AirQuality, MetrLA, PemsBay, EngRad
+from tsl.datasets import AirQuality, EngRad, MetrLA, PemsBay
 from tsl.engines import Imputer
 from tsl.metrics import numpy as numpy_metrics
 from tsl.metrics import torch as torch_metrics
@@ -29,37 +29,42 @@ def get_model_class(model_str):
     return model
 
 
-def get_dataset(dataset_name: str, p_fault=0., p_noise=0.):
+def get_dataset(dataset_name: str, p_fault=0.0, p_noise=0.0):
     if dataset_name.startswith('air'):
         return AirQuality(impute_nans=True, small=dataset_name[3:] == '36')
     if dataset_name.endswith('_point'):
-        p_fault, p_noise = 0., 0.25
+        p_fault, p_noise = 0.0, 0.25
         dataset_name = dataset_name[:-6]
     if dataset_name.endswith('_block'):
         p_fault, p_noise = 0.0015, 0.05
         dataset_name = dataset_name[:-6]
     if dataset_name == 'la':
-        return add_missing_values(MetrLA(),
-                                  p_fault=p_fault,
-                                  p_noise=p_noise,
-                                  min_seq=12,
-                                  max_seq=12 * 4,
-                                  seed=9101112)
+        return add_missing_values(
+            MetrLA(),
+            p_fault=p_fault,
+            p_noise=p_noise,
+            min_seq=12,
+            max_seq=12 * 4,
+            seed=9101112,
+        )
     if dataset_name == 'bay':
-        return add_missing_values(PemsBay(),
-                                  p_fault=p_fault,
-                                  p_noise=p_noise,
-                                  min_seq=12,
-                                  max_seq=12 * 4,
-                                  seed=56789)
+        return add_missing_values(
+            PemsBay(),
+            p_fault=p_fault,
+            p_noise=p_noise,
+            min_seq=12,
+            max_seq=12 * 4,
+            seed=56789,
+        )
     if dataset_name == 'engrad':
-        return add_missing_values(EngRad(mask_zero_radiance=True,
-                                         precipitation_unit="cm"),
-                                  p_fault=p_fault,
-                                  p_noise=p_noise,
-                                  min_seq=4,
-                                  max_seq=12,
-                                  seed=487)
+        return add_missing_values(
+            EngRad(mask_zero_radiance=True, precipitation_unit="cm"),
+            p_fault=p_fault,
+            p_noise=p_noise,
+            min_seq=4,
+            max_seq=12,
+            seed=487,
+        )
     raise ValueError(f"Dataset {dataset_name} not available in this setting.")
 
 
@@ -67,9 +72,9 @@ def init_experiment(tmp_path):
     log_dir = tmp_path / 'imputation'
     log_dir.mkdir()
     # load cfg with hydra
-    with initialize(config_path='config',
-                    job_name='test_example_imputation',
-                    version_base=None):
+    with initialize(
+        config_path='config', job_name='test_example_imputation', version_base=None
+    ):
         cfg = compose(config_name='test_imputation', overrides=[])
     return cfg, str(log_dir)
 
@@ -81,21 +86,23 @@ def test_example_imputation(tmp_path):
     ########################################
     # data module                          #
     ########################################
-    dataset = get_dataset(cfg.dataset.name,
-                          p_fault=cfg.get('p_fault'),
-                          p_noise=cfg.get('p_noise'))
+    dataset = get_dataset(
+        cfg.dataset.name, p_fault=cfg.get('p_fault'), p_noise=cfg.get('p_noise')
+    )
 
     # get adjacency matrix
     adj = dataset.get_connectivity(**cfg.dataset.connectivity)
 
     # instantiate dataset
-    torch_dataset = ImputationDataset(target=dataset.dataframe(),
-                                      mask=dataset.training_mask,
-                                      eval_mask=dataset.eval_mask,
-                                      transform=MaskInput(),
-                                      connectivity=adj,
-                                      window=cfg.window,
-                                      stride=cfg.stride)
+    torch_dataset = ImputationDataset(
+        target=dataset.dataframe(),
+        mask=dataset.training_mask,
+        eval_mask=dataset.eval_mask,
+        transform=MaskInput(),
+        connectivity=adj,
+        window=cfg.window,
+        stride=cfg.stride,
+    )
 
     scalers = {'target': StandardScaler(axis=(0, 1))}
 
@@ -103,7 +110,8 @@ def test_example_imputation(tmp_path):
         dataset=torch_dataset,
         scalers=scalers,
         splitter=dataset.get_splitter(**cfg.dataset.splitting),
-        batch_size=cfg.batch_size)
+        batch_size=cfg.batch_size,
+    )
     dm.setup(stage='fit')
 
     ########################################
@@ -112,38 +120,38 @@ def test_example_imputation(tmp_path):
 
     model_cls = get_model_class(cfg.model.name)
 
-    model_kwargs = dict(n_nodes=torch_dataset.n_nodes,
-                        input_size=torch_dataset.n_channels)
+    model_kwargs = dict(
+        n_nodes=torch_dataset.n_nodes, input_size=torch_dataset.n_channels
+    )
 
     model_cls.filter_model_args_(model_kwargs)
     model_kwargs.update(cfg.model.hparams)
 
     loss_fn = torch_metrics.MaskedMAE()
 
-    log_metrics = {
-        'mae': torch_metrics.MaskedMAE(),
-        'mape': torch_metrics.MaskedMAPE()
-    }
+    log_metrics = {'mae': torch_metrics.MaskedMAE(), 'mape': torch_metrics.MaskedMAPE()}
 
     # setup imputer
-    imputer = Imputer(model_class=model_cls,
-                      model_kwargs=model_kwargs,
-                      optim_class=getattr(torch.optim, cfg.optimizer.name),
-                      optim_kwargs=dict(cfg.optimizer.hparams),
-                      loss_fn=loss_fn,
-                      metrics=log_metrics,
-                      whiten_prob=cfg.whiten_prob,
-                      prediction_loss_weight=cfg.prediction_loss_weight,
-                      impute_only_missing=cfg.impute_only_missing,
-                      warm_up_steps=cfg.warm_up_steps)
+    imputer = Imputer(
+        model_class=model_cls,
+        model_kwargs=model_kwargs,
+        optim_class=getattr(torch.optim, cfg.optimizer.name),
+        optim_kwargs=dict(cfg.optimizer.hparams),
+        loss_fn=loss_fn,
+        metrics=log_metrics,
+        whiten_prob=cfg.whiten_prob,
+        prediction_loss_weight=cfg.prediction_loss_weight,
+        impute_only_missing=cfg.impute_only_missing,
+        warm_up_steps=cfg.warm_up_steps,
+    )
 
     ########################################
     # training                             #
     ########################################
 
-    early_stop_callback = EarlyStopping(monitor='val_mae',
-                                        patience=cfg.patience,
-                                        mode='min')
+    early_stop_callback = EarlyStopping(
+        monitor='val_mae', patience=cfg.patience, mode='min'
+    )
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=log_dir,
@@ -178,23 +186,26 @@ def test_example_imputation(tmp_path):
     output = trainer.predict(imputer, dataloaders=dm.test_dataloader())
     output = imputer.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
-    y_hat, y_true, mask = (output['y_hat'], output['y'],
-                           output.get('eval_mask', None))
-    res_functional = dict(test_mae=numpy_metrics.mae(y_hat, y_true, mask),
-                          test_mre=numpy_metrics.mre(y_hat, y_true, mask),
-                          test_mape=numpy_metrics.mape(y_hat, y_true, mask))
+    y_hat, y_true, mask = (output['y_hat'], output['y'], output.get('eval_mask', None))
+    res_functional = dict(
+        test_mae=numpy_metrics.mae(y_hat, y_true, mask),
+        test_mre=numpy_metrics.mre(y_hat, y_true, mask),
+        test_mape=numpy_metrics.mape(y_hat, y_true, mask),
+    )
 
     res_val = trainer.validate(imputer, datamodule=dm)
 
     output = trainer.predict(imputer, dataloaders=dm.val_dataloader())
     output = imputer.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
-    y_hat, y_true, mask = (output['y_hat'], output['y'],
-                           output.get('eval_mask', None))
+    y_hat, y_true, mask = (output['y_hat'], output['y'], output.get('eval_mask', None))
     res_functional.update(
-        dict(val_mae=numpy_metrics.mae(y_hat, y_true, mask),
-             val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
-             val_mape=numpy_metrics.mape(y_hat, y_true, mask)))
+        dict(
+            val_mae=numpy_metrics.mae(y_hat, y_true, mask),
+            val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
+            val_mape=numpy_metrics.mape(y_hat, y_true, mask),
+        )
+    )
 
     assert np.isclose(res_test[0]['test_mae'], res_functional['test_mae'])
     assert np.isclose(res_test[0]['test_mape'], res_functional['test_mape'])

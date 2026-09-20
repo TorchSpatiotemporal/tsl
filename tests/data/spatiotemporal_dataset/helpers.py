@@ -5,8 +5,8 @@ import torch
 from tsl.data import SpatioTemporalDataset
 from tsl.data.preprocessing.scalers import StandardScaler
 
-
 # -- independent reference --------------------------------------------------
+
 
 def ref_window_range(window, window_lag):
     return np.arange(0, window, window_lag)
@@ -42,34 +42,59 @@ def ref_horizon_steps(idx, window, horizon, delay, horizon_lag):
 
 # -- builders ---------------------------------------------------------------
 
-def _make_dataset(window, horizon, stride=1, delay=0,
-                  window_lag=1, horizon_lag=1, n_steps=200, **kwargs):
-    return SpatioTemporalDataset(target=np.arange(n_steps).astype('float32'),
-                                 window=window,
-                                 horizon=horizon,
-                                 stride=stride,
-                                 delay=delay,
-                                 window_lag=window_lag,
-                                 horizon_lag=horizon_lag,
-                                 **kwargs)
+
+def _make_dataset(
+    window,
+    horizon,
+    stride=1,
+    delay=0,
+    window_lag=1,
+    horizon_lag=1,
+    n_steps=200,
+    **kwargs,
+):
+    return SpatioTemporalDataset(
+        target=np.arange(n_steps).astype('float32'),
+        window=window,
+        horizon=horizon,
+        stride=stride,
+        delay=delay,
+        window_lag=window_lag,
+        horizon_lag=horizon_lag,
+        **kwargs,
+    )
 
 
 def _grid_target(n_steps, n_nodes, n_channels):
     """A target whose every (t, n, f) cell holds a unique value, so a retrieved
     tensor can be matched element-wise against the source by time step."""
     size = n_steps * n_nodes * n_channels
-    return np.arange(size).reshape(n_steps, n_nodes, n_channels).astype(
-        'float32')
+    return np.arange(size).reshape(n_steps, n_nodes, n_channels).astype('float32')
 
 
-def _make_grid_dataset(window, horizon, stride=1, delay=0, window_lag=1,
-                       horizon_lag=1, n_steps=60, n_nodes=3, n_channels=2,
-                       **kwargs):
+def _make_grid_dataset(
+    window,
+    horizon,
+    stride=1,
+    delay=0,
+    window_lag=1,
+    horizon_lag=1,
+    n_steps=60,
+    n_nodes=3,
+    n_channels=2,
+    **kwargs,
+):
     target = _grid_target(n_steps, n_nodes, n_channels)
-    return SpatioTemporalDataset(target=target, window=window, horizon=horizon,
-                                 stride=stride, delay=delay,
-                                 window_lag=window_lag, horizon_lag=horizon_lag,
-                                 **kwargs), target
+    return SpatioTemporalDataset(
+        target=target,
+        window=window,
+        horizon=horizon,
+        stride=stride,
+        delay=delay,
+        window_lag=window_lag,
+        horizon_lag=horizon_lag,
+        **kwargs,
+    ), target
 
 
 def fitted_standard_scaler(target, axis=0):
@@ -96,8 +121,16 @@ def _windowing_grid():
                         if window == 0 and window_lag != 1:
                             continue  # window_lag is irrelevant without a window
                         for horizon_lag in (1, 3):
-                            configs.append((window, horizon, stride, delay,
-                                            window_lag, horizon_lag))
+                            configs.append(
+                                (
+                                    window,
+                                    horizon,
+                                    stride,
+                                    delay,
+                                    window_lag,
+                                    horizon_lag,
+                                )
+                            )
     return configs
 
 
@@ -108,4 +141,5 @@ WINDOWING = _windowing_grid()
 # unpacks the same (window, horizon, stride, delay, window_lag, horizon_lag)
 # tuple and there is a single place to evolve the grid signature.
 windowing_cases = pytest.mark.parametrize(
-    'window,horizon,stride,delay,window_lag,horizon_lag', WINDOWING)
+    'window,horizon,stride,delay,window_lag,horizon_lag', WINDOWING
+)

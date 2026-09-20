@@ -35,23 +35,25 @@ class TemporalConvNet(nn.Module):
             (b s n c), (b c n s) otherwise.
     """
 
-    def __init__(self,
-                 input_channels,
-                 hidden_channels,
-                 kernel_size,
-                 dilation,
-                 stride=1,
-                 exog_channels=None,
-                 output_channels=None,
-                 n_layers=1,
-                 gated=False,
-                 dropout=0.,
-                 activation='relu',
-                 exponential_dilation=False,
-                 weight_norm=False,
-                 causal_padding=True,
-                 bias=True,
-                 channel_last=True):
+    def __init__(
+        self,
+        input_channels,
+        hidden_channels,
+        kernel_size,
+        dilation,
+        stride=1,
+        exog_channels=None,
+        output_channels=None,
+        n_layers=1,
+        gated=False,
+        dropout=0.0,
+        activation='relu',
+        exponential_dilation=False,
+        weight_norm=False,
+        causal_padding=True,
+        bias=True,
+        channel_last=True,
+    ):
         super(TemporalConvNet, self).__init__()
         self.channel_last = channel_last
         base_conv = TemporalConv if not gated else GatedTemporalConv
@@ -66,27 +68,30 @@ class TemporalConvNet(nn.Module):
             if exponential_dilation:
                 d = dilation**i
             layers.append(
-                base_conv(input_channels=input_channels
-                          if i == 0 else hidden_channels,
-                          output_channels=hidden_channels,
-                          kernel_size=kernel_size,
-                          dilation=d,
-                          stride=stride,
-                          causal_pad=causal_padding,
-                          weight_norm=weight_norm,
-                          bias=bias))
+                base_conv(
+                    input_channels=input_channels if i == 0 else hidden_channels,
+                    output_channels=hidden_channels,
+                    kernel_size=kernel_size,
+                    dilation=d,
+                    stride=stride,
+                    causal_pad=causal_padding,
+                    weight_norm=weight_norm,
+                    bias=bias,
+                )
+            )
             receptive_field += (kernel_size - 1) * d * stride
 
         self.receptive_field = receptive_field
         self.convs = nn.ModuleList(layers)
-        self.f = get_functional_activation(
-            activation) if not gated else nn.Identity()
-        self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
+        self.f = get_functional_activation(activation) if not gated else nn.Identity()
+        self.dropout = nn.Dropout(dropout) if dropout > 0.0 else nn.Identity()
 
         if output_channels is not None:
-            self.readout = TemporalConv(input_channels=hidden_channels,
-                                        output_channels=output_channels,
-                                        kernel_size=1)
+            self.readout = TemporalConv(
+                input_channels=hidden_channels,
+                output_channels=output_channels,
+                kernel_size=1,
+            )
         else:
             self.register_parameter('readout', None)
 

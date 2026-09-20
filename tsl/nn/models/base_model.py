@@ -13,9 +13,11 @@ def _forward_packer(model, input, output):
         return output
     if model.return_type is list:
         return ensure_list(output)
-    raise TypeError(f"return type of forward ({type(output)}) does not "
-                    f"match with {model.__class__.__name__}.return_type "
-                    f"({model.return_type}).")
+    raise TypeError(
+        f"return type of forward ({type(output)}) does not "
+        f"match with {model.__class__.__name__}.return_type "
+        f"({model.return_type})."
+    )
 
 
 class BaseModel(nn.Module):
@@ -113,8 +115,12 @@ class BaseModel(nn.Module):
         model's args to an :class:`~argparse.ArgumentParser` (see
         :meth:`~tsl.nn.models.BaseModel.add_model_specific_args`)."""
         return {
-            'input_size', 'output_size', 'exog_size', 'n_nodes', 'horizon',
-            'window'
+            'input_size',
+            'output_size',
+            'exog_size',
+            'n_nodes',
+            'horizon',
+            'window',
         }
 
     @classmethod
@@ -126,13 +132,12 @@ class BaseModel(nn.Module):
         The arguments added are all the parameters of the :meth:`__init__`
         method, excluding the keys returned by
         :meth:`~tsl.nn.models.BaseModel.model_excluded_args`."""
-        return cls.add_argparse_args(parser,
-                                     exclude_args=cls.model_excluded_args())
+        return cls.add_argparse_args(parser, exclude_args=cls.model_excluded_args())
 
     @classmethod
-    def add_argparse_args(cls,
-                          parser: ArgumentParser,
-                          exclude_args: Optional[Set] = None):
+    def add_argparse_args(
+        cls, parser: ArgumentParser, exclude_args: Optional[Set] = None
+    ):
         """Adds to the :class:`~argparse.ArgumentParser` :attr:`parser` all the
         parameters of the :meth:`__init__` method (with typing and default
         values)."""

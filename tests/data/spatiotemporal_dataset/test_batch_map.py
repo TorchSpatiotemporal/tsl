@@ -1,4 +1,5 @@
 """Test BatchMap (default maps, reset/set/update, routing, composites)."""
+
 import numpy as np
 
 from tsl.data import SpatioTemporalDataset
@@ -8,8 +9,7 @@ from .helpers import _grid_target
 
 
 def _dataset():
-    return SpatioTemporalDataset(target=_grid_target(60, 3, 2), window=4,
-                                 horizon=2)
+    return SpatioTemporalDataset(target=_grid_target(60, 3, 2), window=4, horizon=2)
 
 
 def test_default_input_and_target_maps():
@@ -25,8 +25,9 @@ def test_default_input_and_target_maps():
 
 def test_by_synch_mode_filters():
     ds = _dataset()
-    ds.add_covariate('u_h', np.zeros((60, 3, 1), dtype='float32'), 't n f',
-                     synch_mode=HORIZON)
+    ds.add_covariate(
+        'u_h', np.zeros((60, 3, 1), dtype='float32'), 't n f', synch_mode=HORIZON
+    )
     assert set(ds.input_map.by_synch_mode(WINDOW)) == {'x'}
     assert set(ds.input_map.by_synch_mode(HORIZON)) == {'u_h'}
     assert set(ds.target_map.by_synch_mode(HORIZON)) == {'y'}

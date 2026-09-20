@@ -2,10 +2,9 @@ import numpy as np
 from numpy.random import Generator
 
 
-def build_knn_graph(num_nodes: int,
-                    k: int,
-                    include_self: bool = True,
-                    rng: Generator = None):
+def build_knn_graph(
+    num_nodes: int, k: int, include_self: bool = True, rng: Generator = None
+):
     r"""Build a directed k-nearest neighbor graph.
 
     Args:
@@ -28,11 +27,16 @@ def build_knn_graph(num_nodes: int,
         rng = np.random.default_rng()
     node_set = np.arange(num_nodes)
     # if not include_self, remove central nodes from neighbor candidates
-    col = np.concatenate([
-        rng.choice(node_set if include_self else np.delete(node_set, i),
-                   size=k,
-                   replace=False) for i in range(num_nodes)
-    ])
+    col = np.concatenate(
+        [
+            rng.choice(
+                node_set if include_self else np.delete(node_set, i),
+                size=k,
+                replace=False,
+            )
+            for i in range(num_nodes)
+        ]
+    )
     # col: [3, 1, 2, 0, 2, 1, 1, 0, 3, ...]
     edge_index = np.stack((row, col))
     return node_idx, edge_index, None

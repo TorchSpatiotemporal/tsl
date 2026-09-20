@@ -56,18 +56,20 @@ class Predictor(pl.LightningModule):
             (default: :obj:`None`)
     """
 
-    def __init__(self,
-                 model: Optional[torch.nn.Module] = None,
-                 loss_fn: Optional[Callable] = None,
-                 scale_target: bool = False,
-                 metrics: Optional[Mapping[str, Metric]] = None,
-                 *,
-                 model_class: Optional[Type] = None,
-                 model_kwargs: Optional[Mapping] = None,
-                 optim_class: Optional[Type] = None,
-                 optim_kwargs: Optional[Mapping] = None,
-                 scheduler_class: Optional = None,
-                 scheduler_kwargs: Optional[Mapping] = None):
+    def __init__(
+        self,
+        model: Optional[torch.nn.Module] = None,
+        loss_fn: Optional[Callable] = None,
+        scale_target: bool = False,
+        metrics: Optional[Mapping[str, Metric]] = None,
+        *,
+        model_class: Optional[Type] = None,
+        model_kwargs: Optional[Mapping] = None,
+        optim_class: Optional[Type] = None,
+        optim_kwargs: Optional[Mapping] = None,
+        scheduler_class: Optional = None,
+        scheduler_kwargs: Optional[Mapping] = None,
+    ):
         super(Predictor, self).__init__()
         self.save_hyperparameters(ignore=['loss_fn', 'model'], logger=False)
         self.model_cls = model_class
@@ -129,9 +131,11 @@ class Predictor(pl.LightningModule):
                 for k, v in model_kwargs.items():
                     assert v == self.model_kwargs[k], f'{v}'
         else:
-            logger.warning("Predictor with already instantiated model is "
-                           f"loading a state_dict from {filename}. Cannot "
-                           " check if model hyperparameters are the same.")
+            logger.warning(
+                "Predictor with already instantiated model is "
+                f"loading a state_dict from {filename}. Cannot "
+                " check if model hyperparameters are the same."
+            )
         self.load_state_dict(storage['state_dict'])
 
     @property
@@ -142,14 +146,15 @@ class Predictor(pl.LightningModule):
     @property
     def trainable_parameters(self) -> int:
         """"""
-        return sum(p.numel() for p in self.model.parameters()
-                   if p.requires_grad)
+        return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
 
     @property
     def filter_forward_kwargs(self) -> bool:
         """"""
-        return (self._model_fwd_signature is not None
-                and not self._model_fwd_signature['has_kwargs'])
+        return (
+            self._model_fwd_signature is not None
+            and not self._model_fwd_signature['has_kwargs']
+        )
 
     def _filter_forward_kwargs(self, kwargs: dict) -> dict:
         """"""
@@ -157,8 +162,10 @@ class Predictor(pl.LightningModule):
             model_args = self._model_fwd_signature['signature']
             filtered = set(kwargs).difference(model_args)
             forwarded = set(kwargs).intersection(model_args)
-            msg = (f"Only args {list(forwarded)} are forwarded to the model "
-                   f"({self.model.__class__.__name__}).")
+            msg = (
+                f"Only args {list(forwarded)} are forwarded to the model "
+                f"({self.model.__class__.__name__})."
+            )
             if len(filtered):
                 msg = f"Arguments {list(filtered)} are filtered out. " + msg
             logger.warning(msg)
@@ -189,44 +196,42 @@ class Predictor(pl.LightningModule):
                 metric_kwargs = {'reduction': 'none'}
             else:
                 metric_kwargs = dict()
-            return MaskedMetric(metric,
-                                metric_fn_kwargs=metric_kwargs)
+            return MaskedMetric(metric, metric_fn_kwargs=metric_kwargs)
         metric = metric.clone()
         metric.reset()
         return metric
 
     def _set_metrics(self, metrics):
         self.train_metrics = MetricCollection(
-            metrics={k: self._check_metric(m)
-                     for k, m in metrics.items()},
-            prefix='train_')
+            metrics={k: self._check_metric(m) for k, m in metrics.items()},
+            prefix='train_',
+        )
         self.val_metrics = MetricCollection(
-            metrics={k: self._check_metric(m)
-                     for k, m in metrics.items()},
-            prefix='val_')
+            metrics={k: self._check_metric(m) for k, m in metrics.items()},
+            prefix='val_',
+        )
         self.test_metrics = MetricCollection(
-            metrics={k: self._check_metric(m)
-                     for k, m in metrics.items()},
-            prefix='test_')
+            metrics={k: self._check_metric(m) for k, m in metrics.items()},
+            prefix='test_',
+        )
 
     def log_metrics(self, metrics, **kwargs):
         """"""
-        self.log_dict(metrics,
-                      on_step=False,
-                      on_epoch=True,
-                      logger=True,
-                      prog_bar=True,
-                      **kwargs)
+        self.log_dict(
+            metrics, on_step=False, on_epoch=True, logger=True, prog_bar=True, **kwargs
+        )
 
     def log_loss(self, name, loss, **kwargs):
         """"""
-        self.log(name + '_loss',
-                 loss.detach(),
-                 on_step=False,
-                 on_epoch=True,
-                 logger=True,
-                 prog_bar=False,
-                 **kwargs)
+        self.log(
+            name + '_loss',
+            loss.detach(),
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            prog_bar=False,
+            **kwargs,
+        )
 
     def _unpack_batch(self, batch):
         """
@@ -240,12 +245,14 @@ class Predictor(pl.LightningModule):
         transform = batch.get('transform')
         return inputs, targets, mask, transform
 
-    def predict_batch(self,
-                      batch: Data,
-                      preprocess: bool = False,
-                      postprocess: bool = True,
-                      return_target: bool = False,
-                      **forward_kwargs):
+    def predict_batch(
+        self,
+        batch: Data,
+        preprocess: bool = False,
+        postprocess: bool = True,
+        return_target: bool = False,
+        **forward_kwargs,
+    ):
         """This method takes as input a :class:`~tsl.data.Data` object and
         outputs the predictions.
 
@@ -337,9 +344,9 @@ class Predictor(pl.LightningModule):
         mask = batch.get('mask')
 
         # Compute predictions and compute loss
-        y_hat_loss = self.predict_batch(batch,
-                                        preprocess=False,
-                                        postprocess=not self.scale_target)
+        y_hat_loss = self.predict_batch(
+            batch, preprocess=False, postprocess=not self.scale_target
+        )
         y_hat = y_hat_loss.detach()
 
         # Scale target and output, eventually
@@ -362,9 +369,9 @@ class Predictor(pl.LightningModule):
         mask = batch.get('mask')
 
         # Compute predictions
-        y_hat_loss = self.predict_batch(batch,
-                                        preprocess=False,
-                                        postprocess=not self.scale_target)
+        y_hat_loss = self.predict_batch(
+            batch, preprocess=False, postprocess=not self.scale_target
+        )
         y_hat = y_hat_loss.detach()
 
         # Scale target and output, eventually
@@ -412,8 +419,7 @@ class Predictor(pl.LightningModule):
         cfg['optimizer'] = optimizer
         if self.scheduler_class is not None:
             metric = self.scheduler_kwargs.pop('monitor', None)
-            scheduler = self.scheduler_class(optimizer,
-                                             **self.scheduler_kwargs)
+            scheduler = self.scheduler_class(optimizer, **self.scheduler_kwargs)
             cfg['lr_scheduler'] = scheduler
             if metric is not None:
                 cfg['monitor'] = metric

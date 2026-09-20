@@ -1,5 +1,6 @@
 """Unit tests for the :class:`~tsl.data.preprocessing.scalers.Scaler` base
 class: linear transform, numpy/torch conversions, repr and save/load."""
+
 import os
 
 import numpy as np
@@ -14,24 +15,23 @@ from .helpers import random_target
 
 def test_default_params():
     sc = Scaler()
-    assert sc.bias == 0.
-    assert sc.scale == 1.
+    assert sc.bias == 0.0
+    assert sc.scale == 1.0
     assert set(sc.params()) == {'bias', 'scale'}
 
 
 def test_transform_uses_epsilon():
     # transform divides by (scale + tsl.epsilon), not by scale alone
     x = np.array([2.0], dtype=np.float32)
-    sc = Scaler(bias=0., scale=2.)
-    expected = (x - 0.) / (2. + tsl.epsilon)
+    sc = Scaler(bias=0.0, scale=2.0)
+    expected = (x - 0.0) / (2.0 + tsl.epsilon)
     np.testing.assert_allclose(sc.transform(x), expected, rtol=1e-6)
 
 
 def test_transform_inverse_roundtrip():
     x = random_target((20, 2, 1))
     sc = Scaler(bias=3.0, scale=2.5)
-    np.testing.assert_allclose(sc.inverse_transform(sc.transform(x)), x,
-                               rtol=1e-5)
+    np.testing.assert_allclose(sc.inverse_transform(sc.transform(x)), x, rtol=1e-5)
 
 
 def test_call_is_transform():
@@ -82,8 +82,9 @@ def test_base_fit_raises_not_implemented():
 
 
 def test_save_load_numpy_npz(tmp_path):
-    sc = Scaler(bias=np.array([1.5], dtype=np.float32),
-                scale=np.array([2.5], dtype=np.float32))
+    sc = Scaler(
+        bias=np.array([1.5], dtype=np.float32), scale=np.array([2.5], dtype=np.float32)
+    )
     path = sc.save(str(tmp_path / 'scaler'))
     # numpy params are stored via np.savez_compressed; save() must return the
     # actual '.npz' path so the round-trip below works
@@ -104,7 +105,7 @@ def test_save_load_torch_pt(tmp_path):
 
 
 def test_save_make_dir_creates_nested_dir(tmp_path):
-    sc = Scaler(bias=torch.tensor([0.]), scale=torch.tensor([1.]))
+    sc = Scaler(bias=torch.tensor([0.0]), scale=torch.tensor([1.0]))
     target = tmp_path / 'a' / 'b' / 'scaler'
     path = sc.save(str(target), make_dir=True)
     assert (tmp_path / 'a' / 'b').is_dir()

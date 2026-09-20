@@ -1,11 +1,12 @@
 """Unit tests for :mod:`tsl.data.batch_map` (BatchMapItem, BatchMap)."""
+
 import pytest
 
 from tsl.data.batch_map import BatchMap, BatchMapItem
 from tsl.data.synch_mode import HORIZON, STATIC, WINDOW, SynchMode
 
-
 # -- BatchMapItem -----------------------------------------------------------
+
 
 def test_keys_coerced_to_list():
     assert BatchMapItem('target').keys == ['target']
@@ -44,6 +45,7 @@ def test_kwargs_returns_dict():
 
 # -- synch_mode auto-inference from pattern ---------------------------------
 
+
 def test_pattern_with_t_infers_window():
     assert BatchMapItem('a', pattern='t n f').synch_mode is WINDOW
 
@@ -63,6 +65,7 @@ def test_repr_smoke():
 
 
 # -- BatchMap ---------------------------------------------------------------
+
 
 def test_setitem_type_coercion():
     bm = BatchMap()
@@ -100,8 +103,8 @@ def test_update():
 
 def test_by_synch_mode_filters():
     bm = BatchMap()
-    bm['win'] = BatchMapItem('a', pattern='t n f')      # WINDOW
-    bm['stat'] = BatchMapItem('b', pattern='n f')        # STATIC
+    bm['win'] = BatchMapItem('a', pattern='t n f')  # WINDOW
+    bm['stat'] = BatchMapItem('b', pattern='n f')  # STATIC
     bm['hor'] = BatchMapItem('c', synch_mode=HORIZON)
     assert set(bm.by_synch_mode(WINDOW)) == {'win'}
     assert set(bm.by_synch_mode(STATIC)) == {'stat'}

@@ -1,5 +1,5 @@
-""" Test covariates (synch-mode routing, prefixes, partitioning, removal).
-"""
+"""Test covariates (synch-mode routing, prefixes, partitioning, removal)."""
+
 import numpy as np
 import pytest
 import torch
@@ -15,31 +15,38 @@ def _node_cov(n_steps, n_nodes, n_channels=1, offset=1000):
     """Node-level covariate with a unique value per (t, n, f) cell, in a range
     disjoint from the target grid so a misrouted slice is detectable."""
     size = n_steps * n_nodes * n_channels
-    return (offset + np.arange(size)).reshape(
-        n_steps, n_nodes, n_channels).astype('float32')
+    return (
+        (offset + np.arange(size))
+        .reshape(n_steps, n_nodes, n_channels)
+        .astype('float32')
+    )
 
 
 def _graph_cov(n_steps, n_channels=2, offset=5000):
     """Graph-level (no node dim) covariate, pattern ``t f``."""
-    return (offset + np.arange(n_steps * n_channels)).reshape(
-        n_steps, n_channels).astype('float32')
+    return (
+        (offset + np.arange(n_steps * n_channels))
+        .reshape(n_steps, n_channels)
+        .astype('float32')
+    )
 
 
 # -- windowing ---------------------------------------------
 
 INPUT_CONFIGS = [
     (4, 2, 1, 0),
-    (6, 3, 2, 1),    # stride + delay
+    (6, 3, 2, 1),  # stride + delay
     (12, 12, 1, 0),  # horizon == window
-    (4, 3, 1, -2),   # delay < 0: window/horizon overlap
+    (4, 3, 1, -2),  # delay < 0: window/horizon overlap
 ]
 
 
 @pytest.mark.parametrize('window,horizon,stride,delay', INPUT_CONFIGS)
 def test_covariate_synch_mode_routing(window, horizon, stride, delay):
     n_steps, n_nodes = 60, 3
-    ds, _ = _make_grid_dataset(window, horizon, stride, delay, n_steps=n_steps,
-                               n_nodes=n_nodes, n_channels=2)
+    ds, _ = _make_grid_dataset(
+        window, horizon, stride, delay, n_steps=n_steps, n_nodes=n_nodes, n_channels=2
+    )
     cov = _node_cov(n_steps, n_nodes)
     ds.add_covariate('u_win', cov, 't n f', synch_mode=WINDOW)
     ds.add_covariate('u_hor', cov, 't n f', synch_mode=HORIZON)
@@ -55,6 +62,7 @@ def test_covariate_synch_mode_routing(window, horizon, stride, delay):
 
 
 # -- add covariate (node / graph level) -------------------------------------
+
 
 def test_add_covariate_node_and_graph_level():
     ds, _ = _make_grid_dataset(window=4, horizon=2, n_nodes=3, n_channels=2)
@@ -92,6 +100,7 @@ def test_add_exogenous_node_level_default():
 
 # -- static attributes ------------------------------------------------------
 
+
 def test_static_attribute_not_time_sliced():
     ds, _ = _make_grid_dataset(window=4, horizon=3, delay=1, n_nodes=3)
     attr = np.arange(3 * 5).reshape(3, 5).astype('float32')  # 'n f', no time
@@ -104,14 +113,15 @@ def test_static_attribute_not_time_sliced():
 
 # -- promoting a covariate to the target ------------------------------------
 
+
 def test_covariate_promoted_to_target_via_set_target_map():
     # add a covariate, then make it the prediction target by swapping the
     # target map for one that points at the covariate's horizon slice.
     window, horizon, delay = 4, 2, 1
     n_steps, n_nodes = 60, 3
-    ds, target = _make_grid_dataset(window, horizon, delay=delay,
-                                    n_steps=n_steps, n_nodes=n_nodes,
-                                    n_channels=2)
+    ds, target = _make_grid_dataset(
+        window, horizon, delay=delay, n_steps=n_steps, n_nodes=n_nodes, n_channels=2
+    )
     cov = _node_cov(n_steps, n_nodes)
     ds.add_covariate('u', cov, 't n f')
 
@@ -135,8 +145,9 @@ def test_covariate_promoted_to_target_only_keeps_x_as_input():
     # covariate as 'y'.
     window, horizon = 4, 2
     n_steps, n_nodes = 60, 3
-    ds, target = _make_grid_dataset(window, horizon, n_steps=n_steps,
-                                    n_nodes=n_nodes, n_channels=2)
+    ds, target = _make_grid_dataset(
+        window, horizon, n_steps=n_steps, n_nodes=n_nodes, n_channels=2
+    )
     cov = _node_cov(n_steps, n_nodes)
     # keep the covariate out of the input map: it is purely the new target
     ds.add_covariate('u', cov, 't n f', add_to_input_map=False)
@@ -156,13 +167,15 @@ def test_covariate_promoted_to_target_only_keeps_x_as_input():
 
 # -- promoting a covariate to the input -------------------------------------
 
+
 def test_covariate_promoted_to_only_input_via_set_input_map():
     # add a covariate, then make it the sole model input by swapping the input
     # map for a freshly built one that points at the covariate's window slice.
     window, horizon = 4, 2
     n_steps, n_nodes = 60, 3
-    ds, target = _make_grid_dataset(window, horizon, n_steps=n_steps,
-                                    n_nodes=n_nodes, n_channels=2)
+    ds, target = _make_grid_dataset(
+        window, horizon, n_steps=n_steps, n_nodes=n_nodes, n_channels=2
+    )
     cov = _node_cov(n_steps, n_nodes)
     ds.add_covariate('u', cov, 't n f')
 
@@ -188,12 +201,14 @@ def test_covariate_promoted_to_only_input_via_set_input_map():
 
 # -- partitioning / flags ---------------------------------------------------
 
+
 def test_covariate_partitioning_and_flags():
     ds, _ = _make_grid_dataset(window=4, horizon=2, n_nodes=3)
     assert not ds.has_covariates and ds.n_covariates == 0
-    ds.add_covariate('u', _node_cov(ds.n_steps, 3), 't n f')        # exogenous
-    ds.add_covariate('meta', np.arange(3 * 4).reshape(3, 4).astype('float32'),
-                     'n f')                                          # attribute
+    ds.add_covariate('u', _node_cov(ds.n_steps, 3), 't n f')  # exogenous
+    ds.add_covariate(
+        'meta', np.arange(3 * 4).reshape(3, 4).astype('float32'), 'n f'
+    )  # attribute
     assert ds.has_covariates and ds.n_covariates == 2
     # 't' in pattern -> exogenous; otherwise -> attribute
     assert set(ds.exogenous) == {'u'}
@@ -202,6 +217,7 @@ def test_covariate_partitioning_and_flags():
 
 
 # -- removal --------------------------
+
 
 def test_remove_covariate_clears_everywhere():
     ds, _ = _make_grid_dataset(window=4, horizon=3, n_nodes=3)

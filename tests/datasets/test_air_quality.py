@@ -6,6 +6,7 @@ leak into the training mask, and the (global ``temporal_mean``) imputation must
 only fill masked-out cells. We test on the small 36-station Beijing subset, which
 ships with a curated ``eval_mask``.
 """
+
 import numpy as np
 import pytest
 
@@ -22,9 +23,14 @@ N_NODES_FULL = 437
 
 def test_contract():
     ds = AirQuality(small=True)
-    assert_dataset_contract(ds, n_nodes=N_NODES_SMALL, n_channels=1,
-                            has_mask=True, similarity_options={'distance'},
-                            conn_method='distance')
+    assert_dataset_contract(
+        ds,
+        n_nodes=N_NODES_SMALL,
+        n_channels=1,
+        has_mask=True,
+        similarity_options={'distance'},
+        conn_method='distance',
+    )
 
 
 def test_specifics():
@@ -76,7 +82,7 @@ def test_infer_mask_holds_out_a_different_month():
     ds = AirQuality(small=False, impute_nans=False)
     df = ds.dataframe()  # retains NaNs (no imputation)
     eval_mask = infer_mask(df, infer_from='next').values.astype(bool)
-    obs = (~np.isnan(df.values))
+    obs = ~np.isnan(df.values)
     # an eval cell must be an observed cell
     assert np.all(eval_mask <= obs)
     # and there must be at least one held-out cell

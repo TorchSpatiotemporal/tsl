@@ -2,6 +2,7 @@
 chronological sorting, frequency inference / resampling, and the
 ``TemporalFeaturesMixin`` calendar encodings.
 """
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -9,7 +10,6 @@ import pytest
 from tsl.datasets.prototypes import DatetimeDataset
 
 from .helpers import datetime_index, grid_dataframe, make_datetime
-
 
 # -- sorting & frequency ----------------------------------------------------
 
@@ -70,7 +70,7 @@ def test_resample_mask_tolerance():
     mask = np.ones((4, 1, 1), dtype=bool)
     mask[0, 0, 0] = False  # first bin has one missing of two -> mean 0.5
     ds.set_mask(mask)
-    res = ds.resample(freq='2H', aggr='sum', mask_tolerance=0.)
+    res = ds.resample(freq='2H', aggr='sum', mask_tolerance=0.0)
     # tolerance 0 -> a bin with any missing step is invalid
     assert not bool(res.mask[0, 0, 0])
     assert bool(res.mask[1, 0, 0])
@@ -84,12 +84,14 @@ def test_datetime_encoded_shape_and_unit_circle():
     enc = ds.datetime_encoded(['hour', 'day'])
     assert list(enc.columns) == ['hour_sin', 'hour_cos', 'day_sin', 'day_cos']
     # sin^2 + cos^2 == 1 for each unit
-    np.testing.assert_allclose(enc['hour_sin']**2 + enc['hour_cos']**2,
-                               np.ones(len(enc)), atol=1e-5)
+    np.testing.assert_allclose(
+        enc['hour_sin'] ** 2 + enc['hour_cos'] ** 2, np.ones(len(enc)), atol=1e-5
+    )
 
 
 def test_datetime_encoded_matches_formula():
     from tsl.datasets.prototypes.casting import time_unit_to_nanoseconds
+
     ds = make_datetime(24, freq='1H')
     enc = ds.datetime_encoded('hour')
     nano = ds.index.tz_localize(None).astype('datetime64[ns]').view(np.int64)

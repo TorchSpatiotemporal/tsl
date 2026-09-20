@@ -23,16 +23,12 @@ class MaskedPinballLoss(MaskedMetric):
     higher_is_better: bool = False
     full_state_update: bool = False
 
-    def __init__(self,
-                 q,
-                 mask_nans=False,
-                 mask_inf=False,
-                 at=None,
-                 **kwargs):
-        super(MaskedPinballLoss,
-              self).__init__(metric_fn=pinball_loss,
-                             mask_nans=mask_nans,
-                             mask_inf=mask_inf,
-                             metric_fn_kwargs={'q': q},
-                             at=at,
-                             **kwargs)
+    def __init__(self, q, mask_nans=False, mask_inf=False, at=None, **kwargs):
+        super(MaskedPinballLoss, self).__init__(
+            metric_fn=pinball_loss,
+            mask_nans=mask_nans,
+            mask_inf=mask_inf,
+            metric_fn_kwargs={'q': q},
+            at=at,
+            **kwargs,
+        )

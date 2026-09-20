@@ -1,6 +1,10 @@
-from .attention import (AttentionEncoder, MultiHeadAttention,
-                        PositionalEncoding, SpatialSelfAttention,
-                        TemporalSelfAttention)
+from .attention import (
+    AttentionEncoder,
+    MultiHeadAttention,
+    PositionalEncoding,
+    SpatialSelfAttention,
+    TemporalSelfAttention,
+)
 from .dense import Dense
 from .embedding import NodeEmbedding
 from .temporal_conv import GatedTemporalConv, TemporalConv

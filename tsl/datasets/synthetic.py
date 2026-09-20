@@ -45,19 +45,21 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
 
     seed: int = None
 
-    def __init__(self,
-                 num_features: int,
-                 num_nodes: int,
-                 num_steps: int,
-                 connectivity: SparseTensArray,
-                 min_window: int = 1,
-                 model: nn.Module = None,
-                 model_class: Type = None,
-                 model_kwargs: Mapping = None,
-                 sigma_noise: float = .2,
-                 name: str = None,
-                 seed: int = None,
-                 **kwargs):
+    def __init__(
+        self,
+        num_features: int,
+        num_nodes: int,
+        num_steps: int,
+        connectivity: SparseTensArray,
+        min_window: int = 1,
+        model: nn.Module = None,
+        model_class: Type = None,
+        model_kwargs: Mapping = None,
+        sigma_noise: float = 0.2,
+        name: str = None,
+        seed: int = None,
+        **kwargs,
+    ):
         self.name = name
         self._num_nodes = num_nodes
         self._num_features = num_features
@@ -75,9 +77,9 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
 
         self.sigma_noise = sigma_noise
         if connectivity is not None:
-            self.connectivity = parse_connectivity(connectivity,
-                                                   target_layout='edge_index',
-                                                   num_nodes=num_nodes)
+            self.connectivity = parse_connectivity(
+                connectivity, target_layout='edge_index', num_nodes=num_nodes
+            )
         else:
             self.connectivity = None
 
@@ -122,12 +124,18 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
             rng.manual_seed(seed)
 
         # initialize with noise
-        x = torch.empty(
-            (self._num_steps + self._min_window, self._num_nodes,
-             self._num_features)).normal_(generator=rng) * self.sigma_noise
+        x = (
+            torch.empty(
+                (
+                    self._num_steps + self._min_window,
+                    self._num_nodes,
+                    self._num_features,
+                )
+            ).normal_(generator=rng)
+            * self.sigma_noise
+        )
 
-        y_opt = torch.empty(
-            (self._num_steps, self._num_nodes, self._num_features))
+        y_opt = torch.empty((self._num_steps, self._num_nodes, self._num_features))
 
         if self.connectivity is None:
             edge_index = edge_weight = None
@@ -136,28 +144,35 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
 
         with torch.no_grad():
             h_t = None
-            for t in tqdm(range(self._min_window,
-                                self._min_window + self._num_steps),
-                          desc=f"Generating {self.__class__.__name__} data"):
-                x_t, h_t = self._model_forward(x[None, t - self._min_window:t],
-                                               h=h_t,
-                                               t=t,
-                                               edge_index=edge_index,
-                                               edge_weight=edge_weight)
-                y_opt[t - self._min_window:t + 1 - self._min_window] = x_t[0]
+            for t in tqdm(
+                range(self._min_window, self._min_window + self._num_steps),
+                desc=f"Generating {self.__class__.__name__} data",
+            ):
+                x_t, h_t = self._model_forward(
+                    x[None, t - self._min_window : t],
+                    h=h_t,
+                    t=t,
+                    edge_index=edge_index,
+                    edge_weight=edge_weight,
+                )
+                y_opt[t - self._min_window : t + 1 - self._min_window] = x_t[0]
                 # add noise
-                x_t = x_t + torch.zeros_like(x_t).normal_(
-                    generator=rng) * self.sigma_noise
-                x[t:t + 1] = x_t[0]
+                x_t = (
+                    x_t
+                    + torch.zeros_like(x_t).normal_(generator=rng) * self.sigma_noise
+                )
+                x[t : t + 1] = x_t[0]
 
-        x = torch_to_numpy(x[self._min_window:])
+        x = torch_to_numpy(x[self._min_window :])
         y_opt = torch_to_numpy(y_opt)
         return x, y_opt, np.ones_like(x)
 
     def get_connectivity(self, layout: str = 'edge_index', **kwargs):
         """"""
         if self.connectivity is not None:
-            return parse_connectivity(connectivity=self.connectivity,
-                                      target_layout=layout,
-                                      num_nodes=self.n_nodes)
+            return parse_connectivity(
+                connectivity=self.connectivity,
+                target_layout=layout,
+                num_nodes=self.n_nodes,
+            )
         return None

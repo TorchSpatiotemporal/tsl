@@ -1,12 +1,12 @@
 """Unit tests for :class:`~tsl.data.preprocessing.scalers.StandardScaler`."""
+
 import numpy as np
 import pytest
 import torch
 
 from tsl.data.preprocessing.scalers import StandardScaler
 
-from .helpers import (constant_feature_target, masked_target, random_target,
-                      ref_standard)
+from .helpers import constant_feature_target, masked_target, random_target, ref_standard
 
 
 def test_fit_default_axis_mean_std():

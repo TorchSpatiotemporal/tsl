@@ -3,6 +3,7 @@
 No imputation; the optional ``mask_zeros`` masks night-time (zero-production)
 hours, so the leakage check is that masked cells correspond exactly to zeros.
 """
+
 import numpy as np
 import pytest
 
@@ -17,10 +18,14 @@ N_NODES_WEST = 1082
 
 def test_contract():
     ds = PvUS(zones='west')  # mask_zeros defaults to False -> no mask
-    assert_dataset_contract(ds, n_nodes=N_NODES_WEST, n_channels=1,
-                            has_mask=False,
-                            similarity_options={'distance', 'correntropy'},
-                            conn_method='distance')
+    assert_dataset_contract(
+        ds,
+        n_nodes=N_NODES_WEST,
+        n_channels=1,
+        has_mask=False,
+        similarity_options={'distance', 'correntropy'},
+        conn_method='distance',
+    )
 
 
 def test_specifics():

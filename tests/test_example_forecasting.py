@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 from tsl.data import SpatioTemporalDataModule, SpatioTemporalDataset
 from tsl.data.preprocessing import StandardScaler
-from tsl.datasets import MetrLA, PemsBay, EngRad
+from tsl.datasets import EngRad, MetrLA, PemsBay
 from tsl.datasets.pems_benchmarks import PeMS03, PeMS04, PeMS07, PeMS08
 from tsl.engines import Predictor
 from tsl.metrics import numpy as numpy_metrics
@@ -72,9 +72,9 @@ def init_experiment(tmp_path):
     log_dir = tmp_path / 'forecasting'
     log_dir.mkdir()
     # load cfg with hydra
-    with initialize(config_path='config',
-                    job_name='test_example_forecasting',
-                    version_base=None):
+    with initialize(
+        config_path='config', job_name='test_example_forecasting', version_base=None
+    ):
         cfg = compose(config_name='test_forecasting', overrides=[])
     return cfg, str(log_dir)
 
@@ -94,20 +94,23 @@ def test_example_forecasting(tmp_path):
     # get adjacency matrix
     adj = dataset.get_connectivity(**cfg.dataset.connectivity)
 
-    torch_dataset = SpatioTemporalDataset(target=dataset.dataframe(),
-                                          mask=dataset.mask,
-                                          connectivity=adj,
-                                          covariates=covariates,
-                                          horizon=cfg.horizon,
-                                          window=cfg.window,
-                                          stride=cfg.stride)
+    torch_dataset = SpatioTemporalDataset(
+        target=dataset.dataframe(),
+        mask=dataset.mask,
+        connectivity=adj,
+        covariates=covariates,
+        horizon=cfg.horizon,
+        window=cfg.window,
+        stride=cfg.stride,
+    )
     transform = {'target': StandardScaler(axis=(0, 1))}
 
     dm = SpatioTemporalDataModule(
         dataset=torch_dataset,
         scalers=transform,
         splitter=dataset.get_splitter(**cfg.dataset.splitting),
-        batch_size=cfg.batch_size)
+        batch_size=cfg.batch_size,
+    )
     dm.setup()
 
     ########################################
@@ -116,11 +119,13 @@ def test_example_forecasting(tmp_path):
 
     model_cls = get_model_class(cfg.model.name)
 
-    model_kwargs = dict(n_nodes=torch_dataset.n_nodes,
-                        input_size=torch_dataset.n_channels,
-                        output_size=torch_dataset.n_channels,
-                        horizon=torch_dataset.horizon,
-                        exog_size=torch_dataset.input_map.u.shape[-1])
+    model_kwargs = dict(
+        n_nodes=torch_dataset.n_nodes,
+        input_size=torch_dataset.n_channels,
+        output_size=torch_dataset.n_channels,
+        horizon=torch_dataset.horizon,
+        exog_size=torch_dataset.input_map.u.shape[-1],
+    )
 
     model_cls.filter_model_args_(model_kwargs)
     model_kwargs.update(cfg.model.hparams)
@@ -133,24 +138,26 @@ def test_example_forecasting(tmp_path):
         'mape': torch_metrics.MaskedMAPE(),
         'mae_at_15': torch_metrics.MaskedMAE(at=2),  # 3rd is 15 min
         'mae_at_30': torch_metrics.MaskedMAE(at=5),  # 6th is 30 min
-        'mae_at_60': torch_metrics.MaskedMAE(at=11)  # 12th is 1 h
+        'mae_at_60': torch_metrics.MaskedMAE(at=11),  # 12th is 1 h
     }
 
     # setup predictor
-    predictor = Predictor(model_class=model_cls,
-                          model_kwargs=model_kwargs,
-                          optim_class=getattr(torch.optim, cfg.optimizer.name),
-                          optim_kwargs=dict(cfg.optimizer.hparams),
-                          loss_fn=loss_fn,
-                          metrics=log_metrics)
+    predictor = Predictor(
+        model_class=model_cls,
+        model_kwargs=model_kwargs,
+        optim_class=getattr(torch.optim, cfg.optimizer.name),
+        optim_kwargs=dict(cfg.optimizer.hparams),
+        loss_fn=loss_fn,
+        metrics=log_metrics,
+    )
 
     ########################################
     # training                             #
     ########################################
 
-    early_stop_callback = EarlyStopping(monitor='val_mae',
-                                        patience=cfg.patience,
-                                        mode='min')
+    early_stop_callback = EarlyStopping(
+        monitor='val_mae', patience=cfg.patience, mode='min'
+    )
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=log_dir,
@@ -185,22 +192,25 @@ def test_example_forecasting(tmp_path):
     output = trainer.predict(predictor, dataloaders=dm.test_dataloader())
     output = predictor.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
-    y_hat, y_true, mask = (output['y_hat'], output['y'],
-                           output.get('mask', None))
-    res_functional = dict(test_mae=numpy_metrics.mae(y_hat, y_true, mask),
-                          test_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
-                          test_mape=numpy_metrics.mape(y_hat, y_true, mask))
+    y_hat, y_true, mask = (output['y_hat'], output['y'], output.get('mask', None))
+    res_functional = dict(
+        test_mae=numpy_metrics.mae(y_hat, y_true, mask),
+        test_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
+        test_mape=numpy_metrics.mape(y_hat, y_true, mask),
+    )
 
     res_val = trainer.validate(predictor, datamodule=dm)
     output = trainer.predict(predictor, dataloaders=dm.val_dataloader())
     output = predictor.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
-    y_hat, y_true, mask = (output['y_hat'], output['y'],
-                           output.get('mask', None))
+    y_hat, y_true, mask = (output['y_hat'], output['y'], output.get('mask', None))
     res_functional.update(
-        dict(val_mae=numpy_metrics.mae(y_hat, y_true, mask),
-             val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
-             val_mape=numpy_metrics.mape(y_hat, y_true, mask)))
+        dict(
+            val_mae=numpy_metrics.mae(y_hat, y_true, mask),
+            val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
+            val_mape=numpy_metrics.mape(y_hat, y_true, mask),
+        )
+    )
 
     assert np.isclose(res_test[0]['test_mae'], res_functional['test_mae'])
     assert np.isclose(res_test[0]['test_mape'], res_functional['test_mape'])

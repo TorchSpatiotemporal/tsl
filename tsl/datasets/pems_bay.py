@@ -41,12 +41,14 @@ class PemsBay(DatetimeDataset):
         self.mask_zeros = mask_zeros
         # load dataset
         df, dist, mask = self.load(mask_zeros)
-        super().__init__(target=df,
-                         mask=mask,
-                         freq=freq,
-                         similarity_score="distance",
-                         temporal_aggregation="nearest",
-                         name="PemsBay")
+        super().__init__(
+            target=df,
+            mask=mask,
+            freq=freq,
+            similarity_score="distance",
+            temporal_aggregation="nearest",
+            name="PemsBay",
+        )
         self.add_covariate('dist', dist, pattern='n n')
 
     @property
@@ -69,8 +71,10 @@ class PemsBay(DatetimeDataset):
         ids = list(pd.read_hdf(path).columns)
         self.build_distance_matrix(ids)
         # Rename locations file
-        os.rename(os.path.join(self.root_dir, 'sensor_locations_bay.csv'),
-                  os.path.join(self.root_dir, 'locations.csv'))
+        os.rename(
+            os.path.join(self.root_dir, 'sensor_locations_bay.csv'),
+            os.path.join(self.root_dir, 'locations.csv'),
+        )
         # Remove raw data
         self.clean_downloads()
 

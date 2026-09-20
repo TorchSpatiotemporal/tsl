@@ -1,5 +1,5 @@
-"""Test connectivity (layouts, n_edges, presence in the item).
-"""
+"""Test connectivity (layouts, n_edges, presence in the item)."""
+
 import numpy as np
 import torch
 from torch_sparse import SparseTensor
@@ -8,14 +8,14 @@ from tsl.data import SpatioTemporalDataset
 
 from .helpers import _grid_target
 
-
 N_NODES = 4
 
 
 def _dataset(connectivity=None):
     target = _grid_target(30, N_NODES, 1)
-    return SpatioTemporalDataset(target=target, connectivity=connectivity,
-                                 window=4, horizon=2)
+    return SpatioTemporalDataset(
+        target=target, connectivity=connectivity, window=4, horizon=2
+    )
 
 
 def _dense_adj():
@@ -43,10 +43,10 @@ def test_edge_index_tuple_layout():
     assert ds.patterns['edge_weight'] == 'e'
     # both appear in the item input, unchanged
     item = ds[0]
-    np.testing.assert_array_equal(item.input['edge_index'].numpy(),
-                                  edge_index.numpy())
-    np.testing.assert_array_equal(item.input['edge_weight'].numpy(),
-                                  edge_weight.numpy())
+    np.testing.assert_array_equal(item.input['edge_index'].numpy(), edge_index.numpy())
+    np.testing.assert_array_equal(
+        item.input['edge_weight'].numpy(), edge_weight.numpy()
+    )
 
 
 def test_dense_adjacency_layout():
@@ -79,11 +79,17 @@ def test_sparse_tensor_layout():
 def test_two_node_corner_dense_vs_coo():
     # the dtype check disambiguates the [2, 2] shape ambiguity on 2-node graphs
     target = _grid_target(30, 2, 1)
-    dense = SpatioTemporalDataset(target=target, window=4, horizon=2,
-                                  connectivity=np.array([[0., 1.], [1., 0.]],
-                                                        dtype='float32'))
+    dense = SpatioTemporalDataset(
+        target=target,
+        window=4,
+        horizon=2,
+        connectivity=np.array([[0.0, 1.0], [1.0, 0.0]], dtype='float32'),
+    )
     assert dense.patterns['edge_index'] == 'n n' and dense.n_edges == 2
-    coo = SpatioTemporalDataset(target=target, window=4, horizon=2,
-                                connectivity=(torch.tensor([[0, 1, 1],
-                                                            [1, 0, 1]]), None))
+    coo = SpatioTemporalDataset(
+        target=target,
+        window=4,
+        horizon=2,
+        connectivity=(torch.tensor([[0, 1, 1], [1, 0, 1]]), None),
+    )
     assert coo.patterns['edge_index'] == '2 e' and coo.n_edges == 3

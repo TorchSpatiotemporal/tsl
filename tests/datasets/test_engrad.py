@@ -5,6 +5,7 @@ No imputation by default (and 0% missing), so there is no mask unless
 node-level/graph covariates, and that the optional radiance mask flags exactly
 the non-positive shortwave-radiation cells.
 """
+
 import pytest
 
 from tsl.datasets import EngRad
@@ -19,10 +20,14 @@ N_CHANNELS = 5
 
 def test_contract():
     ds = EngRad()  # target_channels='all' -> 5 channels; no mask by default
-    assert_dataset_contract(ds, n_nodes=N_NODES, n_channels=N_CHANNELS,
-                            has_mask=False,
-                            similarity_options={'distance', 'grid'},
-                            conn_method='distance')
+    assert_dataset_contract(
+        ds,
+        n_nodes=N_NODES,
+        n_channels=N_CHANNELS,
+        has_mask=False,
+        similarity_options={'distance', 'grid'},
+        conn_method='distance',
+    )
 
 
 def test_specifics():
@@ -32,8 +37,10 @@ def test_specifics():
     assert ds.patterns['distances'] == 'n n'
     assert ds.distances.shape == (N_NODES, N_NODES)
     # the 'grid' similarity is also implemented
-    assert ds.get_connectivity(method='grid',
-                               layout='dense').shape == (N_NODES, N_NODES)
+    assert ds.get_connectivity(method='grid', layout='dense').shape == (
+        N_NODES,
+        N_NODES,
+    )
 
 
 def test_single_target_channel_selection():

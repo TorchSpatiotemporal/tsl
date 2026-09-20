@@ -1,6 +1,14 @@
 from .agcrn import AGCRNCell
-from .base import (GraphGRUCellBase, GraphLSTMCellBase, GRUCell, GRUCellBase,
-                   LSTMCell, LSTMCellBase, RNNCellBase, StateType)
+from .base import (
+    GraphGRUCellBase,
+    GraphLSTMCellBase,
+    GRUCell,
+    GRUCellBase,
+    LSTMCell,
+    LSTMCellBase,
+    RNNCellBase,
+    StateType,
+)
 from .dcrnn import DCRNNCell
 from .dense_dcrnn import DenseDCRNNCell
 from .evolvegcn import EvolveGCNHCell, EvolveGCNOCell

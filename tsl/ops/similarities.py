@@ -9,9 +9,10 @@ def _pearson_sim_matrix(unbiased_x, norms):
     n_samples = unbiased_x.shape[0]
     res = np.zeros(shape=(n_samples, n_samples))
     for i in range(n_samples):
-        corr = (unbiased_x[i] @ unbiased_x[i + 1:].T) / (
-            norms[i] * norms[i + 1:] + 1e-8)
-        res[i, i + 1:] = corr
+        corr = (unbiased_x[i] @ unbiased_x[i + 1 :].T) / (
+            norms[i] * norms[i + 1 :] + 1e-8
+        )
+        res[i, i + 1 :] = corr
     return res + res.T + np.identity(n_samples)
 
 
@@ -46,8 +47,8 @@ def correntropy(x, period, mask=None, gamma=0.05):
     sim = np.zeros((x.shape[1], x.shape[1]))
     tot = np.zeros_like(sim)
     for i in range(period, len(x), period):
-        xi = x[i - period:i].T
-        m = mask[i - period:i].min(0)
+        xi = x[i - period : i].T
+        m = mask[i - period : i].min(0)
         si = rbf_kernel(xi, gamma=gamma)
         m = m * m.T
         si = si * m
@@ -91,6 +92,7 @@ def geographical_distance(x: FrameArray, to_rad: bool = True):
         latlon_pairs = np.radians(latlon_pairs)
 
     from sklearn.metrics.pairwise import haversine_distances
+
     distances = haversine_distances(latlon_pairs) * AVG_EARTH_RADIUS_KM
     distances = distances.astype(latlon_pairs.dtype)
 
@@ -124,14 +126,13 @@ def top_k(matrix, k, include_self=False, keep_values=False):
     return knn_matrix
 
 
-def thresholded_gaussian_kernel(x,
-                                theta=None,
-                                threshold=None,
-                                threshold_on_input=False):
+def thresholded_gaussian_kernel(
+    x, theta=None, threshold=None, threshold_on_input=False
+):
     if theta is None:
         theta = np.std(x)
     weights = np.exp(-np.square(x / theta))
     if threshold is not None:
         mask = x > threshold if threshold_on_input else weights < threshold
-        weights[mask] = 0.
+        weights[mask] = 0.0
     return weights

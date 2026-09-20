@@ -6,6 +6,7 @@ Leakage focus: the validity mask must be derived from the *raw* readings (zeros 
 missing) and the optional zero-imputation (forward fill) must only touch
 masked-out cells, never the observed ones.
 """
+
 import numpy as np
 import pytest
 
@@ -20,9 +21,14 @@ N_NODES = 207
 
 def test_contract():
     ds = MetrLA()
-    assert_dataset_contract(ds, n_nodes=N_NODES, n_channels=1, has_mask=True,
-                            similarity_options={'distance'},
-                            conn_method='distance')
+    assert_dataset_contract(
+        ds,
+        n_nodes=N_NODES,
+        n_channels=1,
+        has_mask=True,
+        similarity_options={'distance'},
+        conn_method='distance',
+    )
 
 
 def test_specifics():
@@ -43,5 +49,4 @@ def test_mask_is_from_raw_and_imputation_is_safe():
     # (forward-filled) values -> the imputed series has fewer zeros than raw
     invalid = ~imputed.mask
     assert invalid.any()
-    assert np.count_nonzero(imputed.numpy() == 0) <= \
-        np.count_nonzero(raw.numpy() == 0)
+    assert np.count_nonzero(imputed.numpy() == 0) <= np.count_nonzero(raw.numpy() == 0)

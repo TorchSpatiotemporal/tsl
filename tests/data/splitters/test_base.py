@@ -7,8 +7,8 @@ from tsl.data.datamodule.splitters import FixedIndicesSplitter, Splitter
 
 from .helpers import _make_dataset
 
-
 # -- base Splitter ----------------------------------------------------------
+
 
 def test_base_fit_not_implemented():
     # The abstract base does not know how to split.
@@ -49,7 +49,6 @@ def test_track_fit_sets_fitted_and_caches_indices():
     # A subclass whose ``fit`` populates the indices: ``_track_fit`` must flip
     # ``fitted`` to True and ``split`` must then return the cached dict.
     class _Const(Splitter):
-
         def fit(self, dataset):
             self.set_indices(np.arange(3), np.arange(2), np.arange(1))
 
@@ -67,7 +66,6 @@ def test_split_triggers_fit_when_unfitted():
     # A fresh splitter is not fitted, so ``split`` must run ``fit`` (rather than
     # return the empty cached indices).
     class _Const(Splitter):
-
         def fit(self, dataset):
             self.set_indices(np.arange(3), np.arange(2), np.arange(1))
 
@@ -109,9 +107,9 @@ def test_copy_downcasts_subclass_to_base_but_keeps_indices():
 
 
 def test_repr_contains_class_name_and_lens():
-    splitter = FixedIndicesSplitter(train_idxs=[0, 1, 2],
-                                    val_idxs=[3, 4],
-                                    test_idxs=[5, 6, 7])
+    splitter = FixedIndicesSplitter(
+        train_idxs=[0, 1, 2], val_idxs=[3, 4], test_idxs=[5, 6, 7]
+    )
     text = repr(splitter)
     assert text.startswith('FixedIndicesSplitter(')
     assert 'train_len=3' in text
@@ -127,15 +125,16 @@ def test_call_dispatches_to_split():
 
 def test_fitted_splitter_pickles():
     # ``__getstate__`` drops the bound ``fit`` so the splitter can be pickled.
-    splitter = FixedIndicesSplitter(train_idxs=[0, 1, 2],
-                                    val_idxs=[3, 4],
-                                    test_idxs=[5])
+    splitter = FixedIndicesSplitter(
+        train_idxs=[0, 1, 2], val_idxs=[3, 4], test_idxs=[5]
+    )
     restored = pickle.loads(pickle.dumps(splitter))
     assert restored.fitted is True
     assert restored.lens() == splitter.lens()
 
 
 # -- FixedIndicesSplitter ---------------------------------------------------
+
 
 def test_fixed_indices_is_fitted_on_construction():
     splitter = FixedIndicesSplitter(train_idxs=[0, 1], val_idxs=[2], test_idxs=[3])
@@ -144,9 +143,9 @@ def test_fixed_indices_is_fitted_on_construction():
 
 def test_fixed_indices_returns_given_indices():
     dataset = _make_dataset(4, 2)
-    splitter = FixedIndicesSplitter(train_idxs=[0, 1, 2],
-                                    val_idxs=[3, 4],
-                                    test_idxs=[5, 6, 7])
+    splitter = FixedIndicesSplitter(
+        train_idxs=[0, 1, 2], val_idxs=[3, 4], test_idxs=[5, 6, 7]
+    )
     out = splitter.split(dataset)
     assert out['train'] == [0, 1, 2]
     assert out['val'] == [3, 4]

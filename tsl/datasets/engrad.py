@@ -11,12 +11,13 @@ from tsl.utils import download_url, ensure_list
 
 
 class EngRadSplitter(Splitter):
-
-    def __init__(self,
-                 val_len: int = None,
-                 val_seq_len: int = 7,
-                 first_val_step=(2019, 1, 1),
-                 first_test_step=(2020, 1, 1)):
+    def __init__(
+        self,
+        val_len: int = None,
+        val_seq_len: int = 7,
+        first_val_step=(2019, 1, 1),
+        first_test_step=(2020, 1, 1),
+    ):
         super(EngRadSplitter, self).__init__()
         self._val_len = val_len
         self.val_seq_len = val_seq_len
@@ -28,21 +29,19 @@ class EngRadSplitter(Splitter):
         test_idxs = indices_between(dataset, first_ts=self.first_test_step)
         # Get validation indices
         if self.first_val_step is not None:
-            val_idxs = indices_between(dataset,
-                                       first_ts=self.first_val_step,
-                                       last_ts=self.first_test_step)
+            val_idxs = indices_between(
+                dataset, first_ts=self.first_val_step, last_ts=self.first_test_step
+            )
         else:
             val_idxs = np.setdiff1d(np.arange(len(dataset)), test_idxs)
         # Remove validation indices overlapping with test indices
-        ovl_idxs, _ = dataset.overlapping_indices(val_idxs,
-                                                  test_idxs,
-                                                  synch_mode='window',
-                                                  as_mask=True)
+        ovl_idxs, _ = dataset.overlapping_indices(
+            val_idxs, test_idxs, synch_mode='window', as_mask=True
+        )
         val_idxs = val_idxs[~ovl_idxs]
-        ovl_idxs, _ = dataset.overlapping_indices(val_idxs,
-                                                  test_idxs,
-                                                  synch_mode='horizon',
-                                                  as_mask=True)
+        ovl_idxs, _ = dataset.overlapping_indices(
+            val_idxs, test_idxs, synch_mode='horizon', as_mask=True
+        )
         val_idxs = val_idxs[~ovl_idxs]
         # Sparsify validation set according to val_len
         val_len = self._val_len
@@ -53,21 +52,18 @@ class EngRadSplitter(Splitter):
         seq_len = len(val_idxs) // num_seq
         val_seq_start = seq_len - self.val_seq_len
         seq_start_idx = val_idxs[val_seq_start::seq_len]
-        val_seq_idxs = np.ravel(seq_start_idx[:, None] +
-                                np.arange(self.val_seq_len))
+        val_seq_idxs = np.ravel(seq_start_idx[:, None] + np.arange(self.val_seq_len))
         # Remove possibly out-of-bounds indices
         val_idxs = np.intersect1d(val_seq_idxs, val_idxs)
         # Use all other indices for training
         train_idxs = np.arange(val_idxs[-1])
-        ovl_idxs, _ = dataset.overlapping_indices(train_idxs,
-                                                  val_idxs,
-                                                  synch_mode='window',
-                                                  as_mask=True)
+        ovl_idxs, _ = dataset.overlapping_indices(
+            train_idxs, val_idxs, synch_mode='window', as_mask=True
+        )
         train_idxs = train_idxs[~ovl_idxs]
-        ovl_idxs, _ = dataset.overlapping_indices(train_idxs,
-                                                  val_idxs,
-                                                  synch_mode='horizon',
-                                                  as_mask=True)
+        ovl_idxs, _ = dataset.overlapping_indices(
+            train_idxs, val_idxs, synch_mode='horizon', as_mask=True
+        )
         train_idxs = train_idxs[~ovl_idxs]
         self.set_indices(train_idxs, val_idxs, test_idxs)
 
@@ -106,17 +102,20 @@ class EngRad(DatetimeDataset):
         + :obj:`distances`: :math:`N \times N` matrix of pairwise distances
           between the locations.
     """
+
     url = "https://zenodo.org/records/12760772/files/data.h5?download=1"
 
     similarity_options = {'distance', 'grid'}
 
-    def __init__(self,
-                 root: str = None,
-                 target_channels: Optional[Union[str, List[str]]] = 'all',
-                 covariate_channels: Optional[Union[str, List[str]]] = None,
-                 mask_zero_radiance: bool = False,
-                 precipitation_unit: Literal["mm", "cm"] = "mm",
-                 freq: Optional[str] = None):
+    def __init__(
+        self,
+        root: str = None,
+        target_channels: Optional[Union[str, List[str]]] = 'all',
+        covariate_channels: Optional[Union[str, List[str]]] = None,
+        mask_zero_radiance: bool = False,
+        precipitation_unit: Literal["mm", "cm"] = "mm",
+        freq: Optional[str] = None,
+    ):
         self.root = root
         self.mask_zero_radiance = mask_zero_radiance
         self.precipitation_unit = precipitation_unit
@@ -142,14 +141,16 @@ class EngRad(DatetimeDataset):
             columns = pd.MultiIndex.from_product([nodes, covariate_channels])
             covariates['u'] = (df.loc[:, columns], 't n f')
 
-        super().__init__(target=target,
-                         mask=mask,
-                         covariates=covariates,
-                         freq=freq,
-                         similarity_score='distance',
-                         temporal_aggregation='mean',
-                         spatial_aggregation='mean',
-                         name='EngRad')
+        super().__init__(
+            target=target,
+            mask=mask,
+            covariates=covariates,
+            freq=freq,
+            similarity_score='distance',
+            temporal_aggregation='mean',
+            spatial_aggregation='mean',
+            name='EngRad',
+        )
 
     @property
     def raw_file_names(self) -> List[str]:
@@ -169,6 +170,7 @@ class EngRad(DatetimeDataset):
         metadata = pd.DataFrame(pd.read_hdf(path, 'metadata'))
         coords = metadata.loc[:, ['lat', 'lon']]
         from tsl.ops.similarities import geographical_distance
+
         dist = geographical_distance(coords, to_rad=True).values
         np.save(self.required_files_paths['distances'], dist)
 
@@ -197,6 +199,7 @@ class EngRad(DatetimeDataset):
 
     def compute_similarity(self, method: str, **kwargs):
         from tsl.ops.similarities import gaussian_kernel
+
         if method == "distance":
             theta = kwargs.get('theta', np.std(self.distances))
             return gaussian_kernel(self.distances, theta=theta)

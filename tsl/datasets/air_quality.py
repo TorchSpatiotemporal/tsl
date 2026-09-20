@@ -24,15 +24,17 @@ def infer_mask(df, infer_from='next'):
         pd.DataFrame: The evaluation mask for the DataFrame.
     """
     mask = (~df.isna()).astype('uint8')
-    eval_mask = pd.DataFrame(index=mask.index, columns=mask.columns,
-                             data=0).astype('uint8')
+    eval_mask = pd.DataFrame(index=mask.index, columns=mask.columns, data=0).astype(
+        'uint8'
+    )
     if infer_from == 'previous':
         offset = -1
     elif infer_from == 'next':
         offset = 1
     else:
-        raise ValueError('`infer_from` can only be one of {}'.format(
-            ['previous', 'next']))
+        raise ValueError(
+            '`infer_from` can only be one of {}'.format(['previous', 'next'])
+        )
     months = sorted(set(zip(mask.index.year, mask.index.month)))
     length = len(months)
     for i in range(length):
@@ -51,18 +53,15 @@ def infer_mask(df, infer_from='next'):
 
 
 class AirQualitySplitter(Splitter):
-
-    def __init__(self,
-                 val_len: int = None,
-                 test_months: Sequence = (3, 6, 9, 12)):
+    def __init__(self, val_len: int = None, test_months: Sequence = (3, 6, 9, 12)):
         super(AirQualitySplitter, self).__init__()
         self._val_len = val_len
         self.test_months = test_months
 
     def fit(self, dataset):
-        nontest_idxs, test_idxs = disjoint_months(dataset,
-                                                  months=self.test_months,
-                                                  synch_mode=HORIZON)
+        nontest_idxs, test_idxs = disjoint_months(
+            dataset, months=self.test_months, synch_mode=HORIZON
+        )
         # take equal number of samples before each month of testing
         val_len = self._val_len
         if val_len < 1:
@@ -81,10 +80,9 @@ class AirQualitySplitter(Splitter):
         ]
         val_idxs = np.concatenate(month_val_idxs) % len(dataset)
         # remove overlapping indices from training set
-        ovl_idxs, _ = dataset.overlapping_indices(nontest_idxs,
-                                                  val_idxs,
-                                                  synch_mode=HORIZON,
-                                                  as_mask=True)
+        ovl_idxs, _ = dataset.overlapping_indices(
+            nontest_idxs, val_idxs, synch_mode=HORIZON, as_mask=True
+        )
         train_idxs = nontest_idxs[~ovl_idxs]
         self.set_indices(train_idxs, val_idxs, test_idxs)
 
@@ -110,18 +108,21 @@ class AirQuality(DatetimeDataset, MissingValuesMixin):
     Static attributes:
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
+
     url = "https://drive.switch.ch/index.php/s/W0fRqotjHxIndPj/download"
 
     similarity_options = {'distance'}
 
-    def __init__(self,
-                 root: str = None,
-                 impute_nans: bool = True,
-                 small: bool = False,
-                 test_months: Sequence = (3, 6, 9, 12),
-                 infer_eval_from: str = 'next',
-                 freq: Optional[str] = None,
-                 masked_sensors: Optional[Sequence] = None):
+    def __init__(
+        self,
+        root: str = None,
+        impute_nans: bool = True,
+        small: bool = False,
+        test_months: Sequence = (3, 6, 9, 12),
+        infer_eval_from: str = 'next',
+        freq: Optional[str] = None,
+        masked_sensors: Optional[Sequence] = None,
+    ):
         self.root = root
         self.small = small
         self.test_months = test_months
@@ -131,14 +132,16 @@ class AirQuality(DatetimeDataset, MissingValuesMixin):
         else:
             self.masked_sensors = list(masked_sensors)
         df, mask, eval_mask, dist = self.load(impute_nans=impute_nans)
-        super().__init__(target=df,
-                         mask=mask,
-                         freq=freq,
-                         similarity_score='distance',
-                         temporal_aggregation='mean',
-                         spatial_aggregation='mean',
-                         default_splitting_method='air_quality',
-                         name='AQI36' if self.small else 'AQI')
+        super().__init__(
+            target=df,
+            mask=mask,
+            freq=freq,
+            similarity_score='distance',
+            temporal_aggregation='mean',
+            spatial_aggregation='mean',
+            default_splitting_method='air_quality',
+            name='AQI36' if self.small else 'AQI',
+        )
         self.add_covariate('dist', dist, pattern='n n')
         self.set_eval_mask(eval_mask)
 
@@ -156,12 +159,14 @@ class AirQuality(DatetimeDataset, MissingValuesMixin):
         os.unlink(path)
 
     def build(self):
+        from tsl.ops.similarities import geographical_distance
+
         self.maybe_download()
         # compute distances from latitude and longitude degrees
         path = os.path.join(self.root_dir, 'full437.h5')
         stations = pd.DataFrame(pd.read_hdf(path, 'stations'))
         st_coord = stations.loc[:, ['latitude', 'longitude']]
-        from tsl.ops.similarities import geographical_distance
+
         dist = geographical_distance(st_coord, to_rad=True).values
         np.save(os.path.join(self.root_dir, 'aqi_dist.npy'), dist)
 
@@ -192,14 +197,14 @@ class AirQuality(DatetimeDataset, MissingValuesMixin):
         # eventually replace nans with weekly mean by hour
         if impute_nans:
             from tsl.ops.framearray import temporal_mean
+
             df = df.fillna(temporal_mean(df))
         return df, mask, eval_mask, dist
 
     def get_splitter(self, method: Optional[str] = None, **kwargs):
         if method == 'air_quality':
             val_len = kwargs.get('val_len')
-            return AirQualitySplitter(test_months=self.test_months,
-                                      val_len=val_len)
+            return AirQualitySplitter(test_months=self.test_months, val_len=val_len)
 
     def compute_similarity(self, method: str, **kwargs):
         if method == "distance":

@@ -5,7 +5,6 @@ from .metric_wrappers import MaskedMetricWrapper, SelectMetricWrapper
 from .metrics import (
     MaskedMAE,
     MaskedMAPE,
-    MaskedMetric,
     MaskedMRE,
     MaskedMSE,
     MaskedSMAPE,

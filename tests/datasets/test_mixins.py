@@ -4,6 +4,7 @@ by imputation datasets) and ``TabularParsingMixin`` edge cases.
 The ``MissingValuesMixin`` checks are leakage-relevant: the *training* mask must
 never include cells reserved for *evaluation*.
 """
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -21,8 +22,9 @@ class MissingValuesDataset(TabularDataset, MissingValuesMixin):
 
 
 def _make(mask=None):
-    return MissingValuesDataset(target=grid_array(N_STEPS, N_NODES, N_CHANNELS),
-                                mask=mask)
+    return MissingValuesDataset(
+        target=grid_array(N_STEPS, N_NODES, N_CHANNELS), mask=mask
+    )
 
 
 # -- MissingValuesMixin -----------------------------------------------------
@@ -112,9 +114,7 @@ def test_add_covariate_with_unknown_nodes_raises():
     df = grid_dataframe(N_STEPS, N_NODES, 1)  # nodes 0,1,2
     ds = TabularDataset(target=df)
     # covariate referencing a node (99) absent from the dataset
-    cols = pd.MultiIndex.from_product([[0, 1, 99], [0]],
-                                      names=['nodes', 'channels'])
-    cov = pd.DataFrame(np.ones((N_STEPS, N_NODES)), index=df.index,
-                       columns=cols)
+    cols = pd.MultiIndex.from_product([[0, 1, 99], [0]], names=['nodes', 'channels'])
+    cov = pd.DataFrame(np.ones((N_STEPS, N_NODES)), index=df.index, columns=cols)
     with pytest.raises(AssertionError):
         ds.add_covariate('u', cov, 't n f')

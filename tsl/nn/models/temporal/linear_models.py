@@ -21,20 +21,24 @@ class ARModel(BaseModel):
 
     return_type = Tensor
 
-    def __init__(self,
-                 input_size: int,
-                 temporal_order: int,
-                 output_size: int,
-                 horizon: int,
-                 exog_size: int = 0,
-                 bias: bool = True):
+    def __init__(
+        self,
+        input_size: int,
+        temporal_order: int,
+        output_size: int,
+        horizon: int,
+        exog_size: int = 0,
+        bias: bool = True,
+    ):
         super(ARModel, self).__init__()
 
         input_size += exog_size
-        self.linear = LinearReadout(input_size=input_size * temporal_order,
-                                    output_size=output_size,
-                                    horizon=horizon,
-                                    bias=bias)
+        self.linear = LinearReadout(
+            input_size=input_size * temporal_order,
+            output_size=output_size,
+            horizon=horizon,
+            bias=bias,
+        )
         self.temporal_order = temporal_order
 
     def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
@@ -42,7 +46,7 @@ class ARModel(BaseModel):
         # x: [batches steps nodes features]
         # u: [batches steps (nodes) features]
         x = maybe_cat_exog(x, u)
-        x = x[:, -self.temporal_order:]
+        x = x[:, -self.temporal_order :]
         x = rearrange(x, 'b s n f -> b n (s f)')
         return self.linear(x)
 
@@ -59,21 +63,25 @@ class VARModel(ARModel):
         horizon (int): Forecasting horizon.
     """
 
-    def __init__(self,
-                 input_size: int,
-                 temporal_order: int,
-                 output_size: int,
-                 horizon: int,
-                 n_nodes: int,
-                 exog_size: int = 0,
-                 bias: bool = True):
+    def __init__(
+        self,
+        input_size: int,
+        temporal_order: int,
+        output_size: int,
+        horizon: int,
+        n_nodes: int,
+        exog_size: int = 0,
+        bias: bool = True,
+    ):
 
-        super(VARModel, self).__init__(input_size=input_size * n_nodes,
-                                       temporal_order=temporal_order,
-                                       output_size=output_size * n_nodes,
-                                       horizon=horizon,
-                                       exog_size=exog_size,
-                                       bias=bias)
+        super(VARModel, self).__init__(
+            input_size=input_size * n_nodes,
+            temporal_order=temporal_order,
+            output_size=output_size * n_nodes,
+            horizon=horizon,
+            exog_size=exog_size,
+            bias=bias,
+        )
 
     def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""

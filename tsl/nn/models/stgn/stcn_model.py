@@ -33,30 +33,34 @@ class STCNModel(BaseModel):
 
     return_type = Tensor
 
-    def __init__(self,
-                 input_size,
-                 exog_size,
-                 hidden_size,
-                 ff_size,
-                 output_size,
-                 n_layers,
-                 horizon,
-                 temporal_kernel_size,
-                 spatial_kernel_size,
-                 temporal_convs_layer=2,
-                 spatial_convs_layer=1,
-                 dilation=1,
-                 norm='none',
-                 gated=False,
-                 activation='relu',
-                 dropout=0.):
+    def __init__(
+        self,
+        input_size,
+        exog_size,
+        hidden_size,
+        ff_size,
+        output_size,
+        n_layers,
+        horizon,
+        temporal_kernel_size,
+        spatial_kernel_size,
+        temporal_convs_layer=2,
+        spatial_convs_layer=1,
+        dilation=1,
+        norm='none',
+        gated=False,
+        activation='relu',
+        dropout=0.0,
+    ):
         super(STCNModel, self).__init__()
 
         if exog_size:
-            self.input_encoder = ConditionalBlock(input_size=input_size,
-                                                  exog_size=exog_size,
-                                                  output_size=hidden_size,
-                                                  activation=activation)
+            self.input_encoder = ConditionalBlock(
+                input_size=input_size,
+                exog_size=exog_size,
+                output_size=hidden_size,
+                activation=activation,
+            )
         else:
             self.input_encoder = nn.Linear(input_size, hidden_size)
 
@@ -74,15 +78,19 @@ class STCNModel(BaseModel):
                     norm=norm,
                     dropout=dropout,
                     gated=gated,
-                    activation=activation))
+                    activation=activation,
+                )
+            )
         self.convs = nn.ModuleList(conv_blocks)
 
-        self.readout = MLPDecoder(input_size=hidden_size,
-                                  hidden_size=ff_size,
-                                  output_size=output_size,
-                                  horizon=horizon,
-                                  activation=activation,
-                                  dropout=dropout)
+        self.readout = MLPDecoder(
+            input_size=hidden_size,
+            hidden_size=ff_size,
+            output_size=output_size,
+            horizon=horizon,
+            activation=activation,
+            dropout=dropout,
+        )
 
     def forward(self, x, edge_index, edge_weight=None, u=None, **kwargs):
         # x: [batch, steps, nodes, channels] -> [batch, channels, nodes, steps]

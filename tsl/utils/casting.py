@@ -30,14 +30,13 @@ def copy_to_tensor(obj) -> Tensor:
     return obj
 
 
-def convert_precision_tensor(tensor: Union[Tensor, SparseTensor],
-                             precision: Union[int, str] = None) \
-        -> Union[Tensor, SparseTensor]:
+def convert_precision_tensor(
+    tensor: Union[Tensor, SparseTensor], precision: Union[int, str] = None
+) -> Union[Tensor, SparseTensor]:
     if precision is None:
         return tensor
     precision = precision_stoi(precision)
-    dtype = tensor.dtype() if isinstance(tensor,
-                                         SparseTensor) else tensor.dtype
+    dtype = tensor.dtype() if isinstance(tensor, SparseTensor) else tensor.dtype
     # float to float{precision}
     if dtype in [torch.float16, torch.float32, torch.float64]:
         new_dtype = getattr(torch, f'float{precision}')
@@ -61,9 +60,11 @@ def torch_to_numpy(tensors: Any) -> Any:
     return recursive_apply(tensors, lambda t: t.detach().cpu().numpy())
 
 
-def parse_index(index: IndexSlice = None,
-                length: int = None,
-                layout: Literal['index', 'slice', 'mask'] = 'index'):
+def parse_index(
+    index: IndexSlice = None,
+    length: int = None,
+    layout: Literal['index', 'slice', 'mask'] = 'index',
+):
     if index is None:
         return slice(None) if layout == 'slice' else None
     if isinstance(index, slice):

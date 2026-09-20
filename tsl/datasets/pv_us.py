@@ -51,19 +51,22 @@ class PvUS(DatetimeDataset):
         freq (str, optional): The data sampling rate for resampling.
             (default: :obj:`None`)
     """
+
     available_zones = ['east', 'west']
     urls = {
         'east': "https://drive.switch.ch/index.php/s/ZUORMr4uzBSr04b/download",
-        'west': "https://drive.switch.ch/index.php/s/HRPNJdeAzeQLA1f/download"
+        'west': "https://drive.switch.ch/index.php/s/HRPNJdeAzeQLA1f/download",
     }
 
     similarity_options = {'distance', 'correntropy'}
 
-    def __init__(self,
-                 zones: Union[str, List] = None,
-                 mask_zeros: bool = False,
-                 root: str = None,
-                 freq: str = None):
+    def __init__(
+        self,
+        zones: Union[str, List] = None,
+        mask_zeros: bool = False,
+        root: str = None,
+        freq: str = None,
+    ):
         # allow to download a single zone
         if zones is None:
             zones = self.available_zones
@@ -71,8 +74,10 @@ class PvUS(DatetimeDataset):
             zones = ensure_list(zones)
             if not set(zones).issubset(self.available_zones):
                 invalid_zones = set(zones).difference(self.available_zones)
-                raise ValueError(f"Invalid zones {invalid_zones}. "
-                                 f"Allowed zones are {self.available_zones}.")
+                raise ValueError(
+                    f"Invalid zones {invalid_zones}. "
+                    f"Allowed zones are {self.available_zones}."
+                )
         self.zones = zones
         self.mask_zeros = mask_zeros
         self.root = root
@@ -80,13 +85,15 @@ class PvUS(DatetimeDataset):
         name = "PvUS" if len(zones) == 2 else f"PvUS-{zones[0]}"
         # load dataset
         actual, mask, metadata = self.load(mask_zeros)
-        super().__init__(target=actual,
-                         mask=mask,
-                         freq=freq,
-                         similarity_score="distance",
-                         spatial_aggregation="sum",
-                         temporal_aggregation="mean",
-                         name=name)
+        super().__init__(
+            target=actual,
+            mask=mask,
+            freq=freq,
+            similarity_score="distance",
+            spatial_aggregation="sum",
+            temporal_aggregation="mean",
+            name=name,
+        )
         self.add_covariate('metadata', metadata, pattern='n f')
 
     @property
@@ -114,9 +121,9 @@ class PvUS(DatetimeDataset):
         metadata = pd.concat(metadata, axis=0).sort_index()
         # drop duplicated farms when loading whole dataset
         if len(self.zones) == 2:
-            duplicated_farms = metadata.index[[
-                s_id.endswith('-east') for s_id in metadata.state_id
-            ]]
+            duplicated_farms = metadata.index[
+                [s_id.endswith('-east') for s_id in metadata.state_id]
+            ]
             metadata = metadata.drop(duplicated_farms, axis=0)
             actual = actual.drop(duplicated_farms, axis=1, level=0)
         return actual, metadata
@@ -128,8 +135,7 @@ class PvUS(DatetimeDataset):
 
     def compute_similarity(self, method: str, theta: float = 150, **kwargs):
         if method == "distance":
-            from tsl.ops.similarities import (gaussian_kernel,
-                                              geographical_distance)
+            from tsl.ops.similarities import gaussian_kernel, geographical_distance
 
             # compute distances from latitude and longitude degrees
             loc_coord = self.metadata.loc[:, ['lat', 'lon']].values

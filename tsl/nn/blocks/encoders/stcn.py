@@ -35,44 +35,51 @@ class SpatioTemporalConvNet(nn.Module):
             (default: :obj:`'relu'`)
     """
 
-    def __init__(self,
-                 input_size,
-                 output_size,
-                 temporal_kernel_size,
-                 spatial_kernel_size,
-                 temporal_convs=2,
-                 spatial_convs=1,
-                 dilation=1,
-                 norm='none',
-                 dropout=0.,
-                 gated=False,
-                 pad=True,
-                 activation='relu'):
+    def __init__(
+        self,
+        input_size,
+        output_size,
+        temporal_kernel_size,
+        spatial_kernel_size,
+        temporal_convs=2,
+        spatial_convs=1,
+        dilation=1,
+        norm='none',
+        dropout=0.0,
+        gated=False,
+        pad=True,
+        activation='relu',
+    ):
         super(SpatioTemporalConvNet, self).__init__()
         self.pad = pad
 
         self.tcn = nn.Sequential(
             Norm(norm_type=norm, in_channels=input_size),
-            TemporalConvNet(input_channels=input_size,
-                            hidden_channels=output_size,
-                            kernel_size=temporal_kernel_size,
-                            dilation=dilation,
-                            exponential_dilation=True,
-                            n_layers=temporal_convs,
-                            activation=activation,
-                            causal_padding=pad,
-                            dropout=dropout,
-                            gated=gated))
+            TemporalConvNet(
+                input_channels=input_size,
+                hidden_channels=output_size,
+                kernel_size=temporal_kernel_size,
+                dilation=dilation,
+                exponential_dilation=True,
+                n_layers=temporal_convs,
+                activation=activation,
+                causal_padding=pad,
+                dropout=dropout,
+                gated=gated,
+            ),
+        )
 
         self.skip_conn = nn.Linear(input_size, output_size)
 
         self.spatial_convs = nn.ModuleList(
-            DiffConv(in_channels=output_size,
-                     out_channels=output_size,
-                     k=spatial_kernel_size) for _ in range(spatial_convs))
+            DiffConv(
+                in_channels=output_size, out_channels=output_size, k=spatial_kernel_size
+            )
+            for _ in range(spatial_convs)
+        )
         self.spatial_norms = nn.ModuleList(
-            Norm(norm_type=norm, in_channels=output_size)
-            for _ in range(spatial_convs))
+            Norm(norm_type=norm, in_channels=output_size) for _ in range(spatial_convs)
+        )
         self.dropout = nn.Dropout(dropout)
         self.activation = get_layer_activation(activation)()
 

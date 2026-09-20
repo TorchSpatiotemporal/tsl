@@ -1,6 +1,7 @@
 """Shared fixtures and independent numpy references for the preprocessing
 (scaler) unit tests.
 """
+
 import numpy as np
 from scipy import stats
 
@@ -11,7 +12,7 @@ def ref_zeros_to_one(scale):
     """Independent reimplementation of ``scalers.zeros_to_one_`` for arrays."""
     scale = np.array(scale, copy=True)
     eps = 10 * np.finfo(scale.dtype).eps
-    scale[np.isclose(scale, 0., atol=eps, rtol=eps)] = 1.0
+    scale[np.isclose(scale, 0.0, atol=eps, rtol=eps)] = 1.0
     return scale
 
 
@@ -48,8 +49,7 @@ def masked_target(shape=(50, 3, 2), seed=0, frac=0.3):
 
 
 def _masked_nan(x, mask):
-    return np.where(mask, x, np.nan).astype(np.float32) if mask is not None \
-        else x
+    return np.where(mask, x, np.nan).astype(np.float32) if mask is not None else x
 
 
 def ref_standard(x, axis=0, mask=None, keepdims=True):
@@ -64,7 +64,7 @@ def ref_standard(x, axis=0, mask=None, keepdims=True):
     return bias, ref_zeros_to_one(scale)
 
 
-def ref_minmax(x, axis=0, out_range=(0., 1.), mask=None, keepdims=True):
+def ref_minmax(x, axis=0, out_range=(0.0, 1.0), mask=None, keepdims=True):
     x = np.asarray(x)
     out_min, out_max = out_range
     if mask is None:
@@ -80,22 +80,28 @@ def ref_minmax(x, axis=0, out_range=(0., 1.), mask=None, keepdims=True):
     return bias, scale
 
 
-def ref_robust(x, axis=0, quantile_range=(25., 75.), mask=None,
-               unit_variance=False, keepdims=True):
+def ref_robust(
+    x,
+    axis=0,
+    quantile_range=(25.0, 75.0),
+    mask=None,
+    unit_variance=False,
+    keepdims=True,
+):
     x = np.asarray(x)
     q_min, q_max = quantile_range
     if mask is None:
         bias = np.median(x, axis=axis, keepdims=keepdims)
-        min_q, max_q = np.percentile(x, quantile_range, axis=axis,
-                                     keepdims=keepdims)
+        min_q, max_q = np.percentile(x, quantile_range, axis=axis, keepdims=keepdims)
     else:
         xm = _masked_nan(x, mask)
         bias = np.nanmedian(xm, axis=axis, keepdims=keepdims).astype(x.dtype)
-        min_q, max_q = np.nanpercentile(xm, quantile_range, axis=axis,
-                                        keepdims=keepdims)
+        min_q, max_q = np.nanpercentile(
+            xm, quantile_range, axis=axis, keepdims=keepdims
+        )
     scale = (max_q - min_q).astype(x.dtype)
     scale = ref_zeros_to_one(scale)
     if unit_variance:
-        adjust = stats.norm.ppf(q_max / 100.) - stats.norm.ppf(q_min / 100.)
+        adjust = stats.norm.ppf(q_max / 100.0) - stats.norm.ppf(q_min / 100.0)
         scale = scale / adjust
     return bias, scale

@@ -1,4 +1,5 @@
-""" reduce / reduce_ (copy vs inplace, time/node, edge pruning)."""
+"""reduce / reduce_ (copy vs inplace, time/node, edge pruning)."""
+
 import numpy as np
 import pandas as pd
 import torch
@@ -13,10 +14,15 @@ def _dataset():
     index = pd.date_range('2020-01-01', periods=40, freq='h')
     mask = (np.arange(40 * 4).reshape(40, 4, 1) % 2).astype(bool)
     edge_index = torch.tensor([[0, 1, 2, 3], [1, 2, 3, 0]])
-    edge_weight = torch.tensor([10., 20., 30., 40.])
-    ds = SpatioTemporalDataset(target=target, index=index, mask=mask,
-                               connectivity=(edge_index, edge_weight),
-                               window=4, horizon=2)
+    edge_weight = torch.tensor([10.0, 20.0, 30.0, 40.0])
+    ds = SpatioTemporalDataset(
+        target=target,
+        index=index,
+        mask=mask,
+        connectivity=(edge_index, edge_weight),
+        window=4,
+        horizon=2,
+    )
     ds.add_covariate('u', _grid_target(40, 4, 1), 't n f')
     ds.set_trend(np.ones((40, 4, 1), dtype='float32'))
     return ds
@@ -62,4 +68,4 @@ def test_reduce_prunes_edges_and_weights():
     red = ds.reduce(node_index=np.array([0, 1, 2]))  # drop node 3
     # edges touching node 3 (3->0) are removed; their weights go with them
     assert red.n_edges == 2
-    np.testing.assert_array_equal(red.edge_weight.numpy(), [10., 20.])
+    np.testing.assert_array_equal(red.edge_weight.numpy(), [10.0, 20.0])

@@ -15,6 +15,7 @@ class _MTSBenchmarkDataset(DatetimeDataset):
         root: Root folder for data download.
         freq: Resampling frequency.
     """
+
     url = None
     default_similarity_score = None
     default_spatial_aggregation = None
@@ -32,7 +33,8 @@ class _MTSBenchmarkDataset(DatetimeDataset):
             similarity_score=self.default_similarity_score,
             temporal_aggregation=self.default_temporal_aggregation,
             spatial_aggregation=self.default_spatial_aggregation,
-            name=self.__class__.__name__)
+            name=self.__class__.__name__,
+        )
 
     @property
     def required_file_names(self):
@@ -45,14 +47,16 @@ class _MTSBenchmarkDataset(DatetimeDataset):
         # Build dataset
         self.maybe_download()
         tsl.logger.info(f"Building the {self.__class__.__name__} dataset...")
-        df = pd.read_csv(self.raw_files_paths[0],
-                         index_col=False,
-                         header=None,
-                         sep=',',
-                         compression='gzip')
-        index = pd.date_range(start=self.start_date,
-                              periods=len(df),
-                              freq=self.default_freq)
+        df = pd.read_csv(
+            self.raw_files_paths[0],
+            index_col=False,
+            header=None,
+            sep=',',
+            compression='gzip',
+        )
+        index = pd.date_range(
+            start=self.start_date, periods=len(df), freq=self.default_freq
+        )
         df = df.set_index(index)
         path = os.path.join(self.root_dir, f'{self.__class__.__name__}.h5')
         df.to_hdf(path, key='raw')
@@ -66,7 +70,7 @@ class _MTSBenchmarkDataset(DatetimeDataset):
     def load(self):
         df = self.load_raw()
         tsl.logger.info('Loaded raw dataset.')
-        mask = (df.values != 0.).astype('uint8')
+        mask = (df.values != 0.0).astype('uint8')
         return df, mask
 
 
@@ -88,6 +92,7 @@ class ElectricityBenchmark(_MTSBenchmarkDataset):
         + Sampling rate: 1 hour
         + Missing values: 1.09%
     """
+
     url = 'https://github.com/TorchSpatiotemporal/multivariate-time-series-data/blob/master/electricity/electricity.txt.gz?raw=true'  # noqa
 
     similarity_options = None
@@ -118,6 +123,7 @@ class TrafficBenchmark(_MTSBenchmarkDataset):
         + Sampling rate: 1 hour
         + Missing values: 0.90%
     """
+
     url = 'https://github.com/TorchSpatiotemporal/multivariate-time-series-data/blob/master/traffic/traffic.txt.gz?raw=true'  # noqa
 
     similarity_options = None
@@ -149,6 +155,7 @@ class SolarBenchmark(_MTSBenchmarkDataset):
         + Sampling rate: 10 minutes
         + Missing values: 0.00%
     """
+
     url = 'https://github.com/TorchSpatiotemporal/multivariate-time-series-data/blob/master/solar-energy/solar_AL.txt.gz?raw=true'  # noqa
 
     similarity_options = None
@@ -178,6 +185,7 @@ class ExchangeBenchmark(_MTSBenchmarkDataset):
         + Sampling rate: 1 day
         + Missing values: 0.00%
     """
+
     url = 'https://github.com/TorchSpatiotemporal/multivariate-time-series-data/blob/master/exchange_rate/exchange_rate.txt.gz?raw=true'  # noqa
 
     similarity_options = None

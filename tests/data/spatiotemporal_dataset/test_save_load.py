@@ -1,4 +1,5 @@
-""" save / load roundtrip."""
+"""save / load roundtrip."""
+
 import numpy as np
 import pytest
 import torch
@@ -9,8 +10,9 @@ from .helpers import _grid_target
 
 
 def test_save_load_roundtrip(tmp_path):
-    ds = SpatioTemporalDataset(target=_grid_target(40, 3, 2), window=6,
-                               horizon=3, delay=1)
+    ds = SpatioTemporalDataset(
+        target=_grid_target(40, 3, 2), window=6, horizon=3, delay=1
+    )
     ds.add_covariate('u', _grid_target(40, 3, 1), 't n f')
     path = tmp_path / 'dataset.pt'
     ds.save(str(path))

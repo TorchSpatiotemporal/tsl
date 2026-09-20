@@ -41,6 +41,7 @@ class Elergone(DatetimeDataset):
         root: Root folder for data download.
         freq: Resampling frequency.
     """
+
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00321/LD2011_2014.txt.zip"  # noqa
 
     similarity_options = {'correntropy', 'pearson'}
@@ -48,13 +49,15 @@ class Elergone(DatetimeDataset):
     def __init__(self, root=None, freq=None):
         self.root = root
         df, mask = self.load()
-        super().__init__(target=df,
-                         mask=mask,
-                         freq=freq,
-                         similarity_score='correntropy',
-                         temporal_aggregation='sum',
-                         spatial_aggregation='sum',
-                         name='Electricity')
+        super().__init__(
+            target=df,
+            mask=mask,
+            freq=freq,
+            similarity_score='correntropy',
+            temporal_aggregation='sum',
+            spatial_aggregation='sum',
+            name='Electricity',
+        )
 
     @property
     def raw_file_names(self):
@@ -77,11 +80,7 @@ class Elergone(DatetimeDataset):
         self.maybe_download()
         tsl.logger.info("Building the electricity dataset...")
         path = os.path.join(self.root_dir, 'LD2011_2014.csv')
-        df = pd.read_csv(path,
-                         sep=';',
-                         index_col=0,
-                         parse_dates=True,
-                         decimal=',')
+        df = pd.read_csv(path, sep=';', index_col=0, parse_dates=True, decimal=',')
 
         df.index.freq = df.index.inferred_freq
         path = os.path.join(self.root_dir, 'elergone.h5')
@@ -101,18 +100,16 @@ class Elergone(DatetimeDataset):
         # start, end = idx[0], idx[-1]
         # idx = pd.date_range(start, end, freq='15T')
         # df = df.reindex(index=idx)
-        df /= 4.  # kW -> kWh
+        df /= 4.0  # kW -> kWh
         # drop duplicates
         df = df[~df.index.duplicated(keep='first')]
-        df = df.fillna(0.)
-        mask = (df.values != 0.).astype('uint8')
+        df = df.fillna(0.0)
+        mask = (df.values != 0.0).astype('uint8')
         return df, mask
 
-    def compute_similarity(self,
-                           method: str,
-                           gamma=10,
-                           trainlen=None,
-                           **kwargs) -> Optional[np.ndarray]:
+    def compute_similarity(
+        self, method: str, gamma=10, trainlen=None, **kwargs
+    ) -> Optional[np.ndarray]:
         train_df = self.dataframe()
         mask = self.mask
         if trainlen is not None:

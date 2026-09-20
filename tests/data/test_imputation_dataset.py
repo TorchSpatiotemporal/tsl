@@ -6,15 +6,15 @@ The defining feature of an imputation dataset is that ``window == horizon`` and
 it must impute straight off the input is the input ``mask``: it must be ``False``
 wherever ``eval_mask`` is ``True``. These tests center that no-leak invariant.
 """
+
 import numpy as np
-import pytest
 import torch
 
 from tsl.data import ImputationDataset
 from tsl.data.synch_mode import HORIZON, WINDOW
 
-
 # -- builders ---------------------------------------------------------------
+
 
 def _target(t=12, n=3, f=1):
     return np.arange(t * n * f, dtype='float32').reshape(t, n, f)
@@ -30,11 +30,13 @@ def _eval_mask(t=12, n=3, f=1, cells=((5, 1, 0), (7, 2, 0), (9, 0, 0))):
 def _make(target=None, eval_mask=None, mask=None, window=4, **kwargs):
     target = _target() if target is None else target
     eval_mask = _eval_mask() if eval_mask is None else eval_mask
-    return ImputationDataset(target=target, eval_mask=eval_mask, mask=mask,
-                             window=window, **kwargs)
+    return ImputationDataset(
+        target=target, eval_mask=eval_mask, mask=mask, window=window, **kwargs
+    )
 
 
 # -- window configuration ---------------------------------------------------
+
 
 def test_imputation_window_equals_horizon():
     ds = _make(window=4)
@@ -43,11 +45,14 @@ def test_imputation_window_equals_horizon():
     # horizon aligns with the window: same steps are input and target
     assert ds.horizon_offset == 0
     exp = ds.expand_indices(np.array([0]))
-    assert exp['window'].numpy().ravel().tolist() == \
-        exp['horizon'].numpy().ravel().tolist()
+    assert (
+        exp['window'].numpy().ravel().tolist()
+        == exp['horizon'].numpy().ravel().tolist()
+    )
 
 
 # -- LEAK GUARD: eval values are hidden from the input ----------------------
+
 
 def test_eval_cells_never_valid_in_input_mask():
     # The core invariant: no cell flagged for evaluation is marked valid in the
@@ -77,8 +82,8 @@ def test_explicit_mask_is_intersected_with_eval():
     ds = _make(target=target, eval_mask=eval_mask, mask=user_mask)
     ref = ~eval_mask & user_mask
     assert torch.equal(ds.mask, torch.as_tensor(ref))
-    assert not bool((ds.mask & ds.eval_mask).any())   # leak guard still holds
-    assert not bool(ds.mask[2, 0, 0])                 # user invalid respected
+    assert not bool((ds.mask & ds.eval_mask).any())  # leak guard still holds
+    assert not bool(ds.mask[2, 0, 0])  # user invalid respected
 
 
 def test_item_hides_eval_in_input_keeps_it_in_target():
@@ -98,6 +103,7 @@ def test_item_hides_eval_in_input_keeps_it_in_target():
 
 
 # -- batch-map wiring -------------------------------------------------------
+
 
 def test_eval_mask_is_auxiliary_horizon_not_input():
     ds = _make()

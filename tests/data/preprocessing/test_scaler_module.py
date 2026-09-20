@@ -1,11 +1,11 @@
 """Unit tests for :class:`~tsl.data.preprocessing.scalers.ScalerModule`."""
+
 import numpy as np
 import pytest
 import torch
 
 import tsl
-from tsl.data.preprocessing.scalers import (Scaler, ScalerModule,
-                                            StandardScaler)
+from tsl.data.preprocessing.scalers import Scaler, ScalerModule, StandardScaler
 
 from .helpers import random_target
 
@@ -52,7 +52,7 @@ def test_params_registered_as_buffers():
 
 
 def test_setattr_detaches_and_atleast_1d():
-    mod = ScalerModule(bias=0., scale=1.)
+    mod = ScalerModule(bias=0.0, scale=1.0)
     src = torch.tensor(5.0, requires_grad=True)
     mod.scale = src
     assert mod.scale.ndim >= 1
@@ -65,16 +65,18 @@ def test_setattr_detaches_and_atleast_1d():
 def test_transform_inverse_roundtrip_tensor():
     mod = _module()
     x = torch.randn(5, 3, 2)
-    np.testing.assert_allclose(mod.inverse_transform(mod.transform(x)).numpy(),
-                               x.numpy(), rtol=1e-4)
+    np.testing.assert_allclose(
+        mod.inverse_transform(mod.transform(x)).numpy(), x.numpy(), rtol=1e-4
+    )
 
 
 def test_transform_uses_epsilon():
-    mod = ScalerModule(bias=0., scale=2.0)
+    mod = ScalerModule(bias=0.0, scale=2.0)
     x = torch.tensor([4.0])
     expected = x / (2.0 + tsl.epsilon)
-    np.testing.assert_allclose(mod.transform_tensor(x).numpy(),
-                               expected.numpy(), rtol=1e-6)
+    np.testing.assert_allclose(
+        mod.transform_tensor(x).numpy(), expected.numpy(), rtol=1e-6
+    )
 
 
 def test_transform_recurses_over_dict_and_list():
@@ -82,12 +84,10 @@ def test_transform_recurses_over_dict_and_list():
     x = torch.randn(5, 3, 2)
     out_dict = mod.transform({'a': x})
     assert isinstance(out_dict, dict)
-    np.testing.assert_allclose(out_dict['a'].numpy(),
-                               mod.transform_tensor(x).numpy())
+    np.testing.assert_allclose(out_dict['a'].numpy(), mod.transform_tensor(x).numpy())
     out_list = mod.transform([x])
     assert isinstance(out_list, list)
-    np.testing.assert_allclose(out_list[0].numpy(),
-                               mod.transform_tensor(x).numpy())
+    np.testing.assert_allclose(out_list[0].numpy(), mod.transform_tensor(x).numpy())
 
 
 def test_call_is_transform():
@@ -108,16 +108,14 @@ def test_pattern_axes_and_size_properties():
 
 
 def test_properties_none_when_dim_absent():
-    mod = ScalerModule(bias=torch.zeros(3, 2), scale=torch.ones(3, 2),
-                       pattern='n f')
+    mod = ScalerModule(bias=torch.zeros(3, 2), scale=torch.ones(3, 2), pattern='n f')
     assert mod.t is None  # no 't' in pattern
     assert mod.n == 3
 
 
 def test_multiple_node_dims_raises():
     with pytest.raises(RuntimeError):
-        ScalerModule(bias=torch.zeros(3, 3), scale=torch.ones(3, 3),
-                     pattern='n n')
+        ScalerModule(bias=torch.zeros(3, 3), scale=torch.ones(3, 3), pattern='n n')
 
 
 # -- rearrange ---------------------------------------------------------------
@@ -164,8 +162,7 @@ def test_slice_by_node_index():
     mod = _module(t=5, n=3, f=2, pattern='t n f')
     out = mod.slice(node_index=torch.tensor([0, 2]))
     assert out.bias.size(1) == 2
-    np.testing.assert_allclose(out.bias.numpy(),
-                               mod.bias[:, [0, 2]].numpy())
+    np.testing.assert_allclose(out.bias.numpy(), mod.bias[:, [0, 2]].numpy())
 
 
 def test_slice_by_time_index():

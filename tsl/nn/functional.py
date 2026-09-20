@@ -18,8 +18,9 @@ __all__ = [
 ]
 
 
-def expand_then_cat(tensors: Union[Tuple[Tensor, ...], List[Tensor]],
-                    dim: int = -1) -> Tensor:
+def expand_then_cat(
+    tensors: Union[Tuple[Tensor, ...], List[Tensor]], dim: int = -1
+) -> Tensor:
     """Match the dimensions of tensors in the input list and then concatenate.
 
     Args:
@@ -57,11 +58,13 @@ def gated_tanh(input: Tensor, dim: int = -1) -> Tensor:
 
 
 @torch.jit.script
-def sparse_softmax(src: Tensor,
-                   index: Optional[Tensor] = None,
-                   ptr: Optional[Tensor] = None,
-                   num_nodes: Optional[int] = None,
-                   dim: int = -2) -> Tensor:
+def sparse_softmax(
+    src: Tensor,
+    index: Optional[Tensor] = None,
+    ptr: Optional[Tensor] = None,
+    num_nodes: Optional[int] = None,
+    dim: int = -2,
+) -> Tensor:
     r"""Extension of :func:`~torch_geometric.softmax` with index broadcasting
     to compute a sparsely evaluated softmax over multiple broadcast dimensions.
 
@@ -106,12 +109,14 @@ def sparse_softmax(src: Tensor,
 
 
 @torch.jit.script
-def sparse_multi_head_attention(q: Tensor,
-                                k: Tensor,
-                                v: Tensor,
-                                index: Tensor,
-                                dim_size: Optional[int] = None,
-                                dropout_p: float = 0.):
+def sparse_multi_head_attention(
+    q: Tensor,
+    k: Tensor,
+    v: Tensor,
+    index: Tensor,
+    dim_size: Optional[int] = None,
+    dropout_p: float = 0.0,
+):
     r"""Computes multi-head, scaled, dot product attention on query, key and
     value tensors, applying dropout if a probability greater than 0 is
     specified. Index specifies for each query in q the belonging sequence in the

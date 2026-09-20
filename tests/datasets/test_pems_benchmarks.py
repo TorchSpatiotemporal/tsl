@@ -4,6 +4,7 @@ These come pre-imputed (0% missing), so the mask is opt-in via ``mask_zeros``.
 PeMS04 and PeMS08 additionally carry ``occupancy`` and ``speed`` covariates that
 must stay aligned to the flow target's nodes/timesteps.
 """
+
 import numpy as np
 import pytest
 
@@ -26,8 +27,14 @@ SIM_OPTS = {'distance', 'stcn', 'binary'}
 @pytest.mark.parametrize('cls,n_nodes,_extra', CASES)
 def test_contract(cls, n_nodes, _extra):
     ds = cls()  # mask_zeros defaults to False -> no mask
-    assert_dataset_contract(ds, n_nodes=n_nodes, n_channels=1, has_mask=False,
-                            similarity_options=SIM_OPTS, conn_method='distance')
+    assert_dataset_contract(
+        ds,
+        n_nodes=n_nodes,
+        n_channels=1,
+        has_mask=False,
+        similarity_options=SIM_OPTS,
+        conn_method='distance',
+    )
 
 
 @pytest.mark.parametrize('cls,n_nodes,has_extra', CASES)
@@ -41,8 +48,9 @@ def test_covariates(cls, n_nodes, has_extra):
             cov = getattr(ds, name)
             assert cov.shape[0] == ds.length
             # aligned to the same nodes as the flow target
-            np.testing.assert_array_equal(cov.columns.unique(0),
-                                          ds.target.columns.unique(0))
+            np.testing.assert_array_equal(
+                cov.columns.unique(0), ds.target.columns.unique(0)
+            )
 
 
 @pytest.mark.parametrize('cls,n_nodes', [(PeMS08, 170)])

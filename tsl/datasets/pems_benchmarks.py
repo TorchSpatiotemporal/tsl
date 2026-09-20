@@ -25,12 +25,14 @@ class _PeMS(DatetimeDataset):
         self.mask_zeros = mask_zeros
         # load dataset
         flow, occupancy, speed, dist, mask = self.load(mask_zeros)
-        super().__init__(target=flow,
-                         mask=mask,
-                         freq=freq,
-                         similarity_score="distance",
-                         temporal_aggregation="nearest",
-                         name=self.name)
+        super().__init__(
+            target=flow,
+            mask=mask,
+            freq=freq,
+            similarity_score="distance",
+            temporal_aggregation="nearest",
+            name=self.name,
+        )
         # todo : remove this hack
         if occupancy is not None:
             occupancy.columns = self.target.columns
@@ -56,29 +58,21 @@ class _PeMS(DatetimeDataset):
         fp = np.load(self.raw_files_paths[0])
         data = fp['data']
         fp.close()
-        index = pd.date_range(start=self.start_date,
-                              periods=len(data),
-                              freq='5T')
+        index = pd.date_range(start=self.start_date, periods=len(data), freq='5T')
 
-        df_flow = pd.DataFrame(data=data[..., 0],
-                               index=index).astype('float32')
+        df_flow = pd.DataFrame(data=data[..., 0], index=index).astype('float32')
 
         if data.shape[-1] > 1:
-            df_occ = pd.DataFrame(data=data[..., 1],
-                                  index=index).astype('float32')
+            df_occ = pd.DataFrame(data=data[..., 1], index=index).astype('float32')
 
-            df_speed = pd.DataFrame(data=data[..., 2],
-                                    index=index).astype('float32')
+            df_speed = pd.DataFrame(data=data[..., 2], index=index).astype('float32')
         else:
             df_occ = df_speed = None
 
         # load distance matrix
         path = os.path.join(self.root_dir, 'distance_matrix.npy')
         dist = np.load(path)
-        return df_flow, \
-            df_occ, \
-            df_speed, \
-            dist
+        return df_flow, df_occ, df_speed, dist
 
     def load(self, mask_zeros: bool = True):
         *dfs, dist = self.load_raw()
@@ -132,6 +126,7 @@ class PeMS03(_PeMS):
     Static attributes:
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
+
     name = 'PeMS03'
     start_date = '09-01-2018 00:00'
     num_sensors = 358
@@ -149,8 +144,7 @@ class PeMS03(_PeMS):
         logger.info('Building distance matrix...')
         raw_dist_path = os.path.join(self.root_dir, self.raw_files_paths[1])
         distances = pd.read_csv(raw_dist_path)
-        ids = Path(os.path.join(self.root_dir,
-                                'index.txt')).read_text().splitlines()
+        ids = Path(os.path.join(self.root_dir, 'index.txt')).read_text().splitlines()
         dist = np.ones((num_sensors, num_sensors), dtype=np.float32) * np.inf
         sensor_to_idx = {int(sensor_id): i for i, sensor_id in enumerate(ids)}
         for row in distances.values:
@@ -191,6 +185,7 @@ class PeMS04(_PeMS):
     Static attributes:
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
+
     name = 'PeMS04'
     start_date = '01-01-2018 00:00'
     num_sensors = 307
@@ -225,6 +220,7 @@ class PeMS07(_PeMS):
     Static attributes:
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
+
     name = 'PeMS07'
     start_date = '05-01-2017 00:00'
     num_sensors = 883
@@ -266,6 +262,7 @@ class PeMS08(_PeMS):
     Static attributes:
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
+
     name = 'PeMS08'
     start_date = '07-01-2016 00:00'
     num_sensors = 170

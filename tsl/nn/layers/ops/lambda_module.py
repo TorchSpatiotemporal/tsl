@@ -16,10 +16,10 @@ class Lambda(nn.Module):
         self.__function_src__ = ''
         if function.__name__ == '<lambda>':
             import inspect
+
             src = inspect.getsource(function)
-            src = src[src.find('lambda') + 7:]  # cut from 'lambda ' on
-            src = src[:len(src) - src[::-1].find(')') -
-                      1]  # cut until last ')'
+            src = src[src.find('lambda') + 7 :]  # cut from 'lambda ' on
+            src = src[: len(src) - src[::-1].find(')') - 1]  # cut until last ')'
             self.__function_src__ = src
 
     def extra_repr(self) -> str:

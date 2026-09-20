@@ -12,23 +12,23 @@ from tsl.nn.layers.norm import LayerNorm
 
 
 class SpatiotemporalCrossAttention(MessagePassing):
-
-    def __init__(self,
-                 input_size: Union[int, Tuple[int, int]],
-                 output_size: int,
-                 msg_size: Optional[int] = None,
-                 msg_layers: int = 1,
-                 root_weight: bool = True,
-                 reweigh: Optional[str] = None,
-                 temporal_self_attention: bool = True,
-                 mask_temporal: bool = True,
-                 mask_spatial: bool = True,
-                 norm: bool = True,
-                 dropout: float = 0.,
-                 **kwargs):
+    def __init__(
+        self,
+        input_size: Union[int, Tuple[int, int]],
+        output_size: int,
+        msg_size: Optional[int] = None,
+        msg_layers: int = 1,
+        root_weight: bool = True,
+        reweigh: Optional[str] = None,
+        temporal_self_attention: bool = True,
+        mask_temporal: bool = True,
+        mask_spatial: bool = True,
+        norm: bool = True,
+        dropout: float = 0.0,
+        **kwargs,
+    ):
         kwargs.setdefault('aggr', 'add')
-        super(SpatiotemporalCrossAttention, self).__init__(node_dim=-2,
-                                                           **kwargs)
+        super(SpatiotemporalCrossAttention, self).__init__(node_dim=-2, **kwargs)
 
         # store dimensions
         if isinstance(input_size, int):
@@ -45,14 +45,16 @@ class SpatiotemporalCrossAttention(MessagePassing):
         self.dropout = dropout
 
         if temporal_self_attention:
-            self.self_attention = TemporalMLPAttention(input_size=input_size,
-                                                       output_size=output_size,
-                                                       msg_size=msg_size,
-                                                       msg_layers=msg_layers,
-                                                       reweigh=reweigh,
-                                                       dropout=dropout,
-                                                       root_weight=False,
-                                                       norm=False)
+            self.self_attention = TemporalMLPAttention(
+                input_size=input_size,
+                output_size=output_size,
+                msg_size=msg_size,
+                msg_layers=msg_layers,
+                reweigh=reweigh,
+                dropout=dropout,
+                root_weight=False,
+                norm=False,
+            )
         else:
             self.register_parameter('self_attention', None)
 
@@ -68,9 +70,9 @@ class SpatiotemporalCrossAttention(MessagePassing):
         )
 
         if self.root_weight:
-            self.lin_skip = Linear(self.tgt_size,
-                                   self.output_size,
-                                   bias_initializer='zeros')
+            self.lin_skip = Linear(
+                self.tgt_size, self.output_size, bias_initializer='zeros'
+            )
         else:
             self.register_parameter('lin_skip', None)
 
@@ -90,11 +92,13 @@ class SpatiotemporalCrossAttention(MessagePassing):
         if self.norm is not None:
             self.norm.reset_parameters()
 
-    def forward(self,
-                x: OptPairTensor,
-                edge_index: Adj,
-                edge_weight: OptTensor = None,
-                mask: OptTensor = None):
+    def forward(
+        self,
+        x: OptPairTensor,
+        edge_index: Adj,
+        edge_weight: OptTensor = None,
+        mask: OptTensor = None,
+    ):
         # inputs: [batch, steps, nodes, channels]
         if isinstance(x, Tensor):
             x_src = x_tgt = x
@@ -105,17 +109,18 @@ class SpatiotemporalCrossAttention(MessagePassing):
         n_src, n_tgt = x_src.size(-2), x_tgt.size(-2)
 
         # propagate query, key and value
-        out = self.propagate(x=(x_src, x_tgt),
-                             edge_index=edge_index,
-                             edge_weight=edge_weight,
-                             mask=mask if self.mask_spatial else None,
-                             size=(n_src, n_tgt))
+        out = self.propagate(
+            x=(x_src, x_tgt),
+            edge_index=edge_index,
+            edge_weight=edge_weight,
+            mask=mask if self.mask_spatial else None,
+            size=(n_src, n_tgt),
+        )
 
         if self.self_attention is not None:
             s, t = x_src.size(1), x_tgt.size(1)
             if s == t:
-                attn_mask = ~torch.eye(
-                    t, t, dtype=torch.bool, device=x_tgt.device)
+                attn_mask = ~torch.eye(t, t, dtype=torch.bool, device=x_tgt.device)
             else:
                 attn_mask = None
             temp = self.self_attention(
@@ -134,8 +139,9 @@ class SpatiotemporalCrossAttention(MessagePassing):
 
         return out
 
-    def message(self, x_i: Tensor, x_j: Tensor, edge_weight: OptTensor,
-                mask_j: OptTensor) -> Tensor:
+    def message(
+        self, x_i: Tensor, x_j: Tensor, edge_weight: OptTensor, mask_j: OptTensor
+    ) -> Tensor:
         # [batch, steps, edges, channels]
 
         out = self.cross_attention((x_j, x_i), mask=mask_j)
@@ -146,26 +152,28 @@ class SpatiotemporalCrossAttention(MessagePassing):
 
 
 class HierarchicalSpatiotemporalCrossAttention(MessagePassing):
-
-    def __init__(self,
-                 h_size: int,
-                 z_size: int,
-                 msg_size: Optional[int] = None,
-                 msg_layers: int = 1,
-                 root_weight: bool = True,
-                 reweigh: Optional[str] = None,
-                 update_z_cross: bool = True,
-                 mask_temporal: bool = True,
-                 mask_spatial: bool = True,
-                 norm: bool = True,
-                 dropout: float = 0.,
-                 aggr: str = 'add',
-                 **kwargs):
+    def __init__(
+        self,
+        h_size: int,
+        z_size: int,
+        msg_size: Optional[int] = None,
+        msg_layers: int = 1,
+        root_weight: bool = True,
+        reweigh: Optional[str] = None,
+        update_z_cross: bool = True,
+        mask_temporal: bool = True,
+        mask_spatial: bool = True,
+        norm: bool = True,
+        dropout: float = 0.0,
+        aggr: str = 'add',
+        **kwargs,
+    ):
         self.spatial_aggr = aggr
         if aggr == 'softmax':
             aggr = 'add'
-        super(HierarchicalSpatiotemporalCrossAttention,
-              self).__init__(node_dim=-2, aggr=aggr, **kwargs)
+        super(HierarchicalSpatiotemporalCrossAttention, self).__init__(
+            node_dim=-2, aggr=aggr, **kwargs
+        )
 
         # store dimensions
         self.h_size = h_size
@@ -266,29 +274,24 @@ class HierarchicalSpatiotemporalCrossAttention(MessagePassing):
             self.h_norm.reset_parameters()
             self.z_norm.reset_parameters()
 
-    def forward(self,
-                h: Tensor,
-                z: Tensor,
-                edge_index: Adj,
-                mask: OptTensor = None):
+    def forward(self, h: Tensor, z: Tensor, edge_index: Adj, mask: OptTensor = None):
         # inputs: [batch, steps, nodes, channels]
 
-        z_out = self.zh_self(x=(h, z),
-                             mask=mask if self.mask_temporal else None)
+        z_out = self.zh_self(x=(h, z), mask=mask if self.mask_temporal else None)
         h_self = self.hz_self(x=(z_out, h))
 
         # propagate query, key and value
         n_src, n_tgt = h.size(-2), z.size(-2)
-        h_out = self.propagate(h=h_self,
-                               z=z_out,
-                               edge_index=edge_index,
-                               mask=mask if self.mask_spatial else None,
-                               size=(n_src, n_tgt))
+        h_out = self.propagate(
+            h=h_self,
+            z=z_out,
+            edge_index=edge_index,
+            mask=mask if self.mask_spatial else None,
+            size=(n_src, n_tgt),
+        )
 
         if self._z_cross is not None:
-            z_out = self.aggregate(self._z_cross,
-                                   edge_index[1],
-                                   dim_size=n_tgt)
+            z_out = self.aggregate(self._z_cross, edge_index[1], dim_size=n_tgt)
             self._z_cross = None
 
         # skip connection
@@ -302,44 +305,49 @@ class HierarchicalSpatiotemporalCrossAttention(MessagePassing):
 
         return h_out, z_out
 
-    def h_cross_message(self, h_i: Tensor, z_j: Tensor, index,
-                        size_i) -> Tensor:
+    def h_cross_message(self, h_i: Tensor, z_j: Tensor, index, size_i) -> Tensor:
         # [batch, steps, edges, channels]
         h_cross = self.hz_cross((z_j, h_i))
         if self.spatial_aggr == 'softmax':
             alpha_h = self.lin_alpha_h(h_cross)
-            alpha_h = sparse_softmax(alpha_h,
-                                     index,
-                                     num_nodes=size_i,
-                                     dim=self.node_dim)
+            alpha_h = sparse_softmax(
+                alpha_h, index, num_nodes=size_i, dim=self.node_dim
+            )
             h_cross = alpha_h * h_cross
         return h_cross
 
-    def hz_cross_message(self, h_i: Tensor, h_j: Tensor, z_i: Tensor, index,
-                         size_i, mask_j: OptTensor) -> Tensor:
+    def hz_cross_message(
+        self, h_i: Tensor, h_j: Tensor, z_i: Tensor, index, size_i, mask_j: OptTensor
+    ) -> Tensor:
         # [batch, steps, edges, channels]
         z_cross = self.zh_cross((h_j, z_i), mask=mask_j)
         h_cross = self.hz_cross((z_cross, h_i))
         if self.spatial_aggr == 'softmax':
             # reweigh z
             alpha_z = self.lin_alpha_z(z_cross)
-            alpha_z = sparse_softmax(alpha_z,
-                                     index,
-                                     num_nodes=size_i,
-                                     dim=self.node_dim)
+            alpha_z = sparse_softmax(
+                alpha_z, index, num_nodes=size_i, dim=self.node_dim
+            )
             z_cross = alpha_z * z_cross
             # reweigh h
             alpha_h = self.lin_alpha_h(h_cross)
-            alpha_h = sparse_softmax(alpha_h,
-                                     index,
-                                     num_nodes=size_i,
-                                     dim=self.node_dim)
+            alpha_h = sparse_softmax(
+                alpha_h, index, num_nodes=size_i, dim=self.node_dim
+            )
             h_cross = alpha_h * h_cross
         self._z_cross = z_cross
         return h_cross
 
-    def message(self, h_i: Tensor, h_j: Tensor, z_i: Tensor, z_j: Tensor,
-                index, size_i, mask_j: OptTensor) -> Tensor:
+    def message(
+        self,
+        h_i: Tensor,
+        h_j: Tensor,
+        z_i: Tensor,
+        z_j: Tensor,
+        index,
+        size_i,
+        mask_j: OptTensor,
+    ) -> Tensor:
         if self.zh_cross is not None:
             return self.hz_cross_message(h_i, h_j, z_i, index, size_i, mask_j)
         return self.h_cross_message(h_i, z_j, index, size_i)

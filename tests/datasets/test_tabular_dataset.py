@@ -5,6 +5,7 @@ the (spatial) aggregate/reduce ops.
 Targets are grid-valued (unique value per cell) so any mis-indexing surfaces, and
 every expectation is built independently from numpy, never from the dataset.
 """
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -42,8 +43,11 @@ def test_parse_4d_array_raises():
 
 
 def test_parse_dataframe_single_level_columns():
-    df = pd.DataFrame(np.arange(N_STEPS * N_NODES).reshape(N_STEPS, N_NODES),
-                      columns=['a', 'b', 'c'], dtype='float32')
+    df = pd.DataFrame(
+        np.arange(N_STEPS * N_NODES).reshape(N_STEPS, N_NODES),
+        columns=['a', 'b', 'c'],
+        dtype='float32',
+    )
     ds = TabularDataset(target=df)
     assert ds.n_nodes == N_NODES
     assert ds.n_channels == 1
@@ -57,9 +61,9 @@ def test_parse_dataframe_multiindex_columns():
     assert ds.n_channels == N_CHANNELS
 
 
-@pytest.mark.parametrize('precision,dtype', [(16, 'float16'),
-                                             (32, 'float32'),
-                                             (64, 'float64')])
+@pytest.mark.parametrize(
+    'precision,dtype', [(16, 'float16'), (32, 'float32'), (64, 'float64')]
+)
 def test_precision_conversion(precision, dtype):
     arr = grid_array(N_STEPS, N_NODES, N_CHANNELS, dtype='float64')
     ds = TabularDataset(target=arr, precision=precision)
@@ -214,8 +218,7 @@ def test_get_frame_target_only():
 def test_get_frame_time_and_node_index():
     arr = grid_array(N_STEPS, N_NODES, N_CHANNELS)
     ds = TabularDataset(target=arr)
-    frame, _ = ds.get_frame('target', node_index=[0, 2],
-                            time_index=[1, 3, 5])
+    frame, _ = ds.get_frame('target', node_index=[0, 2], time_index=[1, 3, 5])
     np.testing.assert_array_equal(frame, arr[[1, 3, 5]][:, [0, 2]])
 
 
@@ -226,8 +229,7 @@ def test_get_frame_concatenates_covariate():
     ds.add_covariate('u', cov, 't n f')
     frame, pattern = ds.get_frame(['target', 'u'], cat_dim=-1)
     assert pattern == 't n f'
-    np.testing.assert_array_equal(frame,
-                                  np.concatenate([arr, cov], axis=-1))
+    np.testing.assert_array_equal(frame, np.concatenate([arr, cov], axis=-1))
 
 
 def test_get_frame_channel_selection_on_dataframe():
@@ -329,8 +331,8 @@ def test_fill_nan():
     arr = grid_array(N_STEPS, N_NODES, 1)
     arr[2, 1, 0] = np.nan
     ds = TabularDataset(target=arr)
-    ds.fill_nan_(value=0.)
-    assert ds.numpy()[2, 1, 0] == 0.
+    ds.fill_nan_(value=0.0)
+    assert ds.numpy()[2, 1, 0] == 0.0
     assert not np.isnan(ds.numpy()).any()
 
 

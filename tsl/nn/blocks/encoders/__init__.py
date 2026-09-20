@@ -3,12 +3,10 @@ from .conditional import ConditionalBlock, ConditionalTCNBlock
 from .mlp import MLP, ResidualMLP
 from .mlp_attention import MLPAttention, TemporalMLPAttention
 from .multi import MultiMLP, MultiRNN
-from .recurrent import (AGCRN, DCRNN, RNN, DenseDCRNN, EvolveGCN, GraphConvRNN,
-                        RNNBase)
+from .recurrent import AGCRN, DCRNN, RNN, DenseDCRNN, EvolveGCN, GraphConvRNN, RNNBase
 from .stcn import SpatioTemporalConvNet
 from .tcn import TemporalConvNet
-from .transformer import (SpatioTemporalTransformerLayer, Transformer,
-                          TransformerLayer)
+from .transformer import SpatioTemporalTransformerLayer, Transformer, TransformerLayer
 
 __all__ = [
     'MLP',
@@ -32,7 +30,7 @@ __all__ = [
     'DCRNN',
     'DenseDCRNN',
     'AGCRN',
-    'EvolveGCN'
+    'EvolveGCN',
 ]
 
 enc_classes = __all__[:10]

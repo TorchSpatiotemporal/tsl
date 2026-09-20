@@ -17,23 +17,28 @@ class MLP(nn.Module):
         dropout (float, optional): Dropout probability.
     """
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 output_size=None,
-                 exog_size=None,
-                 n_layers=1,
-                 activation='relu',
-                 dropout=0.):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        output_size=None,
+        exog_size=None,
+        n_layers=1,
+        activation='relu',
+        dropout=0.0,
+    ):
         super(MLP, self).__init__()
 
         if exog_size is not None:
             input_size += exog_size
         layers = [
-            Dense(input_size=input_size if i == 0 else hidden_size,
-                  output_size=hidden_size,
-                  activation=activation,
-                  dropout=dropout) for i in range(n_layers)
+            Dense(
+                input_size=input_size if i == 0 else hidden_size,
+                output_size=hidden_size,
+                activation=activation,
+                dropout=dropout,
+            )
+            for i in range(n_layers)
         ]
         self.mlp = nn.Sequential(*layers)
 
@@ -73,37 +78,43 @@ class ResidualMLP(nn.Module):
             connections for the residuals.
     """
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 output_size=None,
-                 exog_size=None,
-                 n_layers=1,
-                 activation='relu',
-                 dropout=0.,
-                 parametrized_skip=False):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        output_size=None,
+        exog_size=None,
+        n_layers=1,
+        activation='relu',
+        dropout=0.0,
+        parametrized_skip=False,
+    ):
         super(ResidualMLP, self).__init__()
 
         if exog_size is not None:
             input_size += exog_size
 
-        self.layers = nn.ModuleList([
-            nn.Sequential(
-                Dense(input_size=input_size if i == 0 else hidden_size,
-                      output_size=hidden_size,
-                      activation=activation,
-                      dropout=dropout), nn.Linear(hidden_size, hidden_size))
-            for i in range(n_layers)
-        ])
+        self.layers = nn.ModuleList(
+            [
+                nn.Sequential(
+                    Dense(
+                        input_size=input_size if i == 0 else hidden_size,
+                        output_size=hidden_size,
+                        activation=activation,
+                        dropout=dropout,
+                    ),
+                    nn.Linear(hidden_size, hidden_size),
+                )
+                for i in range(n_layers)
+            ]
+        )
 
         self.skip_connections = nn.ModuleList()
         for i in range(n_layers):
             if i == 0 and input_size != output_size:
-                self.skip_connections.append(nn.Linear(input_size,
-                                                       hidden_size))
+                self.skip_connections.append(nn.Linear(input_size, hidden_size))
             elif parametrized_skip:
-                self.skip_connections.append(
-                    nn.Linear(hidden_size, hidden_size))
+                self.skip_connections.append(nn.Linear(hidden_size, hidden_size))
             else:
                 self.skip_connections.append(nn.Identity())
 

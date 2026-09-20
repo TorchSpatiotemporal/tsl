@@ -95,16 +95,18 @@ class Imputer(Predictor):
         scheduler_class: Optional = None,
         scheduler_kwargs: Optional[Mapping] = None,
     ):
-        super(Imputer, self).__init__(model=model,
-                                      model_class=model_class,
-                                      model_kwargs=model_kwargs,
-                                      optim_class=optim_class,
-                                      optim_kwargs=optim_kwargs,
-                                      loss_fn=loss_fn,
-                                      scale_target=scale_target,
-                                      metrics=metrics,
-                                      scheduler_class=scheduler_class,
-                                      scheduler_kwargs=scheduler_kwargs)
+        super(Imputer, self).__init__(
+            model=model,
+            model_class=model_class,
+            model_kwargs=model_kwargs,
+            optim_class=optim_class,
+            optim_kwargs=optim_kwargs,
+            loss_fn=loss_fn,
+            scale_target=scale_target,
+            metrics=metrics,
+            scheduler_class=scheduler_class,
+            scheduler_kwargs=scheduler_kwargs,
+        )
 
         if isinstance(whiten_prob, (list, tuple)):
             self.whiten_prob = torch.tensor(whiten_prob)
@@ -123,7 +125,8 @@ class Imputer(Predictor):
                 "'warm_up_steps' must be an int of time steps to "
                 "be cut at the beginning of the sequence or a "
                 "pair of int if the sequence must be trimmed in a "
-                "bidirectional way.")
+                "bidirectional way."
+            )
 
     def trim_warm_up(self, *args):
         """Trim all tensors in :obj:`args` removing a number of first and last
@@ -131,7 +134,7 @@ class Imputer(Predictor):
         respectively."""
         left, right = self.warm_up_steps
         # assume time in second dimension (after batch dim)
-        trim = lambda s: s[:, left:s.size(1) - right]  # noqa
+        trim = lambda s: s[:, left : s.size(1) - right]  # noqa
         args = recursive_apply(args, trim)
         if len(args) == 1:
             return args[0]
@@ -172,16 +175,16 @@ class Imputer(Predictor):
         if self.impute_only_missing:
             y_hat = torch.where(batch.mask.bool(), batch.y, y_hat)
         # return dict
-        output = dict(**batch.target,
-                      y_hat=y_hat,
-                      mask=batch.mask,
-                      eval_mask=batch.eval_mask)
+        output = dict(
+            **batch.target, y_hat=y_hat, mask=batch.mask, eval_mask=batch.eval_mask
+        )
         return output
 
     def shared_step(self, batch, mask):
         y = y_loss = batch.y
         y_hat = y_hat_loss = self.predict_batch(
-            batch, preprocess=False, postprocess=not self.scale_target)
+            batch, preprocess=False, postprocess=not self.scale_target
+        )
 
         if self.scale_target:
             y_loss = batch.transform['y'].transform(y)

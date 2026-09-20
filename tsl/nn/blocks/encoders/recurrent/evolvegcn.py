@@ -19,15 +19,17 @@ class EvolveGCN(nn.Module):
         activation (str): Activation after each GCN layer.
     """
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 n_layers,
-                 norm,
-                 variant='H',
-                 root_weight=False,
-                 cached=False,
-                 activation='relu'):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        n_layers,
+        norm,
+        variant='H',
+        root_weight=False,
+        cached=False,
+        activation='relu',
+    ):
         super(EvolveGCN, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -42,12 +44,15 @@ class EvolveGCN(nn.Module):
 
         for i in range(self.n_layers):
             self.rnn_cells.append(
-                cell(in_size=self.input_size if i == 0 else self.hidden_size,
-                     out_size=self.hidden_size,
-                     norm=norm,
-                     activation=activation,
-                     root_weight=root_weight,
-                     cached=cached))
+                cell(
+                    in_size=self.input_size if i == 0 else self.hidden_size,
+                    out_size=self.hidden_size,
+                    norm=norm,
+                    activation=activation,
+                    root_weight=root_weight,
+                    cached=cached,
+                )
+            )
 
     def forward(self, x, edge_index, edge_weight=None):
         """"""

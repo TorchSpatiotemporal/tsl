@@ -1,23 +1,24 @@
 """Unit tests for :class:`tsl.data.SpatioTemporalDataModule`."""
+
 import numpy as np
 import pytest
 import torch
-from torch.utils.data import (RandomSampler, SequentialSampler, Subset)
+from torch.utils.data import RandomSampler, SequentialSampler, Subset
 
-from tsl.data import (SpatioTemporalDataModule, SpatioTemporalDataset,
-                      TemporalSplitter)
+from tsl.data import SpatioTemporalDataModule, SpatioTemporalDataset, TemporalSplitter
 from tsl.data.loader import StaticGraphLoader
 from tsl.data.preprocessing.scalers import StandardScaler
 
-
 # -- builders ---------------------------------------------------------------
+
 
 def _ramp_dataset(n_steps=300, n_nodes=3, window=8, horizon=4, mask=None):
     # value = time + node, so per-node stats grow with time -> train != full
-    tgt = (np.arange(n_steps)[:, None, None] * np.ones((1, n_nodes, 1))
-           + np.arange(n_nodes)[None, :, None]).astype('float32')
-    return SpatioTemporalDataset(target=tgt, mask=mask, window=window,
-                                 horizon=horizon)
+    tgt = (
+        np.arange(n_steps)[:, None, None] * np.ones((1, n_nodes, 1))
+        + np.arange(n_nodes)[None, :, None]
+    ).astype('float32')
+    return SpatioTemporalDataset(target=tgt, mask=mask, window=window, horizon=horizon)
 
 
 def _dm(dataset, **kwargs):
@@ -29,6 +30,7 @@ def _dm(dataset, **kwargs):
 # ===========================================================================
 # LEAK GUARD: scalers are fit on the training slice only
 # ===========================================================================
+
 
 def test_scaler_fit_on_train_slice_not_full_series():
     ds = _ramp_dataset()
@@ -52,8 +54,7 @@ def test_train_slice_is_exactly_train_footprint():
     dm = _dm(ds)
     dm.setup()
     expected = ds.expand_indices(np.asarray(dm.trainset.indices), merge=True)
-    assert np.array_equal(np.sort(dm.train_slice.numpy()),
-                          np.sort(expected.numpy()))
+    assert np.array_equal(np.sort(dm.train_slice.numpy()), np.sort(expected.numpy()))
 
 
 def test_mask_scaling_uses_only_valid_train_values():
@@ -91,10 +92,12 @@ def test_fit_stages_refit_scaler_on_train_slice(stage):
     # fit (and manual None) must refit on the train slice, overwriting the
     # preset stats
     train_mean = ds.numpy()[dm.train_slice.numpy()].mean(0, keepdims=True)
-    assert not np.allclose(np.asarray(ds.scalers['target'].bias).ravel(),
-                           bias_before.ravel())
-    assert np.allclose(np.asarray(ds.scalers['target'].bias).ravel(),
-                       train_mean.ravel())
+    assert not np.allclose(
+        np.asarray(ds.scalers['target'].bias).ravel(), bias_before.ravel()
+    )
+    assert np.allclose(
+        np.asarray(ds.scalers['target'].bias).ravel(), train_mean.ravel()
+    )
 
 
 def test_missing_scaler_key_raises():
@@ -108,9 +111,9 @@ def test_scaler_without_splitter_raises_on_fit_stage():
     # scalers require a training slice; without a splitter there is none, so
     # setup() on a fit stage must fail loud instead of silently misbehaving.
     ds = _ramp_dataset()
-    dm = SpatioTemporalDataModule(dataset=ds,
-                                  scalers={'target': StandardScaler(axis=0)},
-                                  batch_size=8)
+    dm = SpatioTemporalDataModule(
+        dataset=ds, scalers={'target': StandardScaler(axis=0)}, batch_size=8
+    )
     with pytest.raises(RuntimeError, match='training slice'):
         dm.setup()
 
@@ -122,9 +125,7 @@ def test_prefit_scaler_without_splitter_works_on_non_fit_stages():
     preset = StandardScaler(axis=0)
     preset.fit(torch.as_tensor(ds.numpy()), keepdims=True)
     bias_before = np.asarray(preset.bias).copy()
-    dm = SpatioTemporalDataModule(dataset=ds,
-                                  scalers={'target': preset},
-                                  batch_size=8)
+    dm = SpatioTemporalDataModule(dataset=ds, scalers={'target': preset}, batch_size=8)
     dm.setup(stage='predict')
     assert np.allclose(np.asarray(ds.scalers['target'].bias), bias_before)
 
@@ -134,33 +135,37 @@ def test_covariate_scalers_slice_by_pattern():
     # static covariate (pattern 'n f') must be fit on the full tensor.
     ds = _ramp_dataset()
     n_steps, n_nodes = 300, 3
-    u_dyn = (np.arange(n_steps)[:, None, None] * np.ones((1, n_nodes, 1))
-             ).astype('float32')  # ramp again -> full != train
+    u_dyn = (np.arange(n_steps)[:, None, None] * np.ones((1, n_nodes, 1))).astype(
+        'float32'
+    )  # ramp again -> full != train
     u_stat = np.arange(n_nodes, dtype='float32').reshape(n_nodes, 1) * 10.0
     ds.add_covariate('u_dyn', u_dyn, pattern='t n f')
     ds.add_covariate('u_stat', u_stat, pattern='n f')
 
-    dm = _dm(ds,
-             scalers={'u_dyn': StandardScaler(axis=0),
-                      'u_stat': StandardScaler(axis=0)})
+    dm = _dm(
+        ds, scalers={'u_dyn': StandardScaler(axis=0), 'u_stat': StandardScaler(axis=0)}
+    )
     dm.setup()
 
     sl = dm.train_slice.numpy()
     # temporal covariate: fit on the train slice only
     dyn_train_mean = u_dyn[sl].mean(0, keepdims=True)
-    assert np.allclose(np.asarray(ds.scalers['u_dyn'].bias).ravel(),
-                       dyn_train_mean.ravel())
-    assert not np.allclose(np.asarray(ds.scalers['u_dyn'].bias).ravel(),
-                           u_dyn.mean(0, keepdims=True).ravel())
+    assert np.allclose(
+        np.asarray(ds.scalers['u_dyn'].bias).ravel(), dyn_train_mean.ravel()
+    )
+    assert not np.allclose(
+        np.asarray(ds.scalers['u_dyn'].bias).ravel(),
+        u_dyn.mean(0, keepdims=True).ravel(),
+    )
     # static covariate: fit on the whole tensor (no accidental t-slicing)
     stat_mean = u_stat.mean(0, keepdims=True)
-    assert np.allclose(np.asarray(ds.scalers['u_stat'].bias).ravel(),
-                       stat_mean.ravel())
+    assert np.allclose(np.asarray(ds.scalers['u_stat'].bias).ravel(), stat_mean.ravel())
 
 
 # ===========================================================================
 # LEAK GUARD: the train loader only draws training samples
 # ===========================================================================
+
 
 def test_train_loader_only_sees_train_samples():
     ds = _ramp_dataset()
@@ -178,6 +183,7 @@ def test_train_loader_only_sees_train_samples():
 # ===========================================================================
 # Module mechanics
 # ===========================================================================
+
 
 def test_sets_and_slices_none_before_setup():
     dm = _dm(_ramp_dataset())
@@ -241,6 +247,7 @@ def test_train_loader_drop_last_only_for_train():
 # Loader-option forwarding
 # ===========================================================================
 
+
 def test_workers_forwarded_to_all_loaders():
     ds = _ramp_dataset()
     dm = _dm(ds, workers=3)
@@ -284,8 +291,7 @@ def test_shuffle_argument_controls_sampler():
     assert isinstance(dm.val_dataloader().sampler, SequentialSampler)
     assert isinstance(dm.test_dataloader().sampler, SequentialSampler)
     # per-call override propagates in both directions
-    assert isinstance(dm.train_dataloader(shuffle=False).sampler,
-                      SequentialSampler)
+    assert isinstance(dm.train_dataloader(shuffle=False).sampler, SequentialSampler)
     assert isinstance(dm.val_dataloader(shuffle=True).sampler, RandomSampler)
 
 

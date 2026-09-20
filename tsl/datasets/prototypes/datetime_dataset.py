@@ -70,32 +70,36 @@ class DatetimeDataset(TabularDataset, TemporalFeaturesMixin):
             "half"), 32 (or "full") or 64 (or "double").
             (default: :obj:`32`)
     """
+
     similarity_options = {'correntropy'}
 
-    def __init__(self,
-                 target: FrameArray,
-                 mask: OptFrameArray = None,
-                 covariates: Optional[Mapping[str, Union[FrameArray, Mapping,
-                                                         Tuple]]] = None,
-                 freq: Optional[str] = None,
-                 similarity_score: Optional[str] = None,
-                 temporal_aggregation: str = 'sum',
-                 spatial_aggregation: str = 'sum',
-                 default_splitting_method: Optional[str] = 'temporal',
-                 sort_index: bool = True,
-                 force_synchronization: bool = True,
-                 name: str = None,
-                 precision: Union[int, str] = 32):
-        super().__init__(target=target,
-                         mask=mask,
-                         covariates=covariates,
-                         similarity_score=similarity_score,
-                         temporal_aggregation=temporal_aggregation,
-                         spatial_aggregation=spatial_aggregation,
-                         default_splitting_method=default_splitting_method,
-                         force_synchronization=force_synchronization,
-                         name=name,
-                         precision=precision)
+    def __init__(
+        self,
+        target: FrameArray,
+        mask: OptFrameArray = None,
+        covariates: Optional[Mapping[str, Union[FrameArray, Mapping, Tuple]]] = None,
+        freq: Optional[str] = None,
+        similarity_score: Optional[str] = None,
+        temporal_aggregation: str = 'sum',
+        spatial_aggregation: str = 'sum',
+        default_splitting_method: Optional[str] = 'temporal',
+        sort_index: bool = True,
+        force_synchronization: bool = True,
+        name: str = None,
+        precision: Union[int, str] = 32,
+    ):
+        super().__init__(
+            target=target,
+            mask=mask,
+            covariates=covariates,
+            similarity_score=similarity_score,
+            temporal_aggregation=temporal_aggregation,
+            spatial_aggregation=spatial_aggregation,
+            default_splitting_method=default_splitting_method,
+            force_synchronization=force_synchronization,
+            name=name,
+            precision=precision,
+        )
 
         if sort_index:
             self.sort()
@@ -124,11 +128,13 @@ class DatetimeDataset(TabularDataset, TemporalFeaturesMixin):
                     attr['value'] = attr['value'].reindex(self.index)
         return self
 
-    def resample_(self,
-                  freq=None,
-                  aggr: str = None,
-                  keep: Literal["first", "last", False] = 'first',
-                  mask_tolerance: float = 0.) -> "DatetimeDataset":
+    def resample_(
+        self,
+        freq=None,
+        aggr: str = None,
+        keep: Literal["first", "last", False] = 'first',
+        mask_tolerance: float = 0.0,
+    ) -> "DatetimeDataset":
         """"""
         freq = to_pandas_freq(freq) if freq is not None else self.freq
         aggr = aggr if aggr is not None else self.temporal_aggregation
@@ -146,7 +152,7 @@ class DatetimeDataset(TabularDataset, TemporalFeaturesMixin):
         # mask_tolerance
         if mask is not None:
             mask = mask[valid_steps].resample(freq)
-            mask = mask.mean() >= (1. - mask_tolerance)
+            mask = mask.mean() >= (1.0 - mask_tolerance)
             self.set_mask(mask)
 
         for name, attr in self._covariates.items():
@@ -156,19 +162,22 @@ class DatetimeDataset(TabularDataset, TemporalFeaturesMixin):
                 value = value[valid_steps].resample(freq).apply(aggr)
             for lvl, dim in enumerate(dims[1:]):
                 if dim == 't':
-                    value = value[valid_steps] \
-                        .resample(freq, axis=1, level=lvl).apply(aggr)
+                    value = (
+                        value[valid_steps].resample(freq, axis=1, level=lvl).apply(aggr)
+                    )
             self._covariates[name]['value'] = value
 
         self.freq = freq
 
         return self
 
-    def resample(self,
-                 freq=None,
-                 aggr: str = None,
-                 keep: Literal["first", "last", False] = 'first',
-                 mask_tolerance: float = 0.) -> "DatetimeDataset":
+    def resample(
+        self,
+        freq=None,
+        aggr: str = None,
+        keep: Literal["first", "last", False] = 'first',
+        mask_tolerance: float = 0.0,
+    ) -> "DatetimeDataset":
         """"""
         self_copy = deepcopy(self)
         self_copy.resample_(freq, aggr, keep, mask_tolerance)

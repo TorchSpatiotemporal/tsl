@@ -39,14 +39,17 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
             computed in the first call.
             (default :obj:`False`)
     """
+
     norm = 'none'
     cached = False
 
-    def __init__(self,
-                 temporal_order: int,
-                 spatial_order: int,
-                 norm: str = 'none',
-                 cached: bool = False):
+    def __init__(
+        self,
+        temporal_order: int,
+        spatial_order: int,
+        norm: str = 'none',
+        cached: bool = False,
+    ):
         super().__init__(aggr="add", node_dim=-2)
         self.temporal_order = temporal_order
         self.spatial_order = spatial_order
@@ -60,16 +63,17 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
         nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
 
     @classmethod
-    def from_params(cls,
-                    filter_params: Tensor,
-                    norm: str = 'none',
-                    cached: bool = False):
+    def from_params(
+        cls, filter_params: Tensor, norm: str = 'none', cached: bool = False
+    ):
         temporal_order = filter_params.shape[1]  # p
         spatial_order = filter_params.shape[0] - 1  # l
-        model = cls(spatial_order=spatial_order,
-                    temporal_order=temporal_order,
-                    norm=norm,
-                    cached=cached)
+        model = cls(
+            spatial_order=spatial_order,
+            temporal_order=temporal_order,
+            norm=norm,
+            cached=cached,
+        )
         model.weight.data.copy_(filter_params)
         return model
 
@@ -86,31 +90,28 @@ class GraphPolyVAR(MessagePassing, NormalizedAdjacencyMixin):
         # x: [*, nodes, channels]
         return matmul(adj_t, x, reduce=self.aggr)
 
-    def forward(self,
-                x: Tensor,
-                edge_index: Adj,
-                edge_weight: Optional[Tensor] = None):
+    def forward(self, x: Tensor, edge_index: Adj, edge_weight: Optional[Tensor] = None):
         """"""
         assert x.shape[-3] >= self.temporal_order  # time steps
         assert x.shape[-1] == 1  # node features
 
         # [b, t>=p, n, f=1] -> [b, n, p]
-        out = rearrange(x[:, -self.temporal_order:],
-                        "... p n f -> ... n (p f)")
+        out = rearrange(x[:, -self.temporal_order :], "... p n f -> ... n (p f)")
 
         if self.norm != 'none':
             edge_index, edge_weight = self.normalize_edge_index(
                 x,
                 edge_index=edge_index,
                 edge_weight=edge_weight,
-                use_cached=self.cached)
+                use_cached=self.cached,
+            )
 
         # [b n p] -> [b n l]
         h = F.linear(out, self.weight)
         for i in range(1, self.spatial_order + 1):
-            h[..., i:] = self.propagate(edge_index=edge_index,
-                                        x=h[..., i:],
-                                        weight=edge_weight)
+            h[..., i:] = self.propagate(
+                edge_index=edge_index, x=h[..., i:], weight=edge_weight
+            )
 
         # [... n l] -> [... t=1 n f=1]
         out = h.sum(axis=-1).unsqueeze(-2).unsqueeze(-1)

@@ -119,9 +119,9 @@ class Splitter:
         self._fitted = False
 
     def lens(self) -> dict:
-        return dict(train_len=self.train_len,
-                    val_len=self.val_len,
-                    test_len=self.test_len)
+        return dict(
+            train_len=self.train_len, val_len=self.val_len, test_len=self.test_len
+        )
 
     def copy(self) -> "Splitter":
         copy = Splitter()
@@ -142,12 +142,14 @@ class CustomSplitter(Splitter):
     r"""Create a :class:`~tsl.data.datamodule.splitters.Splitter` using custom
     validation and test sets splitting functions."""
 
-    def __init__(self,
-                 val_split_fn: Callable = None,
-                 test_split_fn: Callable = None,
-                 val_kwargs: Mapping = None,
-                 test_kwargs: Mapping = None,
-                 mask_test_indices_in_val: bool = True):
+    def __init__(
+        self,
+        val_split_fn: Callable = None,
+        test_split_fn: Callable = None,
+        val_kwargs: Mapping = None,
+        test_kwargs: Mapping = None,
+        mask_test_indices_in_val: bool = True,
+    ):
         super(CustomSplitter, self).__init__()
         self.val_split_fn = val_split_fn
         self.test_split_fn = test_split_fn
@@ -157,13 +159,11 @@ class CustomSplitter(Splitter):
 
     @property
     def val_policy(self):
-        return self.val_split_fn.__name__ if callable(
-            self.val_split_fn) else None
+        return self.val_split_fn.__name__ if callable(self.val_split_fn) else None
 
     @property
     def test_policy(self):
-        return self.test_split_fn.__name__ if callable(
-            self.test_split_fn) else None
+        return self.test_split_fn.__name__ if callable(self.test_split_fn) else None
 
     def fit(self, dataset: SpatioTemporalDataset):
         _, test_idxs = self.test_split_fn(dataset, **self.test_kwargs)
@@ -178,10 +178,12 @@ class FixedIndicesSplitter(Splitter):
     r"""Create a :class:`~tsl.data.datamodule.splitters.Splitter` using fixed
     indices for training, validation and test sets."""
 
-    def __init__(self,
-                 train_idxs: Optional[Index] = None,
-                 val_idxs: Optional[Index] = None,
-                 test_idxs: Optional[Index] = None):
+    def __init__(
+        self,
+        train_idxs: Optional[Index] = None,
+        val_idxs: Optional[Index] = None,
+        test_idxs: Optional[Index] = None,
+    ):
         super(FixedIndicesSplitter, self).__init__()
         self.set_indices(train_idxs, val_idxs, test_idxs)
         self._fitted = True
@@ -199,19 +201,23 @@ class TemporalSplitter(Splitter):
         offset (str): How to size the offset separating the splits so that samples
             do not leak across sets.
 
-            - :obj:`'window'`: separate splits by :obj:`dataset.samples_offset` positions,
-              so their lookback windows just touch. This avoids leakage (no target step shared
-              across splits) as long as the horizon is short enough relative to the window.
-            - :obj:`'sample'`: separate splits by :obj:`ceil(sample_span / stride)` positions,
-              so that adjacent splits share no time step in any role, for any window/horizon/delay/stride.
+            - :obj:`'window'`: separate splits by :obj:`dataset.samples_offset`
+              positions, so their lookback windows just touch. This avoids leakage (no
+              target step shared across splits) as long as the horizon is short enough
+              relative to the window.
+            - :obj:`'sample'`: separate splits by :obj:`ceil(sample_span / stride)`
+              positions, so that adjacent splits share no time step in any role, for
+              any window/horizon/delay/stride.
 
             (default: :obj:`'window'`)
     """
 
-    def __init__(self,
-                 val_len: Union[int, float] = None,
-                 test_len: Union[int, float] = None,
-                 offset: str = 'window'):
+    def __init__(
+        self,
+        val_len: Union[int, float] = None,
+        test_len: Union[int, float] = None,
+        offset: str = 'window',
+    ):
         super(TemporalSplitter, self).__init__()
         self._val_len = val_len
         self._test_len = test_len
@@ -237,18 +243,23 @@ class TemporalSplitter(Splitter):
                 f"{(offset + 1) * dataset.stride} steps < horizon="
                 f"{dataset.horizon} (window={dataset.window}, "
                 f"stride={dataset.stride}): target steps would be shared across "
-                f"splits.")
+                f"splits."
+            )
         elif self.offset == 'sample':
             # Separate the closest split samples by ``ceil(sample_span / stride)``
-            # positions: splits share no time step in any role, for any window/horizon/delay/stride.
+            # positions: splits share no time step in any role,
+            # for any window/horizon/delay/stride.
             offset = int(np.ceil(dataset.sample_span / dataset.stride)) - 1
         else:
-            raise ValueError(f"Unknown offset '{self.offset}', must be "
-                             "'window' or 'sample'.")
+            raise ValueError(
+                f"Unknown offset '{self.offset}', must be 'window' or 'sample'."
+            )
 
-        self.set_indices(idx[:val_start - offset],
-                         idx[val_start:test_start - offset],
-                         idx[test_start:])
+        self.set_indices(
+            idx[: val_start - offset],
+            idx[val_start : test_start - offset],
+            idx[test_start:],
+        )
 
 
 class AtTimeStepSplitter(Splitter):
@@ -300,14 +311,16 @@ class AtTimeStepSplitter(Splitter):
             :obj:`'sample'` or :obj:`'window'`. (default: :obj:`'sample'`)
     """
 
-    def __init__(self,
-                 first_val_ts: Union[Tuple, datetime] = None,
-                 last_val_ts: Union[Tuple, datetime] = None,
-                 first_test_ts: Union[Tuple, datetime] = None,
-                 last_test_ts: Union[Tuple, datetime] = None,
-                 first_train_ts: Union[Tuple, datetime] = None,
-                 last_train_ts: Union[Tuple, datetime] = None,
-                 min_offset: str = 'sample'):
+    def __init__(
+        self,
+        first_val_ts: Union[Tuple, datetime] = None,
+        last_val_ts: Union[Tuple, datetime] = None,
+        first_test_ts: Union[Tuple, datetime] = None,
+        last_test_ts: Union[Tuple, datetime] = None,
+        first_train_ts: Union[Tuple, datetime] = None,
+        last_train_ts: Union[Tuple, datetime] = None,
+        min_offset: str = 'sample',
+    ):
         super(AtTimeStepSplitter, self).__init__()
         self.first_val_ts = first_val_ts
         self.last_val_ts = last_val_ts
@@ -322,13 +335,11 @@ class AtTimeStepSplitter(Splitter):
             raise ValueError(
                 "AtTimeStepSplitter requires a SpatioTemporalDataset with a "
                 "pandas.DatetimeIndex index, but the dataset's index is "
-                f"{type(dataset.index).__name__}.")
+                f"{type(dataset.index).__name__}."
+            )
         offset = self._min_gap(dataset)
         train_idx, val_idx, test_idx = self._resolve_ranges(dataset, offset)
-        self._check_separated(offset,
-                              train=train_idx,
-                              val=val_idx,
-                              test=test_idx)
+        self._check_separated(offset, train=train_idx, val=val_idx, test=test_idx)
         return self.set_indices(train_idx, val_idx, test_idx)
 
     def _min_gap(self, dataset: SpatioTemporalDataset) -> int:
@@ -343,10 +354,12 @@ class AtTimeStepSplitter(Splitter):
                 f"offset='window' separates splits by "
                 f"{offset * dataset.stride} steps < horizon={dataset.horizon} "
                 f"(window={dataset.window}, stride={dataset.stride}): target "
-                f"steps would be shared across splits.")
+                f"steps would be shared across splits."
+            )
             return offset
-        raise ValueError(f"Unknown offset '{self.min_offset}', must be "
-                         "'sample' or 'window'.")
+        raise ValueError(
+            f"Unknown offset '{self.min_offset}', must be 'sample' or 'window'."
+        )
 
     def _resolve_ranges(self, dataset: SpatioTemporalDataset, offset: int):
         """Resolve the train/val/test position ranges, inferring unspecified
@@ -368,13 +381,10 @@ class AtTimeStepSplitter(Splitter):
             return int(idx.max()) if len(idx) else -1
 
         def as_idx(present, start, end):
-            return (np.arange(start, end + 1) if present
-                    else np.array([], dtype=int))
+            return np.arange(start, end + 1) if present else np.array([], dtype=int)
 
-        val_present = (self.first_val_ts is not None
-                       or self.last_val_ts is not None)
-        test_present = (self.first_test_ts is not None
-                        or self.last_test_ts is not None)
+        val_present = self.first_val_ts is not None or self.last_val_ts is not None
+        test_present = self.first_test_ts is not None or self.last_test_ts is not None
         vf, vl = first_pos(self.first_val_ts), last_pos(self.last_val_ts)
         tf, tl = first_pos(self.first_test_ts), last_pos(self.last_test_ts)
         train_last = last_pos(self.last_train_ts)
@@ -391,8 +401,9 @@ class AtTimeStepSplitter(Splitter):
         # unspecified test (no bounds) is left empty.
         test_start, test_end = 0, n - 1
         if test_present:
-            test_start = tf if tf is not None else \
-                (val_end + offset if val_present else 0)
+            test_start = (
+                tf if tf is not None else (val_end + offset if val_present else 0)
+            )
             test_end = tl if tl is not None else n - 1
 
         # Training: starts at the series beginning and ends ``offset`` before the
@@ -403,23 +414,24 @@ class AtTimeStepSplitter(Splitter):
         if train_last is not None:
             train_end = train_last
         else:
-            held_out_starts = ([val_start] if val_present else []) + \
-                              ([test_start] if test_present else [])
-            train_end = (min(held_out_starts) - offset) if held_out_starts \
-                else n - 1
+            held_out_starts = ([val_start] if val_present else []) + (
+                [test_start] if test_present else []
+            )
+            train_end = (min(held_out_starts) - offset) if held_out_starts else n - 1
 
-        return (as_idx(True, train_start, train_end),
-                as_idx(val_present, val_start, val_end),
-                as_idx(test_present, test_start, test_end))
+        return (
+            as_idx(True, train_start, train_end),
+            as_idx(val_present, val_start, val_end),
+            as_idx(test_present, test_start, test_end),
+        )
 
     @staticmethod
     def _check_separated(offset, **splits):
         """Raise if any two splits are closer than ``offset`` positions."""
-        splits = {name: np.asarray(idxs)
-                  for name, idxs in splits.items() if len(idxs)}
+        splits = {name: np.asarray(idxs) for name, idxs in splits.items() if len(idxs)}
         names = list(splits)
         for i, a in enumerate(names):
-            for b in names[i + 1:]:
+            for b in names[i + 1 :]:
                 lo, hi = sorted((splits[a], splits[b]), key=lambda s: s.min())
                 gap = int(hi.min()) - int(lo.max())
                 if gap < offset:
@@ -427,12 +439,15 @@ class AtTimeStepSplitter(Splitter):
                         f"'{a}' and '{b}' splits are not separated enough: they "
                         f"are {gap} positions apart but at least {offset} are "
                         "required to avoid sharing time steps across splits. "
-                        "Adjust the timestamp ranges.")
+                        "Adjust the timestamp ranges."
+                    )
 
 
-def indices_between(dataset: SpatioTemporalDataset,
-                    first_ts: Union[Tuple, datetime] = None,
-                    last_ts: Union[Tuple, datetime] = None):
+def indices_between(
+    dataset: SpatioTemporalDataset,
+    first_ts: Union[Tuple, datetime] = None,
+    last_ts: Union[Tuple, datetime] = None,
+):
     r"""Return the positions of the samples whose prediction horizon falls
     within the :obj:`[first_ts, last_ts)` time interval.
 
@@ -508,8 +523,9 @@ def disjoint_months(dataset, months=None, synch_mode=SynchMode.WINDOW):
         start = dataset.horizon_offset
         end = dataset.horizon_offset + dataset.horizon - 1
     else:
-        raise ValueError("synch_mode can only be one of "
-                         f"{[SynchMode.WINDOW, SynchMode.HORIZON]}")
+        raise ValueError(
+            f"synch_mode can only be one of {[SynchMode.WINDOW, SynchMode.HORIZON]}"
+        )
     # after idxs
     indices = np.asarray(dataset._indices)
     start_in_months = np.in1d(dataset.index[indices + start].month, months)

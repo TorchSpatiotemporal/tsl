@@ -37,8 +37,7 @@ def extract_tar(path: str, folder: str, log: bool = True):
     if log:
         logger.info(f"Extracting {path}")
     with tarfile.open(path, 'r') as tar:
-        for member in tqdm(iterable=tar.getmembers(),
-                           total=len(tar.getmembers())):
+        for member in tqdm(iterable=tar.getmembers(), total=len(tar.getmembers())):
             tar.extract(member=member, path=folder)
 
 
@@ -82,10 +81,9 @@ class DownloadProgressBar(tqdm):
         self.update(b * bsize - self.n)
 
 
-def download_url(url: str,
-                 folder: str,
-                 filename: Optional[str] = None,
-                 log: bool = True):
+def download_url(
+    url: str, folder: str, filename: Optional[str] = None, log: bool = True
+):
     r"""Downloads the content of an URL to a specific folder.
 
     Args:
@@ -111,9 +109,8 @@ def download_url(url: str,
     os.makedirs(folder, exist_ok=True)
 
     # From https://stackoverflow.com/a/53877507
-    with DownloadProgressBar(unit='B',
-                             unit_scale=True,
-                             miniters=1,
-                             desc=url.split('/')[-1]) as t:
+    with DownloadProgressBar(
+        unit='B', unit_scale=True, miniters=1, desc=url.split('/')[-1]
+    ) as t:
         urllib.request.urlretrieve(url, filename=path, reporthook=t.update_to)
     return path

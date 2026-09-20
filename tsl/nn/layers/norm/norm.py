@@ -28,7 +28,8 @@ class Norm(torch.nn.Module):
             norm_layer = nn.Identity
         else:
             raise NotImplementedError(
-                f'"{norm_type}" is not a valid normalization option.')
+                f'"{norm_type}" is not a valid normalization option.'
+            )
 
         self.norm = norm_layer(in_channels, **kwargs)
 
@@ -37,5 +38,4 @@ class Norm(torch.nn.Module):
         return self.norm(x)
 
     def __repr__(self):
-        return (f'{self.__class__.__name__}({self.norm_type},'
-                f' {self.in_channels})')
+        return f'{self.__class__.__name__}({self.norm_type}, {self.in_channels})'

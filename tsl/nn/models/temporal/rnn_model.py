@@ -31,44 +31,53 @@ class RNNModel(BaseModel):
 
     return_type = Tensor
 
-    def __init__(self,
-                 input_size: int,
-                 output_size: int,
-                 horizon: int,
-                 exog_size: int = 0,
-                 hidden_size: int = 32,
-                 ff_size: int = 64,
-                 rec_layers: int = 1,
-                 ff_layers: int = 1,
-                 rec_dropout: float = 0.,
-                 ff_dropout: float = 0.,
-                 cell_type: str = 'gru',
-                 activation: str = 'relu'):
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int,
+        horizon: int,
+        exog_size: int = 0,
+        hidden_size: int = 32,
+        ff_size: int = 64,
+        rec_layers: int = 1,
+        ff_layers: int = 1,
+        rec_dropout: float = 0.0,
+        ff_dropout: float = 0.0,
+        cell_type: str = 'gru',
+        activation: str = 'relu',
+    ):
         super(RNNModel, self).__init__()
 
         if exog_size:
-            self.input_encoder = ConditionalBlock(input_size=input_size,
-                                                  exog_size=exog_size,
-                                                  output_size=hidden_size,
-                                                  activation=activation)
+            self.input_encoder = ConditionalBlock(
+                input_size=input_size,
+                exog_size=exog_size,
+                output_size=hidden_size,
+                activation=activation,
+            )
         else:
             self.input_encoder = nn.Sequential(
-                nn.Linear(input_size, hidden_size), nn.ReLU())
+                nn.Linear(input_size, hidden_size), nn.ReLU()
+            )
 
-        self.rnn = RNN(input_size=hidden_size,
-                       hidden_size=hidden_size,
-                       n_layers=rec_layers,
-                       return_only_last_state=True,
-                       dropout=rec_dropout,
-                       cell=cell_type)
+        self.rnn = RNN(
+            input_size=hidden_size,
+            hidden_size=hidden_size,
+            n_layers=rec_layers,
+            return_only_last_state=True,
+            dropout=rec_dropout,
+            cell=cell_type,
+        )
 
-        self.readout = MLPDecoder(input_size=hidden_size,
-                                  hidden_size=ff_size,
-                                  output_size=output_size,
-                                  horizon=horizon,
-                                  n_layers=ff_layers,
-                                  activation=activation,
-                                  dropout=ff_dropout)
+        self.readout = MLPDecoder(
+            input_size=hidden_size,
+            hidden_size=ff_size,
+            output_size=output_size,
+            horizon=horizon,
+            n_layers=ff_layers,
+            activation=activation,
+            dropout=ff_dropout,
+        )
 
     def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""
@@ -108,32 +117,36 @@ class FCRNNModel(RNNModel):
             (default: :obj:`relu`)
     """
 
-    def __init__(self,
-                 input_size: int,
-                 output_size: int,
-                 horizon: int,
-                 n_nodes: int,
-                 exog_size: Optional[int] = None,
-                 hidden_size: int = 32,
-                 ff_size: int = 64,
-                 rec_layers: int = 1,
-                 ff_layers: int = 1,
-                 rec_dropout: float = 0.,
-                 ff_dropout: float = 0.,
-                 cell_type: str = 'gru',
-                 activation: str = 'relu'):
-        super(FCRNNModel, self).__init__(input_size=input_size * n_nodes,
-                                         output_size=output_size * n_nodes,
-                                         horizon=horizon,
-                                         exog_size=exog_size,
-                                         hidden_size=hidden_size,
-                                         ff_size=ff_size,
-                                         rec_layers=rec_layers,
-                                         ff_layers=ff_layers,
-                                         rec_dropout=rec_dropout,
-                                         ff_dropout=ff_dropout,
-                                         cell_type=cell_type,
-                                         activation=activation)
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int,
+        horizon: int,
+        n_nodes: int,
+        exog_size: Optional[int] = None,
+        hidden_size: int = 32,
+        ff_size: int = 64,
+        rec_layers: int = 1,
+        ff_layers: int = 1,
+        rec_dropout: float = 0.0,
+        ff_dropout: float = 0.0,
+        cell_type: str = 'gru',
+        activation: str = 'relu',
+    ):
+        super(FCRNNModel, self).__init__(
+            input_size=input_size * n_nodes,
+            output_size=output_size * n_nodes,
+            horizon=horizon,
+            exog_size=exog_size,
+            hidden_size=hidden_size,
+            ff_size=ff_size,
+            rec_layers=rec_layers,
+            ff_layers=ff_layers,
+            rec_dropout=rec_dropout,
+            ff_dropout=ff_dropout,
+            cell_type=cell_type,
+            activation=activation,
+        )
 
     def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""

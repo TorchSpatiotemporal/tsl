@@ -70,9 +70,11 @@ class Config(dict):
         with open(filename, 'r') as fp:
             if filename.endswith('.json'):
                 import json
+
                 data = json.load(fp)
             elif filename.endswith('.yaml') or filename.endswith('.yml'):
                 import yaml
+
                 data = yaml.load(fp, Loader=yaml.FullLoader)
             else:
                 raise RuntimeError('Config file format not supported.')

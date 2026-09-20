@@ -99,11 +99,12 @@ target-version = "py38"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
-ignore = ["E203"]
+ignore = ["E203", "E501", "E741"]
 
 [tool.ruff.lint.per-file-ignores]
 "*/__init__.py" = ["F401", "F403", "E402"]
 "tests/test_imports.py" = ["E402", "F401"]
+"tests/*" = ["E731"]
 
 [tool.ruff.format]
 quote-style = "preserve"

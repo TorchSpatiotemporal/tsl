@@ -1,8 +1,7 @@
 import inspect
 import os
 from argparse import ArgumentParser
-from typing import (Any, Callable, List, Mapping, Optional, Sequence, Set,
-                    Type, Union)
+from typing import Any, Callable, List, Mapping, Optional, Sequence, Set, Type, Union
 
 
 def ensure_list(value: Any) -> List:
@@ -20,6 +19,7 @@ def files_exist(files: Sequence[str]) -> bool:
 
 def hash_dict(obj: dict):
     from hashlib import md5
+
     obj = {k: obj[k] for k in sorted(obj)}
     return md5(str(obj).encode()).hexdigest()
 
@@ -37,8 +37,7 @@ def set_property(obj, name, prop_function):
     """
 
     class_name = obj.__class__.__name__
-    new_class = type(class_name, (obj.__class__, ),
-                     {name: property(prop_function)})
+    new_class = type(class_name, (obj.__class__,), {name: property(prop_function)})
     obj.__class__ = new_class
 
 
@@ -54,9 +53,11 @@ def foo_signature(foo: Union[Callable, Type]):
     return {'signature': args, 'has_args': has_args, 'has_kwargs': has_kwargs}
 
 
-def parameters_to_args(foo: Union[Callable, Type],
-                       parser: Optional[ArgumentParser] = None,
-                       exclude_args: Optional[Set] = None):
+def parameters_to_args(
+    foo: Union[Callable, Type],
+    parser: Optional[ArgumentParser] = None,
+    exclude_args: Optional[Set] = None,
+):
     if isinstance(foo, type):
         foo = foo.__init__
     sign = inspect.signature(foo)
@@ -94,18 +95,17 @@ def precision_stoi(precision: Union[int, str]) -> int:
     :obj:`half`=16, :obj:`full`=32, :obj:`double`=64."""
     if isinstance(precision, str):
         precision = dict(half=16, full=32, double=64).get(precision)
-    assert precision in [16, 32, 64], \
-        "precision must be one of 16 (or 'half'), 32 (or 'full') or 64 " \
+    assert precision in [16, 32, 64], (
+        "precision must be one of 16 (or 'half'), 32 (or 'full') or 64 "
         f"(or 'double'). Default is 32, invalid input '{precision}'."
+    )
     return precision
 
 
 def remove_files(directory: str, extension: str = '.ckpt'):
     """Remove files of specific extension from a directory"""
     files_in_directory = os.listdir(directory)
-    filtered_files = [
-        file for file in files_in_directory if file.endswith(extension)
-    ]
+    filtered_files = [file for file in files_in_directory if file.endswith(extension)]
     for file in filtered_files:
         path_to_file = os.path.join(directory, file)
         os.remove(path_to_file)
@@ -124,8 +124,5 @@ def filter_kwargs(target: Union[Callable, Type], kwargs: Mapping):
     """
     signature = foo_signature(target)
     if not signature['has_kwargs']:
-        kwargs = {
-            k: v
-            for k, v in kwargs.items() if k in signature['signature']
-        }
+        kwargs = {k: v for k, v in kwargs.items() if k in signature['signature']}
     return kwargs

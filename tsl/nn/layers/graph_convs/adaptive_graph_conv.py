@@ -18,15 +18,16 @@ class AdaptiveGraphConv(nn.Module):
         bias: Whether to add a learnable bias.
     """
 
-    def __init__(self,
-                 input_size: int,
-                 emb_size: int,
-                 output_size: int,
-                 num_nodes: int,
-                 bias: bool = True):
+    def __init__(
+        self,
+        input_size: int,
+        emb_size: int,
+        output_size: int,
+        num_nodes: int,
+        bias: bool = True,
+    ):
         super(AdaptiveGraphConv, self).__init__()
-        self.weight = nn.Parameter(
-            torch.Tensor(emb_size, 2, input_size, output_size))
+        self.weight = nn.Parameter(torch.Tensor(emb_size, 2, input_size, output_size))
         self.num_nodes = num_nodes
         if bias:
             self.b = nn.Parameter(torch.Tensor(emb_size, output_size))
@@ -35,7 +36,7 @@ class AdaptiveGraphConv(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        stdv = 1. / math.sqrt(self.weight.size(-1))
+        stdv = 1.0 / math.sqrt(self.weight.size(-1))
         self.weight.data.uniform_(-stdv, stdv)
         if self.b is not None:
             self.b.data.zero_()

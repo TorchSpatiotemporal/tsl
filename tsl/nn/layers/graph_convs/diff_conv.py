@@ -5,32 +5,33 @@ from torch import Tensor, nn
 from torch_geometric.nn import MessagePassing
 from torch_geometric.typing import Adj, OptTensor
 from torch_geometric.utils.num_nodes import maybe_num_nodes
-from torch_sparse import SparseTensor
+from torch_sparse import SparseTensor, matmul
 from torch_sparse import cat as cat_sparse
-from torch_sparse import matmul
 
 from tsl.nn.utils import get_functional_activation
 from tsl.ops.connectivity import asymmetric_norm, transpose
 
 
-def diff_conv_gso(edge_index: Tensor,
-                  edge_weight: OptTensor = None,
-                  k: int = 2,
-                  num_nodes: int = None,
-                  add_backward: bool = True):
+def diff_conv_gso(
+    edge_index: Tensor,
+    edge_weight: OptTensor = None,
+    k: int = 2,
+    num_nodes: int = None,
+    add_backward: bool = True,
+):
     if isinstance(edge_index, Tensor):
         # transpose
         col, row = edge_index
         num_nodes = maybe_num_nodes(edge_index, num_nodes)
-        adj = SparseTensor(row=row,
-                           col=col,
-                           value=edge_weight,
-                           sparse_sizes=(num_nodes, num_nodes))
+        adj = SparseTensor(
+            row=row, col=col, value=edge_weight, sparse_sizes=(num_nodes, num_nodes)
+        )
     elif isinstance(edge_index, SparseTensor):
         adj = edge_index
     else:
-        raise RuntimeError("Edge index must be (edge_index, edge_weight) "
-                           "tuple or SparseTensor.")
+        raise RuntimeError(
+            "Edge index must be (edge_index, edge_weight) tuple or SparseTensor."
+        )
 
     # normalize
     adj0, _ = asymmetric_norm(adj, dim=1, num_nodes=num_nodes)
@@ -40,10 +41,7 @@ def diff_conv_gso(edge_index: Tensor,
         out.append(adj0 @ out[-1])
 
     if add_backward:
-        out_bwd = DiffConv.gso(adj.t(),
-                               k=k,
-                               num_nodes=num_nodes,
-                               add_backward=False)
+        out_bwd = DiffConv.gso(adj.t(), k=k, num_nodes=num_nodes, add_backward=False)
         return cat_sparse(out + [out_bwd], dim=0)
 
     return cat_sparse(out, dim=0)
@@ -71,14 +69,16 @@ class DiffConv(MessagePassing):
             (default: :obj:`None`)
     """
 
-    def __init__(self,
-                 in_channels: int,
-                 out_channels: int,
-                 k: int,
-                 root_weight: bool = True,
-                 add_backward: bool = True,
-                 bias: bool = True,
-                 activation: str = None):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        k: int,
+        root_weight: bool = True,
+        add_backward: bool = True,
+        bias: bool = True,
+        activation: str = None,
+    ):
         super(DiffConv, self).__init__(aggr="add", node_dim=-2)
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -94,30 +94,33 @@ class DiffConv(MessagePassing):
         if root_weight:
             n_filters += 1
 
-        self.filters = nn.Linear(in_channels * n_filters,
-                                 out_channels,
-                                 bias=bias)
+        self.filters = nn.Linear(in_channels * n_filters, out_channels, bias=bias)
 
         self._support = None
         self.reset_parameters()
 
     @staticmethod
-    def compute_support_index(edge_index: Adj,
-                              edge_weight: OptTensor = None,
-                              num_nodes: int = None,
-                              add_backward: bool = True) -> List:
+    def compute_support_index(
+        edge_index: Adj,
+        edge_weight: OptTensor = None,
+        num_nodes: int = None,
+        add_backward: bool = True,
+    ) -> List:
         """Normalize the connectivity weights and (optionally) add normalized
         backward weights."""
-        norm_edge_index, \
-            norm_edge_weight = asymmetric_norm(edge_index, edge_weight,
-                                               dim=1, num_nodes=num_nodes)
+        norm_edge_index, norm_edge_weight = asymmetric_norm(
+            edge_index, edge_weight, dim=1, num_nodes=num_nodes
+        )
         # Add backward matrices
         if add_backward:
-            return [(norm_edge_index, norm_edge_weight)] + \
-                DiffConv.compute_support_index(transpose(edge_index),
-                                               edge_weight=edge_weight,
-                                               num_nodes=num_nodes,
-                                               add_backward=False)
+            return [
+                (norm_edge_index, norm_edge_weight)
+            ] + DiffConv.compute_support_index(
+                transpose(edge_index),
+                edge_weight=edge_weight,
+                num_nodes=num_nodes,
+                add_backward=False,
+            )
         # Normalize
         return [(norm_edge_index, norm_edge_weight)]
 
@@ -136,18 +139,20 @@ class DiffConv(MessagePassing):
         # x: [(batch,) nodes, channels]
         return matmul(adj_t, x, reduce=self.aggr)
 
-    def forward(self, x: Tensor, edge_index: Adj,
-                edge_weight: OptTensor = None, cache_support: bool = False) \
-            -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        edge_index: Adj,
+        edge_weight: OptTensor = None,
+        cache_support: bool = False,
+    ) -> Tensor:
         """"""
         # x: [batch, (steps), nodes, nodes]
         n = x.size(-2)
         if self._support is None:
             support = self.compute_support_index(
-                edge_index,
-                edge_weight,
-                add_backward=self.add_backward,
-                num_nodes=n)
+                edge_index, edge_weight, add_backward=self.add_backward, num_nodes=n
+            )
             if cache_support:
                 self._support = support
         else:
@@ -169,4 +174,5 @@ class DiffConv(MessagePassing):
 
 class DiffusionConv(DiffConv):
     """Alias for :class:`~tsl.nn.layers.graph_convs.DiffConv`."""
+
     pass

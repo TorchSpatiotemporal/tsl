@@ -4,14 +4,18 @@ import numpy as np
 import pytest
 
 from tsl.data import AtTimeStepSplitter, TemporalSplitter
-from tsl.data.datamodule.splitters import (at_ts, disjoint_months,
-                                            indices_between, temporal)
+from tsl.data.datamodule.splitters import (
+    at_ts,
+    disjoint_months,
+    indices_between,
+    temporal,
+)
 from tsl.data.synch_mode import SynchMode
 
 from .helpers import _make_dt_dataset, _steps
 
-
 # -- indices_between --------------------------------------------------------
+
 
 def test_indices_between_bounded_range():
     dataset = _make_dt_dataset(window=4, horizon=4, periods=400)
@@ -23,8 +27,9 @@ def test_indices_between_bounded_range():
 
 def test_indices_between_open_bounds_are_supersets():
     dataset = _make_dt_dataset(window=4, horizon=4, periods=400)
-    bounded = set(indices_between(dataset, first_ts=(2019, 3, 1),
-                                  last_ts=(2019, 5, 1)).tolist())
+    bounded = set(
+        indices_between(dataset, first_ts=(2019, 3, 1), last_ts=(2019, 5, 1)).tolist()
+    )
     first_only = set(indices_between(dataset, first_ts=(2019, 3, 1)).tolist())
     last_only = set(indices_between(dataset, last_ts=(2019, 5, 1)).tolist())
     assert bounded <= first_only
@@ -40,14 +45,15 @@ def test_indices_between_no_bounds_returns_all():
 def test_indices_between_accepts_datetime_objects():
     # tuples and datetime objects must map to the same index range.
     dataset = _make_dt_dataset(window=4, horizon=4, periods=400)
-    as_tuples = indices_between(dataset, first_ts=(2019, 3, 1),
-                                last_ts=(2019, 5, 1))
-    as_dt = indices_between(dataset, first_ts=datetime(2019, 3, 1),
-                            last_ts=datetime(2019, 5, 1))
+    as_tuples = indices_between(dataset, first_ts=(2019, 3, 1), last_ts=(2019, 5, 1))
+    as_dt = indices_between(
+        dataset, first_ts=datetime(2019, 3, 1), last_ts=datetime(2019, 5, 1)
+    )
     assert np.array_equal(np.asarray(as_tuples), np.asarray(as_dt))
 
 
 # -- disjoint_months --------------------------------------------------------
+
 
 def _ref_disjoint_months(dataset, months, synch_mode):
     """Independent reference: a sample is ``after`` when the first AND last step
@@ -66,12 +72,11 @@ def _ref_disjoint_months(dataset, months, synch_mode):
 
 
 @pytest.mark.parametrize('window,horizon', [(4, 4), (12, 4), (4, 12), (12, 1)])
-@pytest.mark.parametrize('months,synch_mode',
-                         [([1, 2], SynchMode.WINDOW),
-                          ([7], SynchMode.HORIZON),
-                          ([6, 12], SynchMode.WINDOW)])
-def test_disjoint_months_partition_is_exact(months, synch_mode, window,
-                                            horizon):
+@pytest.mark.parametrize(
+    'months,synch_mode',
+    [([1, 2], SynchMode.WINDOW), ([7], SynchMode.HORIZON), ([6, 12], SynchMode.WINDOW)],
+)
+def test_disjoint_months_partition_is_exact(months, synch_mode, window, horizon):
     dataset = _make_dt_dataset(window=window, horizon=horizon, periods=400)
     prev, after = disjoint_months(dataset, months=months, synch_mode=synch_mode)
     ref_prev, ref_after = _ref_disjoint_months(dataset, months, synch_mode)
@@ -103,6 +108,7 @@ def test_disjoint_months_invalid_synch_mode_raises():
 
 
 # -- aliases ----------------------------------------------------------------
+
 
 def test_aliases():
     # ``Dataset.get_splitter`` resolves a method string via ``getattr`` on this

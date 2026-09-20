@@ -38,16 +38,18 @@ class STIDModel(BaseModel):
             (default: :obj:`0.15`)
     """
 
-    def __init__(self,
-                 input_size: int,
-                 n_nodes: int,
-                 window: int,
-                 horizon: int,
-                 n_exog_emb: Union[Sequence[int], int] = None,
-                 output_size: int = None,
-                 hidden_size: int = 32,
-                 n_layers: int = 3,
-                 dropout: float = 0.15):
+    def __init__(
+        self,
+        input_size: int,
+        n_nodes: int,
+        window: int,
+        horizon: int,
+        n_exog_emb: Union[Sequence[int], int] = None,
+        output_size: int = None,
+        hidden_size: int = 32,
+        n_layers: int = 3,
+        dropout: float = 0.15,
+    ):
         super().__init__()
 
         self.input_size = input_size
@@ -63,7 +65,8 @@ class STIDModel(BaseModel):
         if n_exog_emb is not None:
             n_exog_emb = ensure_list(n_exog_emb)
             self.exog_embs = nn.ModuleList(
-                [NodeEmbedding(size, hidden_size) for size in n_exog_emb])
+                [NodeEmbedding(size, hidden_size) for size in n_exog_emb]
+            )
             mlp_size += len(n_exog_emb) * hidden_size
         self.exog_size = n_exog_emb
 
@@ -71,14 +74,19 @@ class STIDModel(BaseModel):
         self.input_encoder = nn.Linear(input_size * window, hidden_size)
 
         # encoding
-        self.mlp_list = nn.ModuleList([
-            MLP(input_size=mlp_size,
-                hidden_size=mlp_size,
-                output_size=mlp_size,
-                n_layers=1,
-                activation="relu",
-                dropout=dropout) for _ in range(n_layers)
-        ])
+        self.mlp_list = nn.ModuleList(
+            [
+                MLP(
+                    input_size=mlp_size,
+                    hidden_size=mlp_size,
+                    output_size=mlp_size,
+                    n_layers=1,
+                    activation="relu",
+                    dropout=dropout,
+                )
+                for _ in range(n_layers)
+            ]
+        )
 
         # regression
         self.readout = LinearReadout(mlp_size, self.output_size, horizon)
@@ -128,14 +136,16 @@ class STIDModel(BaseModel):
         z = [h, n_emb]
 
         if u is not None:
-            assert (self.exog_size is not None and u.dim() <= 3
-                    and u.size(-1) == len(self.exog_size))
+            assert (
+                self.exog_size is not None
+                and u.dim() <= 3
+                and u.size(-1) == len(self.exog_size)
+            )
             if u.dim() == 3:
                 assert u.size(1) == self.window
                 u = u[:, -1]  # select only last step: b t f -> b 1 f
             for u_idx, u_emb in enumerate(self.exog_embs):
-                t_emb = u_emb(expand=(-1, self.n_nodes, -1),
-                              node_index=u[..., u_idx])
+                t_emb = u_emb(expand=(-1, self.n_nodes, -1), node_index=u[..., u_idx])
                 z.append(t_emb)
 
         z = torch.cat(z, dim=-1)

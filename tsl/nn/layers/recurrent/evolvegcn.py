@@ -14,7 +14,6 @@ from tsl.nn.utils import get_functional_activation
 
 
 class _TopK(torch.nn.Module):
-
     def __init__(self, input_size, k):
         super().__init__()
         self.k = k
@@ -24,7 +23,7 @@ class _TopK(torch.nn.Module):
 
     def reset_parameters(self):
         # Initialize based on the number of rows
-        stdv = 1. / math.sqrt(self.p.size(0))
+        stdv = 1.0 / math.sqrt(self.p.size(0))
         self.p.data.uniform_(-stdv, stdv)
 
     def forward(self, x):
@@ -39,17 +38,16 @@ class _TopK(torch.nn.Module):
 
 
 class _EvolveGCNCell(MessagePassing, NormalizedAdjacencyMixin):
-    r"""
-    """
-
-    def __init__(self,
-                 in_size,
-                 out_size,
-                 norm,
-                 activation='relu',
-                 root_weight=False,
-                 bias=True,
-                 cached=False):
+    def __init__(
+        self,
+        in_size,
+        out_size,
+        norm,
+        activation='relu',
+        root_weight=False,
+        bias=True,
+        cached=False,
+    ):
         super(_EvolveGCNCell, self).__init__(aggr='add')
         self.in_size = in_size
         self.out_size = out_size
@@ -71,7 +69,7 @@ class _EvolveGCNCell(MessagePassing, NormalizedAdjacencyMixin):
             self.register_parameter('skip_con', None)
 
     def reset_parameters(self):
-        std = 1. / math.sqrt(self.out_size)
+        std = 1.0 / math.sqrt(self.out_size)
         self.W0.data.uniform_(-std, std)
         if self.bias is not None:
             torch.nn.init.zeros_(self.bias)
@@ -96,24 +94,29 @@ class EvolveGCNHCell(_EvolveGCNCell):
         bias (bool): Whether to learn a bias.
         cached (bool): Whether to cache normalized edge_weights.
     """
+
     _cached_edge_index: Optional[Tuple[Tensor, Tensor]]
     _cached_adj_t: Optional[SparseTensor]
 
-    def __init__(self,
-                 in_size,
-                 out_size,
-                 norm,
-                 activation='relu',
-                 root_weight=False,
-                 bias=True,
-                 cached=False):
-        super(EvolveGCNHCell, self).__init__(in_size,
-                                             out_size,
-                                             norm=norm,
-                                             activation=activation,
-                                             root_weight=root_weight,
-                                             bias=bias,
-                                             cached=cached)
+    def __init__(
+        self,
+        in_size,
+        out_size,
+        norm,
+        activation='relu',
+        root_weight=False,
+        bias=True,
+        cached=False,
+    ):
+        super(EvolveGCNHCell, self).__init__(
+            in_size,
+            out_size,
+            norm=norm,
+            activation=activation,
+            root_weight=root_weight,
+            bias=bias,
+            cached=cached,
+        )
         self.gru_cell = nn.GRUCell(input_size=in_size, hidden_size=in_size)
         self.pooling_layer = _TopK(input_size=in_size, k=out_size)
         self.reset_parameters()
@@ -126,7 +129,8 @@ class EvolveGCNHCell(_EvolveGCNCell):
     def forward(self, x, h, edge_index, edge_weight=None):
         """"""
         edge_index, edge_weight = self.normalize_edge_index(
-            x, edge_index, edge_weight, use_cached=self.cached)
+            x, edge_index, edge_weight, use_cached=self.cached
+        )
 
         if h is None:
             W = repeat(self.W0, 'din dout -> b din dout', b=x.size(0))
@@ -177,24 +181,29 @@ class EvolveGCNOCell(_EvolveGCNCell):
         bias (bool): Whether to learn a bias.
         cached (bool): Whether to cache normalized edge_weights.
     """
+
     _cached_edge_index: Optional[Tuple[Tensor, Tensor]]
     _cached_adj_t: Optional[SparseTensor]
 
-    def __init__(self,
-                 in_size,
-                 out_size,
-                 norm,
-                 activation='relu',
-                 root_weight=False,
-                 bias=True,
-                 cached=False):
-        super(EvolveGCNOCell, self).__init__(in_size,
-                                             out_size,
-                                             norm=norm,
-                                             activation=activation,
-                                             root_weight=root_weight,
-                                             bias=bias,
-                                             cached=cached)
+    def __init__(
+        self,
+        in_size,
+        out_size,
+        norm,
+        activation='relu',
+        root_weight=False,
+        bias=True,
+        cached=False,
+    ):
+        super(EvolveGCNOCell, self).__init__(
+            in_size,
+            out_size,
+            norm=norm,
+            activation=activation,
+            root_weight=root_weight,
+            bias=bias,
+            cached=cached,
+        )
         self.lstm_cell = nn.LSTMCell(input_size=in_size, hidden_size=in_size)
         self.reset_parameters()
 
@@ -205,7 +214,8 @@ class EvolveGCNOCell(_EvolveGCNCell):
     def forward(self, x, hs, edge_index, edge_weight=None):
         """"""
         edge_index, edge_weight = self.normalize_edge_index(
-            x, edge_index, edge_weight, use_cached=self.cached)
+            x, edge_index, edge_weight, use_cached=self.cached
+        )
 
         if hs is None:
             W = repeat(self.W0, 'din dout -> b din dout', b=x.size(0))

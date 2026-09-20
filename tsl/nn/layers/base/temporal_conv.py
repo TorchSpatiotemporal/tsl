@@ -26,17 +26,19 @@ class TemporalConv(nn.Module):
             the parameters of the filter.
     """
 
-    def __init__(self,
-                 input_channels: int,
-                 output_channels: int,
-                 kernel_size: int,
-                 dilation: int = 1,
-                 stride: int = 1,
-                 bias: bool = True,
-                 padding: Union[int, Tuple[int]] = 0,
-                 causal_pad: bool = True,
-                 weight_norm: bool = False,
-                 channel_last: bool = False):
+    def __init__(
+        self,
+        input_channels: int,
+        output_channels: int,
+        kernel_size: int,
+        dilation: int = 1,
+        stride: int = 1,
+        bias: bool = True,
+        padding: Union[int, Tuple[int]] = 0,
+        causal_pad: bool = True,
+        weight_norm: bool = False,
+        channel_last: bool = False,
+    ):
         super().__init__()
         self.input_channels = input_channels
         self.output_channels = output_channels
@@ -58,19 +60,23 @@ class TemporalConv(nn.Module):
         self.pad_layer = nn.ZeroPad2d(padding)
 
         # We use Conv2d here to accommodate multiple input sequences
-        self.conv = nn.Conv2d(input_channels,
-                              output_channels,
-                              kernel_size=(1, kernel_size),
-                              stride=(1, stride),
-                              padding=(0, 0),
-                              dilation=(1, dilation),
-                              bias=bias)
+        self.conv = nn.Conv2d(
+            input_channels,
+            output_channels,
+            kernel_size=(1, kernel_size),
+            stride=(1, stride),
+            padding=(0, 0),
+            dilation=(1, dilation),
+            bias=bias,
+        )
         if self.weight_norm:
             self.conv = nn.utils.weight_norm(self.conv)
 
     def __repr__(self):
-        s = ('{cls}({input_channels}, {output_channels}, '
-             'kernel_size={kernel_size}, stride={stride}')
+        s = (
+            '{cls}({input_channels}, {output_channels}, '
+            'kernel_size={kernel_size}, stride={stride}'
+        )
         if self.causal_pad:
             s += ', causal_padding={padding}'
         elif self.padding != 0:
@@ -96,17 +102,19 @@ class TemporalConv(nn.Module):
 class GatedTemporalConv(TemporalConv):
     """Temporal convolutional filter with gated tanh connection."""
 
-    def __init__(self,
-                 input_channels: int,
-                 output_channels: int,
-                 kernel_size: int,
-                 dilation: int = 1,
-                 stride: int = 1,
-                 bias: bool = True,
-                 padding: Union[int, Tuple[int]] = 0,
-                 causal_pad: bool = True,
-                 weight_norm: bool = False,
-                 channel_last: bool = False):
+    def __init__(
+        self,
+        input_channels: int,
+        output_channels: int,
+        kernel_size: int,
+        dilation: int = 1,
+        stride: int = 1,
+        bias: bool = True,
+        padding: Union[int, Tuple[int]] = 0,
+        causal_pad: bool = True,
+        weight_norm: bool = False,
+        channel_last: bool = False,
+    ):
         super(GatedTemporalConv, self).__init__(
             input_channels=input_channels,
             output_channels=2 * output_channels,

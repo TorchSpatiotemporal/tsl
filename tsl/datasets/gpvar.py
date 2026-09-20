@@ -13,7 +13,6 @@ from .synthetic import GaussianNoiseSyntheticDataset
 
 
 class _GPVAR(GraphPolyVAR):
-
     def forward(self, x, edge_index, edge_weight=None):
         out = super(_GPVAR, self).forward(x, edge_index, edge_weight)
         return torch.tanh(out)
@@ -38,36 +37,40 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
         name (optional, str): Name of the dataset.
     """
 
-    def __init__(self,
-                 num_communities: int,
-                 num_steps: int,
-                 filter_params: Union[List, Tensor, ndarray],
-                 sigma_noise: float = .2,
-                 norm: str = 'none',
-                 name: str = None):
+    def __init__(
+        self,
+        num_communities: int,
+        num_steps: int,
+        filter_params: Union[List, Tensor, ndarray],
+        sigma_noise: float = 0.2,
+        norm: str = 'none',
+        name: str = None,
+    ):
         if name is None:
             name = "GP-VAR"
         node_idx, edge_index, _ = build_tri_community_graph(
-            num_communities=num_communities)
+            num_communities=num_communities
+        )
         num_nodes = len(node_idx)
         # add self loops
-        edge_index, _ = add_self_loops(edge_index=torch.tensor(edge_index),
-                                       num_nodes=num_nodes)
+        edge_index, _ = add_self_loops(
+            edge_index=torch.tensor(edge_index), num_nodes=num_nodes
+        )
 
         if not isinstance(filter_params, Tensor):
             filter_params = torch.as_tensor(filter_params, dtype=torch.float32)
 
-        filter = _GPVAR.from_params(filter_params=filter_params,
-                                    norm=norm,
-                                    cached=True)
-        super(GPVARDataset, self).__init__(num_features=1,
-                                           num_nodes=num_nodes,
-                                           num_steps=num_steps,
-                                           connectivity=edge_index,
-                                           min_window=filter.temporal_order,
-                                           model=filter,
-                                           sigma_noise=sigma_noise,
-                                           name=name)
+        filter = _GPVAR.from_params(filter_params=filter_params, norm=norm, cached=True)
+        super(GPVARDataset, self).__init__(
+            num_features=1,
+            num_nodes=num_nodes,
+            num_steps=num_steps,
+            connectivity=edge_index,
+            min_window=filter.temporal_order,
+            model=filter,
+            sigma_noise=sigma_noise,
+            name=name,
+        )
 
 
 class GPVARDatasetAZ(GPVARDataset):
@@ -80,6 +83,7 @@ class GPVARDatasetAZ(GPVARDataset):
         root (str, optional): Path to the directory to use for data storage.
             (default: :obj:`None`)
     """
+
     seed = 1234
     NUM_COMMUNITIES = 5
     NUM_STEPS = 30000
@@ -87,14 +91,15 @@ class GPVARDatasetAZ(GPVARDataset):
 
     def __init__(self, root: str = None):
         self.root = root
-        filter_params = [[5., 2.], [-4., 6.], [-1., 0.]]
-        super(GPVARDatasetAZ,
-              self).__init__(num_communities=self.NUM_COMMUNITIES,
-                             num_steps=self.NUM_STEPS,
-                             filter_params=filter_params,
-                             sigma_noise=self.SIGMA_NOISE,
-                             norm='none',
-                             name='GPVAR-AZ')
+        filter_params = [[5.0, 2.0], [-4.0, 6.0], [-1.0, 0.0]]
+        super(GPVARDatasetAZ, self).__init__(
+            num_communities=self.NUM_COMMUNITIES,
+            num_steps=self.NUM_STEPS,
+            filter_params=filter_params,
+            sigma_noise=self.SIGMA_NOISE,
+            norm='none',
+            name='GPVAR-AZ',
+        )
 
     @property
     def required_file_names(self):

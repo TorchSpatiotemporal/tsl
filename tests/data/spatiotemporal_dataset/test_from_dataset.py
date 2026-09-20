@@ -8,11 +8,14 @@ from .helpers import _grid_target
 
 def test_from_dataset_copies_fields_and_filters_covariates():
     target = _grid_target(40, 3, 1)
-    src = TabularDataset(target=target, name='src',
-                         covariates={'u': _grid_target(40, 3, 1),
-                                     'v': _grid_target(40, 3, 1)})
-    ds = SpatioTemporalDataset.from_dataset(src, covariate_keys=['u'],
-                                            window=6, horizon=3)
+    src = TabularDataset(
+        target=target,
+        name='src',
+        covariates={'u': _grid_target(40, 3, 1), 'v': _grid_target(40, 3, 1)},
+    )
+    ds = SpatioTemporalDataset.from_dataset(
+        src, covariate_keys=['u'], window=6, horizon=3
+    )
     # core fields are carried over
     assert ds.name == 'src'
     np.testing.assert_array_equal(ds.numpy(), target)

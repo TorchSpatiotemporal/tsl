@@ -24,9 +24,7 @@ def convert_to_masked_metric(metric_fn, **kwargs):
             metric_kwargs = {'reduction': 'none'}
         else:
             metric_kwargs = dict()
-        return MaskedMetric(metric_fn,
-                            metric_fn_kwargs=metric_kwargs,
-                            **kwargs)
+        return MaskedMetric(metric_fn, metric_fn_kwargs=metric_kwargs, **kwargs)
     assert not len(kwargs)
     return deepcopy(metric_fn)
 
@@ -51,14 +49,16 @@ class MaskedMetric(Metric):
     full_state_update: bool = None
     shape_check: bool = True
 
-    def __init__(self,
-                 metric_fn,
-                 mask_nans=False,
-                 mask_inf=False,
-                 metric_fn_kwargs=None,
-                 at=None,
-                 full_state_update: bool = None,
-                 **kwargs: Any):
+    def __init__(
+        self,
+        metric_fn,
+        mask_nans=False,
+        mask_inf=False,
+        metric_fn_kwargs=None,
+        at=None,
+        full_state_update: bool = None,
+        **kwargs: Any,
+    ):
         # set 'full_state_update' before Metric instantiation
         if full_state_update is not None:
             self.__dict__['full_state_update'] = full_state_update
@@ -75,12 +75,12 @@ class MaskedMetric(Metric):
             self.at = slice(None)
         else:
             self.at = slice(at, at + 1)
-        self.add_state('value',
-                       dist_reduce_fx='sum',
-                       default=torch.tensor(0., dtype=torch.float))
-        self.add_state('numel',
-                       dist_reduce_fx='sum',
-                       default=torch.tensor(0., dtype=torch.float))
+        self.add_state(
+            'value', dist_reduce_fx='sum', default=torch.tensor(0.0, dtype=torch.float)
+        )
+        self.add_state(
+            'numel', dist_reduce_fx='sum', default=torch.tensor(0.0, dtype=torch.float)
+        )
 
     def _check_mask(self, mask, val):
         if mask is None:

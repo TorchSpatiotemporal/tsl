@@ -1,4 +1,5 @@
 """Shared helpers for the :mod:`tsl.datasets` test package."""
+
 import numpy as np
 import pandas as pd
 
@@ -11,18 +12,20 @@ from tsl.datasets.prototypes import Dataset, DatetimeDataset, TabularDataset
 def grid_array(n_steps, n_nodes, n_channels, offset=0, dtype='float32'):
     """Array whose every ``(t, n, f)`` cell holds a unique value."""
     size = n_steps * n_nodes * n_channels
-    return (offset + np.arange(size)).reshape(n_steps, n_nodes,
-                                              n_channels).astype(dtype)
+    return (
+        (offset + np.arange(size)).reshape(n_steps, n_nodes, n_channels).astype(dtype)
+    )
 
 
 def grid_dataframe(n_steps, n_nodes, n_channels, offset=0, index=None):
     """DataFrame backing for a grid target, with a ``(nodes, channels)``
     MultiIndex on the columns."""
     data = grid_array(n_steps, n_nodes, n_channels, offset).reshape(
-        n_steps, n_nodes * n_channels)
+        n_steps, n_nodes * n_channels
+    )
     columns = pd.MultiIndex.from_product(
-        [np.arange(n_nodes), np.arange(n_channels)],
-        names=['nodes', 'channels'])
+        [np.arange(n_nodes), np.arange(n_channels)], names=['nodes', 'channels']
+    )
     if index is None:
         index = np.arange(n_steps)
     return pd.DataFrame(data, index=index, columns=columns)
@@ -33,13 +36,13 @@ def datetime_index(n_steps, freq='1H', start='2020-01-01'):
 
 
 def make_tabular(n_steps=10, n_nodes=3, n_channels=2, **kwargs):
-    return TabularDataset(target=grid_array(n_steps, n_nodes, n_channels),
-                          **kwargs)
+    return TabularDataset(target=grid_array(n_steps, n_nodes, n_channels), **kwargs)
 
 
 def make_datetime(n_steps=24, n_nodes=3, n_channels=1, freq='1H', **kwargs):
-    df = grid_dataframe(n_steps, n_nodes, n_channels,
-                        index=datetime_index(n_steps, freq=freq))
+    df = grid_dataframe(
+        n_steps, n_nodes, n_channels, index=datetime_index(n_steps, freq=freq)
+    )
     return DatetimeDataset(target=df, **kwargs)
 
 
@@ -53,10 +56,10 @@ class DummyDataset(Dataset):
 
     similarity_options = {'fixed'}
 
-    def __init__(self, similarity=None, n_nodes=4, similarity_score='fixed',
-                 **kwargs):
-        self._sim = (np.asarray(similarity, dtype='float32')
-                     if similarity is not None else None)
+    def __init__(self, similarity=None, n_nodes=4, similarity_score='fixed', **kwargs):
+        self._sim = (
+            np.asarray(similarity, dtype='float32') if similarity is not None else None
+        )
         self._n_nodes = n_nodes
         super().__init__(similarity_score=similarity_score, **kwargs)
 
@@ -80,9 +83,15 @@ class DummyDataset(Dataset):
 # -- concrete-dataset contract (used by the download tests) ------------------
 
 
-def assert_dataset_contract(ds, *, n_nodes=None, n_channels=None,
-                            has_mask=None, similarity_options=None,
-                            conn_method=None):
+def assert_dataset_contract(
+    ds,
+    *,
+    n_nodes=None,
+    n_channels=None,
+    has_mask=None,
+    similarity_options=None,
+    conn_method=None,
+):
     """Shared structural contract every concrete dataset must satisfy.
 
     Expectations are passed in (derived independently from each dataset's own
@@ -122,8 +131,9 @@ def assert_dataset_contract(ds, *, n_nodes=None, n_channels=None,
     if conn_method is not None:
         dense = ds.get_connectivity(method=conn_method, layout='dense')
         assert dense.shape == (ds.n_nodes, ds.n_nodes)
-        edge_index, edge_weight = ds.get_connectivity(method=conn_method,
-                                                      layout='edge_index')
+        edge_index, edge_weight = ds.get_connectivity(
+            method=conn_method, layout='edge_index'
+        )
         assert edge_index.shape[0] == 2
         assert edge_index.shape[1] == edge_weight.shape[0]
         coo = ds.get_connectivity(method=conn_method, layout='coo')

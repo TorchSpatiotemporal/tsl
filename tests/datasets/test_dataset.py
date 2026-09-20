@@ -6,6 +6,7 @@ Connectivity expectations are computed by hand from a tiny fixed similarity
 matrix (never read back from ``get_connectivity``), mirroring the golden-rule
 discipline of the SpatioTemporalDataset suite.
 """
+
 import os
 
 import numpy as np
@@ -21,9 +22,7 @@ from tsl.ops.connectivity import adj_to_edge_index
 from .helpers import DummyDataset
 
 # a small symmetric similarity with zero diagonal; every off-diagonal distinct
-SIM = np.array([[0., 1., 2.],
-                [1., 0., 3.],
-                [2., 3., 0.]], dtype='float32')
+SIM = np.array([[0.0, 1.0, 2.0], [1.0, 0.0, 3.0], [2.0, 3.0, 0.0]], dtype='float32')
 
 
 def make(**kwargs):
@@ -75,7 +74,6 @@ def test_root_dir_invalid_type_raises():
 
 def test_required_file_names_default_to_raw():
     class WithRaw(DummyDataset):
-
         @property
         def raw_file_names(self):
             return ['a.csv', 'b.csv']
@@ -86,37 +84,35 @@ def test_required_file_names_default_to_raw():
 
 def test_file_paths_list_form(tmp_path):
     class WithRaw(DummyDataset):
-
         @property
         def raw_file_names(self):
             return ['a.csv', 'b.csv']
 
     ds = WithRaw(similarity=SIM)
     ds.root = str(tmp_path)
-    assert ds.raw_files_paths == [str(tmp_path / 'a.csv'),
-                                  str(tmp_path / 'b.csv')]
+    assert ds.raw_files_paths == [str(tmp_path / 'a.csv'), str(tmp_path / 'b.csv')]
     assert ds.raw_files_paths_list == ds.raw_files_paths
     assert ds.required_files_paths_list == ds.raw_files_paths
 
 
 def test_file_paths_mapping_form(tmp_path):
     class WithMap(DummyDataset):
-
         @property
         def raw_file_names(self):
             return {'x': 'a.csv', 'y': 'b.csv'}
 
     ds = WithMap(similarity=SIM)
     ds.root = str(tmp_path)
-    assert ds.raw_files_paths == {'x': str(tmp_path / 'a.csv'),
-                                  'y': str(tmp_path / 'b.csv')}
+    assert ds.raw_files_paths == {
+        'x': str(tmp_path / 'a.csv'),
+        'y': str(tmp_path / 'b.csv'),
+    }
     # the *_list flavour collapses a mapping to its values
     assert set(ds.raw_files_paths_list) == set(ds.raw_files_paths.values())
 
 
 def test_file_paths_str_form(tmp_path):
     class WithStr(DummyDataset):
-
         @property
         def raw_file_names(self):
             return 'only.csv'
@@ -145,39 +141,36 @@ def test_connectivity_from_similarity():
 
 
 def test_connectivity_binary_weights():
-    adj = make().get_connectivity(method='fixed', binary_weights=True,
-                                  layout='dense')
+    adj = make().get_connectivity(method='fixed', binary_weights=True, layout='dense')
     np.testing.assert_array_equal(adj, (SIM > 0).astype(SIM.dtype))
 
 
 def test_connectivity_threshold():
-    adj = make().get_connectivity(method='fixed', threshold=2., layout='dense')
+    adj = make().get_connectivity(method='fixed', threshold=2.0, layout='dense')
     expected = SIM.copy()
-    expected[expected < 2.] = 0
+    expected[expected < 2.0] = 0
     np.testing.assert_array_equal(adj, expected)
 
 
 def test_connectivity_include_self_false_zeros_diagonal():
-    adj = make().get_connectivity(method='full', include_self=False,
-                                  layout='dense')
+    adj = make().get_connectivity(method='full', include_self=False, layout='dense')
     expected = np.ones((3, 3))
     np.fill_diagonal(expected, 0)
     np.testing.assert_array_equal(adj, expected)
 
 
 def test_connectivity_force_symmetric():
-    asym = np.array([[0., 5., 0.],
-                     [0., 0., 0.],
-                     [0., 0., 0.]], dtype='float32')
-    adj = DummyDataset(similarity=asym).get_connectivity(method='fixed',
-                                                         force_symmetric=True,
-                                                         layout='dense')
+    asym = np.array(
+        [[0.0, 5.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype='float32'
+    )
+    adj = DummyDataset(similarity=asym).get_connectivity(
+        method='fixed', force_symmetric=True, layout='dense'
+    )
     np.testing.assert_array_equal(adj, np.maximum(asym, asym.T))
 
 
 def test_connectivity_normalize_axis():
-    adj = make().get_connectivity(method='fixed', normalize_axis=1,
-                                  layout='dense')
+    adj = make().get_connectivity(method='fixed', normalize_axis=1, layout='dense')
     expected = SIM / (SIM.sum(1, keepdims=True) + tsl.epsilon)
     np.testing.assert_allclose(adj, expected, rtol=1e-6)
 
@@ -185,23 +178,26 @@ def test_connectivity_normalize_axis():
 def test_connectivity_knn():
     # keep only the single strongest incoming neighbour per node (+ self)
     from tsl.ops.similarities import top_k
-    adj = make().get_connectivity(method='fixed', knn=1, include_self=False,
-                                  layout='dense')
+
+    adj = make().get_connectivity(
+        method='fixed', knn=1, include_self=False, layout='dense'
+    )
     expected = top_k(SIM, 1, include_self=False, keep_values=True)
     np.testing.assert_array_equal(adj, expected)
 
 
 def test_connectivity_layout_edge_index():
-    edge_index, edge_weight = make().get_connectivity(method='fixed',
-                                                      layout='edge_index')
+    edge_index, edge_weight = make().get_connectivity(
+        method='fixed', layout='edge_index'
+    )
     exp_ei, exp_ew = adj_to_edge_index(SIM)
     np.testing.assert_array_equal(edge_index, exp_ei)
     np.testing.assert_array_equal(edge_weight, exp_ew)
 
 
-@pytest.mark.parametrize('layout,cls', [('coo', coo_matrix),
-                                        ('csr', csr_matrix),
-                                        ('csc', csc_matrix)])
+@pytest.mark.parametrize(
+    'layout,cls', [('coo', coo_matrix), ('csr', csr_matrix), ('csc', csc_matrix)]
+)
 def test_connectivity_sparse_layouts(layout, cls):
     adj = make().get_connectivity(method='fixed', layout=layout)
     assert isinstance(adj, cls)
@@ -262,7 +258,6 @@ def test_get_splitter_dataset_specific_override():
     sentinel = TemporalSplitter()
 
     class WithSplitter(DummyDataset):
-
         def get_splitter(self, method=None, **kwargs):
             if method == 'custom':
                 return sentinel

@@ -21,6 +21,7 @@ if _HYDRA_AVAILABLE:
     from omegaconf.errors import ConfigAttributeError
 
     from .resolvers import register_resolvers
+
     register_resolvers()
 else:
     hydra = DictConfig = None
@@ -51,7 +52,8 @@ def _pre_experiment_routine(cfg: DictConfig):
     run_args = dict(
         seed=seed,
         # name=hconf.job.name,
-        dir=hconf.runtime.output_dir)
+        dir=hconf.runtime.output_dir,
+    )
     if hconf.get('output_subdir') is not None:
         run_args['tsl_subdir'] = osp.join(cfg.run.dir, hconf.output_subdir)
         # remove hydra conf from logging
@@ -72,8 +74,9 @@ def _pre_experiment_routine(cfg: DictConfig):
     if 'num_threads' in cfg:
         torch.set_num_threads(cfg.num_threads)
 
-    logger.info("\n**** Experiment config ****\n" +
-                OmegaConf.to_yaml(cfg, resolve=True))
+    logger.info(
+        "\n**** Experiment config ****\n" + OmegaConf.to_yaml(cfg, resolve=True)
+    )
 
     return cfg
 
@@ -105,14 +108,18 @@ class Experiment:
             configuration, and act in-place on the configuration.
     """
 
-    def __init__(self,
-                 run_fn: Callable,
-                 config_path: Optional[str] = None,
-                 config_name: Optional[str] = None,
-                 pre_run_hooks: Union[Callable, List[Callable]] = None):
+    def __init__(
+        self,
+        run_fn: Callable,
+        config_path: Optional[str] = None,
+        config_name: Optional[str] = None,
+        pre_run_hooks: Union[Callable, List[Callable]] = None,
+    ):
         if not _HYDRA_AVAILABLE:
-            raise RuntimeError("Install optional dependency 'hydra-core'"
-                               f" to use {self.__class__.__name__}.")
+            raise RuntimeError(
+                "Install optional dependency 'hydra-core'"
+                f" to use {self.__class__.__name__}."
+            )
 
         # store the run configuration
         self.cfg: Optional[DictConfig] = None
@@ -171,14 +178,19 @@ class Experiment:
 
             return decorated_run_fn
 
-        return hydra.main(config_path=self.config_path,
-                          config_name=self.config_name,
-                          version_base=None)(run_fn_decorator(run_fn))
+        return hydra.main(
+            config_path=self.config_path,
+            config_name=self.config_name,
+            version_base=None,
+        )(run_fn_decorator(run_fn))
 
     def __repr__(self):
         return "{}(config_path={}, config_name={}, run_fn={})".format(
-            self.__class__.__name__, self.config_path, self.config_name,
-            self.run_fn.__name__)
+            self.__class__.__name__,
+            self.config_path,
+            self.config_name,
+            self.run_fn.__name__,
+        )
 
     @property
     def run_dir(self):

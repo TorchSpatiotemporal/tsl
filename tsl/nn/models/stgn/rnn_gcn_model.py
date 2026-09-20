@@ -31,43 +31,52 @@ class RNNEncGCNDecModel(BaseModel):
 
     return_type = Tensor
 
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 output_size,
-                 exog_size,
-                 rnn_layers,
-                 gcn_layers,
-                 rnn_dropout,
-                 gcn_dropout,
-                 horizon,
-                 cell_type='gru',
-                 activation='relu'):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        output_size,
+        exog_size,
+        rnn_layers,
+        gcn_layers,
+        rnn_dropout,
+        gcn_dropout,
+        horizon,
+        cell_type='gru',
+        activation='relu',
+    ):
         super(RNNEncGCNDecModel, self).__init__()
 
         if exog_size:
-            self.input_encoder = ConditionalBlock(input_size=input_size,
-                                                  exog_size=exog_size,
-                                                  output_size=hidden_size,
-                                                  activation=activation)
+            self.input_encoder = ConditionalBlock(
+                input_size=input_size,
+                exog_size=exog_size,
+                output_size=hidden_size,
+                activation=activation,
+            )
         else:
             self.input_encoder = nn.Sequential(
-                nn.Linear(input_size, hidden_size), )
+                nn.Linear(input_size, hidden_size),
+            )
 
-        self.encoder = RNN(input_size=hidden_size,
-                           hidden_size=hidden_size,
-                           n_layers=rnn_layers,
-                           return_only_last_state=True,
-                           dropout=rnn_dropout,
-                           cell=cell_type)
+        self.encoder = RNN(
+            input_size=hidden_size,
+            hidden_size=hidden_size,
+            n_layers=rnn_layers,
+            return_only_last_state=True,
+            dropout=rnn_dropout,
+            cell=cell_type,
+        )
 
-        self.decoder = GCNDecoder(input_size=hidden_size,
-                                  hidden_size=hidden_size,
-                                  output_size=output_size,
-                                  horizon=horizon,
-                                  n_layers=gcn_layers,
-                                  activation=activation,
-                                  dropout=gcn_dropout)
+        self.decoder = GCNDecoder(
+            input_size=hidden_size,
+            hidden_size=hidden_size,
+            output_size=output_size,
+            horizon=horizon,
+            n_layers=gcn_layers,
+            activation=activation,
+            dropout=gcn_dropout,
+        )
 
     def forward(self, x, edge_index, edge_weight, u=None, **kwargs):
         """"""

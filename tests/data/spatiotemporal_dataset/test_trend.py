@@ -1,4 +1,5 @@
 """Trend."""
+
 import numpy as np
 import torch
 
@@ -13,13 +14,13 @@ def test_set_trend_injects_into_scaler_bias_and_restores():
     orig_bias = sc.bias.clone()
     trend = np.full((60, 2, 1), 5.0, dtype='float32')
 
-    ds = SpatioTemporalDataset(target=target, window=4, horizon=2,
-                               scalers={'target': sc})
+    ds = SpatioTemporalDataset(
+        target=target, window=4, horizon=2, scalers={'target': sc}
+    )
     ds.set_trend(trend)
     assert ds.trend is not None
     # the trend is combined with the fitted bias, not substituted for it
-    assert torch.allclose(ds.scalers['target'].bias,
-                          orig_bias + torch.as_tensor(trend))
+    assert torch.allclose(ds.scalers['target'].bias, orig_bias + torch.as_tensor(trend))
 
     ds.set_trend(None)
     assert ds.trend is None
@@ -32,8 +33,12 @@ def test_trend_bias_independent_of_call_order():
     orig_bias = fitted_standard_scaler(target).bias.clone()
     trend = np.full((60, 2, 1), 5.0, dtype='float32')
 
-    a = SpatioTemporalDataset(target=target, window=4, horizon=2,
-                              scalers={'target': fitted_standard_scaler(target)})
+    a = SpatioTemporalDataset(
+        target=target,
+        window=4,
+        horizon=2,
+        scalers={'target': fitted_standard_scaler(target)},
+    )
     a.set_trend(trend)
 
     b = SpatioTemporalDataset(target=target, window=4, horizon=2)

@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 from matplotlib import pyplot as plt
+
 from tsl.data import SpatioTemporalDataset, SynchMode
 
 # Plotting functions ###############
@@ -25,6 +26,7 @@ def print_model_size(model):
 
 # Plotting functions ###############
 
+
 def get_darker_shades(base_color, num_shades, darken_factor=0.2):
     """
     Generate progressively darker shades of a color.
@@ -32,8 +34,10 @@ def get_darker_shades(base_color, num_shades, darken_factor=0.2):
     Parameters:
         base_color (str or tuple): The base color as a color name, hex, or RGB tuple.
         num_shades (int): The number of shades to generate.
-        darken_factor (float): The percentage to darken with each step (between 0 and 1).
-                               A factor of 0 means no change; 0.2 means each shade is 20% darker.
+        darken_factor (float): The percentage to darken with each step (between ``0``
+            and ``1``). A factor of ``0`` means no change; ``0.2`` means each shade is
+            20% darker.
+            (default: ``0.2``)
 
     Returns:
         list: A list of RGB tuples representing darker shades.
@@ -43,9 +47,9 @@ def get_darker_shades(base_color, num_shades, darken_factor=0.2):
     darken_factor = 1 - darken_factor
     for i in range(1, num_shades):
         shade = (
-            base_color[0] * (darken_factor ** i),  # Red channel
-            base_color[1] * (darken_factor ** i),  # Green channel
-            base_color[2] * (darken_factor ** i),  # Blue channel
+            base_color[0] * (darken_factor**i),  # Red channel
+            base_color[1] * (darken_factor**i),  # Green channel
+            base_color[2] * (darken_factor**i),  # Blue channel
             base_color[3],  # Alpha channel
         )
         shades.append(shade)
@@ -53,10 +57,10 @@ def get_darker_shades(base_color, num_shades, darken_factor=0.2):
 
 
 def plot_inputs_and_target(
-        dataset: SpatioTemporalDataset,
-        sample_idx: int = 0,
-        node_idx: int = 0,
-        plot_neighbors: bool = False
+    dataset: SpatioTemporalDataset,
+    sample_idx: int = 0,
+    node_idx: int = 0,
+    plot_neighbors: bool = False,
 ) -> None:
     """
     Plots each feature of input tensors on the left, and a single target tensor

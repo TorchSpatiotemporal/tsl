@@ -16,10 +16,9 @@ _PATTERNS = {
 #  PATTERN PARSING ############################################################
 
 
-def check_pattern(pattern: str,
-                  split: bool = False,
-                  ndim: int = None,
-                  include_batch: bool = False) -> Union[str, list]:
+def check_pattern(
+    pattern: str, split: bool = False, ndim: int = None, include_batch: bool = False
+) -> Union[str, list]:
     r"""Check that :attr:`pattern` is allowed. A pattern is a string of tokens
     interleaved with blank spaces, where each token specifies what an axis in a
     tensor refers to. The supported tokens are:
@@ -78,10 +77,12 @@ def check_pattern(pattern: str,
     return ' '.join(pattern_squeezed)
 
 
-def infer_pattern(shape: tuple,
-                  t: Optional[int] = None,
-                  n: Optional[int] = None,
-                  e: Optional[int] = None) -> str:
+def infer_pattern(
+    shape: tuple,
+    t: Optional[int] = None,
+    n: Optional[int] = None,
+    e: Optional[int] = None,
+) -> str:
     out = []
     for dim in shape:
         if t is not None and dim == t:
@@ -122,14 +123,18 @@ def _infer_backend(obj, backend: ModuleType = None):
         return torch
     elif isinstance(obj, np.ndarray):
         return np
-    raise RuntimeError(f"Cannot infer valid backed from {type(obj)}. "
-                       "Expected backends are 'torch' and 'numpy'.")
+    raise RuntimeError(
+        f"Cannot infer valid backed from {type(obj)}. "
+        "Expected backends are 'torch' and 'numpy'."
+    )
 
 
-def _parse_indices(backend,
-                   time_index: Union[List, ndarray, Tensor] = None,
-                   node_index: Union[List, ndarray, Tensor] = None,
-                   edge_mask: Union[List, ndarray, Tensor] = None):
+def _parse_indices(
+    backend,
+    time_index: Union[List, ndarray, Tensor] = None,
+    node_index: Union[List, ndarray, Tensor] = None,
+    edge_mask: Union[List, ndarray, Tensor] = None,
+):
     indices = [time_index, node_index, edge_mask]
     if backend is torch:
         for i, index in enumerate(indices):
@@ -182,21 +187,22 @@ def _get_expand_fn(backend):
     return expand
 
 
-def take(x: Union[np.ndarray, torch.Tensor],
-         pattern: str,
-         time_index: Union[List, ndarray, Tensor] = None,
-         node_index: Union[List, ndarray, Tensor] = None,
-         edge_mask: Union[List, ndarray, Tensor] = None,
-         *,
-         backend: ModuleType = None):
+def take(
+    x: Union[np.ndarray, torch.Tensor],
+    pattern: str,
+    time_index: Union[List, ndarray, Tensor] = None,
+    node_index: Union[List, ndarray, Tensor] = None,
+    edge_mask: Union[List, ndarray, Tensor] = None,
+    *,
+    backend: ModuleType = None,
+):
     backend = _infer_backend(x, backend)
     dims = check_pattern(pattern, split=True)
 
     select = _get_select_fn(backend)
-    time_index, node_index, edge_index = _parse_indices(backend,
-                                                        time_index=time_index,
-                                                        node_index=node_index,
-                                                        edge_mask=edge_mask)
+    time_index, node_index, edge_index = _parse_indices(
+        backend, time_index=time_index, node_index=node_index, edge_mask=edge_mask
+    )
 
     # assume that 't' can only be first dimension, then allow multidimensional
     # temporal indexing
@@ -220,38 +226,42 @@ def take(x: Union[np.ndarray, torch.Tensor],
     return x
 
 
-def broadcast(x: Union[np.ndarray, torch.Tensor],
-              pattern: str,
-              time_index: Union[List, ndarray, Tensor] = None,
-              node_index: Union[List, ndarray, Tensor] = None,
-              edge_mask: Union[List, ndarray, Tensor] = None,
-              *,
-              t: int = 1,
-              n: int = 1,
-              e: int = 1,
-              f: int = 1,
-              backend: ModuleType = None):
+def broadcast(
+    x: Union[np.ndarray, torch.Tensor],
+    pattern: str,
+    time_index: Union[List, ndarray, Tensor] = None,
+    node_index: Union[List, ndarray, Tensor] = None,
+    edge_mask: Union[List, ndarray, Tensor] = None,
+    *,
+    t: int = 1,
+    n: int = 1,
+    e: int = 1,
+    f: int = 1,
+    backend: ModuleType = None,
+):
     # check patterns
     left, rght = pattern.split('->')
     left_dims = check_pattern(left, split=True)
     rght_dims = check_pattern(rght, split=True)
     if not set(left_dims).issubset(rght_dims):
-        raise RuntimeError(f"Shape {left_dims} cannot be "
-                           f"broadcasted to {rght.strip()}.")
+        raise RuntimeError(
+            f"Shape {left_dims} cannot be broadcasted to {rght.strip()}."
+        )
 
     backend = _infer_backend(x, backend)
     select = _get_select_fn(backend)
     expand = _get_expand_fn(backend)
-    time_index, node_index, edge_index = _parse_indices(backend,
-                                                        time_index=time_index,
-                                                        node_index=node_index,
-                                                        edge_mask=edge_mask)
+    time_index, node_index, edge_index = _parse_indices(
+        backend, time_index=time_index, node_index=node_index, edge_mask=edge_mask
+    )
 
     # build indices and default values for broadcasting
-    dim_map = dict(t=t if time_index is None else len(time_index),
-                   n=n if node_index is None else len(node_index),
-                   e=e if edge_index is None else len(edge_index),
-                   f=f)
+    dim_map = dict(
+        t=t if time_index is None else len(time_index),
+        n=n if node_index is None else len(node_index),
+        e=e if edge_index is None else len(edge_index),
+        f=f,
+    )
 
     # assume that 't' can only be first dimension, then allow multidimensional
     # temporal indexing

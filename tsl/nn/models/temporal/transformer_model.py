@@ -35,46 +35,57 @@ class TransformerModel(BaseModel):
 
     return_type = Tensor
 
-    def __init__(self,
-                 input_size: int,
-                 output_size: int,
-                 horizon: int,
-                 exog_size: int = 0,
-                 hidden_size: int = 32,
-                 ff_size: int = 32,
-                 n_heads: int = 1,
-                 n_layers: int = 1,
-                 dropout: float = 0.,
-                 axis: str = 'time',
-                 activation: str = 'elu'):
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int,
+        horizon: int,
+        exog_size: int = 0,
+        hidden_size: int = 32,
+        ff_size: int = 32,
+        n_heads: int = 1,
+        n_layers: int = 1,
+        dropout: float = 0.0,
+        axis: str = 'time',
+        activation: str = 'elu',
+    ):
         super(TransformerModel, self).__init__()
 
         if exog_size:
-            self.input_encoder = ConditionalBlock(input_size=input_size,
-                                                  exog_size=exog_size,
-                                                  output_size=hidden_size,
-                                                  activation=activation)
+            self.input_encoder = ConditionalBlock(
+                input_size=input_size,
+                exog_size=exog_size,
+                output_size=hidden_size,
+                activation=activation,
+            )
         else:
             self.input_encoder = nn.Linear(input_size, hidden_size)
 
         self.pe = PositionalEncoding(hidden_size, max_len=100)
 
         self.transformer_encoder = nn.Sequential(
-            Transformer(input_size=hidden_size,
-                        hidden_size=hidden_size,
-                        ff_size=ff_size,
-                        n_heads=n_heads,
-                        n_layers=n_layers,
-                        activation=activation,
-                        dropout=dropout,
-                        axis=axis), Select(1, -1))
+            Transformer(
+                input_size=hidden_size,
+                hidden_size=hidden_size,
+                ff_size=ff_size,
+                n_heads=n_heads,
+                n_layers=n_layers,
+                activation=activation,
+                dropout=dropout,
+                axis=axis,
+            ),
+            Select(1, -1),
+        )
 
         self.readout = nn.Sequential(
-            MLP(input_size=hidden_size,
+            MLP(
+                input_size=hidden_size,
                 hidden_size=ff_size,
                 output_size=output_size * horizon,
-                dropout=dropout),
-            Rearrange('b n (h f) -> b h n f', f=output_size, h=horizon))
+                dropout=dropout,
+            ),
+            Rearrange('b n (h f) -> b h n f', f=output_size, h=horizon),
+        )
 
     def forward(self, x: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""

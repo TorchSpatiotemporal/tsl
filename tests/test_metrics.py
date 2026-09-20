@@ -26,11 +26,9 @@ DELTA = 1e-6
 @pytest.fixture(scope='module')
 def metric_context():
     torch.manual_seed(0)
-    x = 1.0 + torch.arange(2 * 8 * 2 * 2,
-                           dtype=torch.float32).reshape(2, 8, 2, 2)
-    y = 1.0 + torch.arange(2 * 8 * 2 * 4,
-                           dtype=torch.float32).reshape(2, 8, 2, 4)
-    mask = torch.tensor([0., 1.], dtype=torch.float32).repeat(2, 8, 2, 2)
+    x = 1.0 + torch.arange(2 * 8 * 2 * 2, dtype=torch.float32).reshape(2, 8, 2, 2)
+    y = 1.0 + torch.arange(2 * 8 * 2 * 4, dtype=torch.float32).reshape(2, 8, 2, 4)
+    mask = torch.tensor([0.0, 1.0], dtype=torch.float32).repeat(2, 8, 2, 2)
     mask = mask.reshape(2, 8, 2, 4)
 
     predictor = Predictor(
@@ -51,8 +49,7 @@ def metric_context():
     )
 
     batch = StaticBatch(input={'x': x}, target={'y': y}, mask=mask)
-    y_hat = predictor.predict_batch(batch, preprocess=False,
-                                    postprocess=True).detach()
+    y_hat = predictor.predict_batch(batch, preprocess=False, postprocess=True).detach()
     y, mask = batch.y, batch.get('mask')
 
     metrics_res = predictor.test_metrics(y_hat, y)
@@ -60,22 +57,29 @@ def metric_context():
     masked_metrics_res = predictor.test_metrics(y_hat, y, mask)
     predictor.test_metrics.reset()
 
-    return SimpleNamespace(y_hat=y_hat,
-                           y=y,
-                           mask=mask,
-                           metrics_res=metrics_res,
-                           masked_metrics_res=masked_metrics_res)
+    return SimpleNamespace(
+        y_hat=y_hat,
+        y=y,
+        mask=mask,
+        metrics_res=metrics_res,
+        masked_metrics_res=masked_metrics_res,
+    )
 
 
 def _numpy_context(metric_context):
-    return (torch_to_numpy(metric_context.y_hat),
-            torch_to_numpy(metric_context.y),
-            torch_to_numpy(metric_context.mask))
+    return (
+        torch_to_numpy(metric_context.y_hat),
+        torch_to_numpy(metric_context.y),
+        torch_to_numpy(metric_context.mask),
+    )
 
 
 def _tensor_context(metric_context):
-    return (metric_context.y_hat.clone(), metric_context.y.clone(),
-            metric_context.mask.clone())
+    return (
+        metric_context.y_hat.clone(),
+        metric_context.y.clone(),
+        metric_context.mask.clone(),
+    )
 
 
 def test_mae_metric(metric_context):
@@ -87,9 +91,7 @@ def test_mae_metric(metric_context):
 def test_mae_masked_metric(metric_context):
     y_hat_, y_, mask_ = _numpy_context(metric_context)
     res = npf.mae(y_hat_, y_, mask_.astype(bool))
-    assert np.isclose(metric_context.masked_metrics_res['test_mae'],
-                      res,
-                      atol=DELTA)
+    assert np.isclose(metric_context.masked_metrics_res['test_mae'], res, atol=DELTA)
 
 
 def test_mse_metric(metric_context):
@@ -101,9 +103,7 @@ def test_mse_metric(metric_context):
 def test_mse_masked_metric(metric_context):
     y_hat_, y_, mask_ = _numpy_context(metric_context)
     res = npf.mse(y_hat_, y_, mask_.astype(bool))
-    assert np.isclose(metric_context.masked_metrics_res['test_mse'],
-                      res,
-                      atol=DELTA)
+    assert np.isclose(metric_context.masked_metrics_res['test_mse'], res, atol=DELTA)
 
 
 def test_mape_metric(metric_context):
@@ -121,17 +121,13 @@ def test_smape_metric(metric_context):
 def test_mape_masked_metric(metric_context):
     y_hat_, y_, mask_ = _numpy_context(metric_context)
     res = npf.mape(y_hat_, y_, mask_.astype(bool))
-    assert np.isclose(metric_context.masked_metrics_res['test_mape'],
-                      res,
-                      atol=DELTA)
+    assert np.isclose(metric_context.masked_metrics_res['test_mape'], res, atol=DELTA)
 
 
 def test_smape_masked_metric(metric_context):
     y_hat_, y_, mask_ = _numpy_context(metric_context)
     res = npf.smape(y_hat_, y_, mask_.astype(bool))
-    assert np.isclose(metric_context.masked_metrics_res['test_smape'],
-                      res,
-                      atol=DELTA)
+    assert np.isclose(metric_context.masked_metrics_res['test_smape'], res, atol=DELTA)
 
 
 def test_mre_metric(metric_context):
@@ -143,9 +139,7 @@ def test_mre_metric(metric_context):
 def test_mre_masked_metric(metric_context):
     y_hat_, y_, mask_ = _numpy_context(metric_context)
     res = npf.mre(y_hat_, y_, mask_.astype(bool))
-    assert np.isclose(metric_context.masked_metrics_res['test_mre'],
-                      res,
-                      atol=DELTA)
+    assert np.isclose(metric_context.masked_metrics_res['test_mre'], res, atol=DELTA)
 
 
 def test_mae_functional(metric_context):

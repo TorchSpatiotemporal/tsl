@@ -5,8 +5,8 @@ from tsl.data import SpatioTemporalDataset, TemporalSplitter
 
 from .helpers import CONFIGS, _footprint, _make_dataset, _targets
 
-
 # -- exact-count test (independent reference computation) -------------------
+
 
 def test_temporal_splitter():
     splitter = TemporalSplitter(val_len=0.1, test_len=0.2, offset='window')
@@ -45,6 +45,7 @@ def test_temporal_splitter():
 
 # -- offset='sample': fully disjoint footprints -----------------------------
 
+
 @pytest.mark.parametrize('window,horizon,stride,delay', CONFIGS)
 def test_sample_offset_fully_disjoint(window, horizon, stride, delay):
     dataset = _make_dataset(window, horizon, stride, delay)
@@ -52,36 +53,44 @@ def test_sample_offset_fully_disjoint(window, horizon, stride, delay):
     tr, va, te = idxs['train'], idxs['val'], idxs['test']
     if not (len(tr) and len(va) and len(te)):
         pytest.skip('degenerate split for this config')
-    f_tr, f_va, f_te = (_footprint(dataset, tr),
-                        _footprint(dataset, va),
-                        _footprint(dataset, te))
+    f_tr, f_va, f_te = (
+        _footprint(dataset, tr),
+        _footprint(dataset, va),
+        _footprint(dataset, te),
+    )
     # no time step shared between splits in any role (input or target)
     assert f_tr.isdisjoint(f_va)
     assert f_va.isdisjoint(f_te)
     assert f_tr.isdisjoint(f_te)
 
 
-@pytest.mark.parametrize('window,horizon,stride,delay',
-                         [(12, 12, 1, 0), (12, 6, 2, 0),
-                          (6, 12, 1, 3), (4, 4, 3, -4)])  # last: horizon_offset==0
+@pytest.mark.parametrize(
+    'window,horizon,stride,delay',
+    [(12, 12, 1, 0), (12, 6, 2, 0), (6, 12, 1, 3), (4, 4, 3, -4)],
+)  # last: horizon_offset==0
 @pytest.mark.parametrize('window_lag,horizon_lag', [(2, 1), (1, 3), (2, 3)])
-def test_sample_offset_disjoint_with_lags(window, horizon, stride, delay,
-                                          window_lag, horizon_lag):
-    dataset = _make_dataset(window, horizon, stride, delay,
-                            window_lag=window_lag, horizon_lag=horizon_lag)
+def test_sample_offset_disjoint_with_lags(
+    window, horizon, stride, delay, window_lag, horizon_lag
+):
+    dataset = _make_dataset(
+        window, horizon, stride, delay, window_lag=window_lag, horizon_lag=horizon_lag
+    )
     idxs = TemporalSplitter(0.1, 0.2, offset='sample').split(dataset)
     tr, va, te = idxs['train'], idxs['val'], idxs['test']
     if not (len(tr) and len(va) and len(te)):
         pytest.skip('degenerate split for this config')
-    f_tr, f_va, f_te = (_footprint(dataset, tr),
-                        _footprint(dataset, va),
-                        _footprint(dataset, te))
+    f_tr, f_va, f_te = (
+        _footprint(dataset, tr),
+        _footprint(dataset, va),
+        _footprint(dataset, te),
+    )
     assert f_tr.isdisjoint(f_va)
     assert f_va.isdisjoint(f_te)
     assert f_tr.isdisjoint(f_te)
 
 
 # -- offset='window': never leaks targets when it accepts a config ----------
+
 
 @pytest.mark.parametrize('window,horizon,stride,delay', CONFIGS)
 def test_window_offset_never_leaks_targets(window, horizon, stride, delay):
@@ -119,13 +128,16 @@ def test_window_offset_boundary_is_horizon_eq_window(horizon):
     # stride 1: safe iff horizon <= window. window == horizon passes,
     # window == horizon - 1 fails.
     TemporalSplitter(0.1, 0.2, offset='window').split(
-        _make_dataset(window=horizon, horizon=horizon))
+        _make_dataset(window=horizon, horizon=horizon)
+    )
     with pytest.raises(AssertionError):
         TemporalSplitter(0.1, 0.2, offset='window').split(
-            _make_dataset(window=horizon - 1, horizon=horizon))
+            _make_dataset(window=horizon - 1, horizon=horizon)
+        )
 
 
 # -- edge cases -------------------------------------------------------------
+
 
 def test_zero_val_len_gives_empty_val():
     # val_len=0 is a valid degenerate request: no validation samples, while

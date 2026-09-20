@@ -4,8 +4,11 @@ import torch
 import torch.nn as nn
 from torch import LongTensor, Tensor
 from torch_geometric.typing import Adj, OptTensor
-from torch_geometric.utils import (from_scipy_sparse_matrix, remove_self_loops,
-                                   to_scipy_sparse_matrix)
+from torch_geometric.utils import (
+    from_scipy_sparse_matrix,
+    remove_self_loops,
+    to_scipy_sparse_matrix,
+)
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 from torch_sparse import SparseTensor, remove_diag
 
@@ -17,23 +20,22 @@ from tsl.ops.connectivity import asymmetric_norm, power_series, transpose
 from .dcrnn import DCRNNCell
 
 
-def compute_support(edge_index: Adj,
-                    edge_weight: OptTensor = None,
-                    order: int = 1,
-                    num_nodes: Optional[int] = None,
-                    add_backward: bool = True):
+def compute_support(
+    edge_index: Adj,
+    edge_weight: OptTensor = None,
+    order: int = 1,
+    num_nodes: Optional[int] = None,
+    add_backward: bool = True,
+):
     num_nodes = maybe_num_nodes(edge_index, num_nodes)
     edge_index, edge_weight = remove_self_loops(edge_index, edge_weight)
-    ei, ew = asymmetric_norm(edge_index,
-                             edge_weight,
-                             dim=1,
-                             num_nodes=num_nodes)
+    ei, ew = asymmetric_norm(edge_index, edge_weight, dim=1, num_nodes=num_nodes)
     a = to_scipy_sparse_matrix(ei, ew, num_nodes)
     support = []
     ak = a
     for i in range(order - 1):
         ak = ak * a
-        ak.setdiag(0.)
+        ak.setdiag(0.0)
         ak.eliminate_zeros()
         support.append(ak)
     support = [(ei, ew)] + [from_scipy_sparse_matrix(ak) for ak in support]
@@ -44,13 +46,14 @@ def compute_support(edge_index: Adj,
 
 
 class SpatialDecoder(nn.Module):
-
-    def __init__(self,
-                 input_size: int,
-                 hidden_size: int,
-                 output_size: Optional[int] = None,
-                 exog_size: int = 0,
-                 order: int = 1):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        output_size: Optional[int] = None,
+        exog_size: int = 0,
+        order: int = 1,
+    ):
         super(SpatialDecoder, self).__init__()
 
         self.input_size = input_size
@@ -62,10 +65,9 @@ class SpatialDecoder(nn.Module):
         in_channels = input_size * 2 + hidden_size + exog_size
 
         self.lin_in = nn.Linear(in_channels, hidden_size)
-        self.graph_conv = DiffConv(in_channels=hidden_size,
-                                   out_channels=hidden_size,
-                                   root_weight=False,
-                                   k=1)
+        self.graph_conv = DiffConv(
+            in_channels=hidden_size, out_channels=hidden_size, root_weight=False, k=1
+        )
         self.lin_out = nn.Linear(2 * hidden_size, hidden_size)
         self.read_out = nn.Linear(2 * hidden_size, self.output_size)
         self.activation = nn.PReLU()
@@ -75,15 +77,14 @@ class SpatialDecoder(nn.Module):
         attrs = ', '.join([f'{attr}={getattr(self, attr)}' for attr in attrs])
         return f"{self.__class__.__name__}({attrs})"
 
-    def compute_support(self,
-                        edge_index: LongTensor,
-                        edge_weight: OptTensor = None,
-                        num_nodes: Optional[int] = None,
-                        add_backward: bool = True):
-        ei, ew = asymmetric_norm(edge_index,
-                                 edge_weight,
-                                 dim=1,
-                                 num_nodes=num_nodes)
+    def compute_support(
+        self,
+        edge_index: LongTensor,
+        edge_weight: OptTensor = None,
+        num_nodes: Optional[int] = None,
+        add_backward: bool = True,
+    ):
+        ei, ew = asymmetric_norm(edge_index, edge_weight, dim=1, num_nodes=num_nodes)
         ei, ew = power_series(ei, ew, self.order)
         ei, ew = remove_self_loops(ei, ew)
         if add_backward:
@@ -91,13 +92,15 @@ class SpatialDecoder(nn.Module):
             return (ei, ew), self.compute_support(ei_t, ew_t, num_nodes, False)
         return ei, ew
 
-    def forward(self,
-                x: Tensor,
-                mask: Tensor,
-                h: Tensor,
-                edge_index: Adj,
-                edge_weight: OptTensor = None,
-                u: OptTensor = None):
+    def forward(
+        self,
+        x: Tensor,
+        mask: Tensor,
+        h: Tensor,
+        edge_index: Adj,
+        edge_weight: OptTensor = None,
+        u: OptTensor = None,
+    ):
         # x: [batch, nodes, channels]
         x_in = [x, mask, h]
         if u is not None:
@@ -105,17 +108,15 @@ class SpatialDecoder(nn.Module):
         x_in = torch.cat(x_in, -1)
         x_in = self.lin_in(x_in)
         if self.order > 1:
-            support = self.compute_support(edge_index,
-                                           edge_weight,
-                                           x.size(1),
-                                           add_backward=True)
+            support = self.compute_support(
+                edge_index, edge_weight, x.size(1), add_backward=True
+            )
             self.graph_conv._support = support
             out = self.graph_conv(x_in, edge_index=None)
             self.graph_conv._support = None
         else:
             if isinstance(edge_index, Tensor):
-                edge_index, edge_weight = remove_self_loops(
-                    edge_index, edge_weight)
+                edge_index, edge_weight = remove_self_loops(edge_index, edge_weight)
             elif isinstance(edge_index, SparseTensor):
                 edge_index = remove_diag(edge_index)
             out = self.graph_conv(x_in, edge_index, edge_weight)
@@ -154,16 +155,18 @@ class GRINCell(nn.Module):
             (default: :obj:`0`)
     """
 
-    def __init__(self,
-                 input_size: int,
-                 hidden_size: int,
-                 exog_size: int = 0,
-                 n_layers: int = 1,
-                 n_nodes: Optional[int] = None,
-                 kernel_size: int = 2,
-                 decoder_order: int = 1,
-                 layer_norm: bool = False,
-                 dropout: float = 0.):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        exog_size: int = 0,
+        n_layers: int = 1,
+        n_nodes: Optional[int] = None,
+        kernel_size: int = 2,
+        decoder_order: int = 1,
+        layer_norm: bool = False,
+        dropout: float = 0.0,
+    ):
         super(GRINCell, self).__init__()
 
         self.input_size = input_size
@@ -180,24 +183,28 @@ class GRINCell(nn.Module):
         self.norms = nn.ModuleList()
         for i in range(self.n_layers):
             in_channels = rnn_input_size if i == 0 else self.hidden_size
-            cell = DCRNNCell(input_size=in_channels,
-                             hidden_size=self.hidden_size,
-                             k=kernel_size,
-                             root_weight=True)
+            cell = DCRNNCell(
+                input_size=in_channels,
+                hidden_size=self.hidden_size,
+                k=kernel_size,
+                root_weight=True,
+            )
             self.cells.append(cell)
             norm = LayerNorm(self.hidden_size) if layer_norm else nn.Identity()
             self.norms.append(norm)
 
-        self.dropout = nn.Dropout(dropout) if dropout > 0. else None
+        self.dropout = nn.Dropout(dropout) if dropout > 0.0 else None
 
         # Fist stage readout
         self.first_stage = nn.Linear(self.hidden_size, self.input_size)
 
         # Spatial decoder (rnn_input_size + hidden_size -> hidden_size)
-        self.spatial_decoder = SpatialDecoder(input_size=input_size,
-                                              hidden_size=hidden_size,
-                                              exog_size=exog_size,
-                                              order=decoder_order)
+        self.spatial_decoder = SpatialDecoder(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            exog_size=exog_size,
+            order=decoder_order,
+        )
 
         # Hidden state initialization embedding
         if n_nodes is not None:
@@ -228,13 +235,15 @@ class GRINCell(nn.Module):
                 rnn_in = self.dropout(rnn_in)
         return h
 
-    def forward(self,
-                x: Tensor,
-                edge_index: Adj,
-                edge_weight: OptTensor = None,
-                mask: OptTensor = None,
-                u: OptTensor = None,
-                h: Union[List[Tensor], Tensor] = None):
+    def forward(
+        self,
+        x: Tensor,
+        edge_index: Adj,
+        edge_weight: OptTensor = None,
+        mask: OptTensor = None,
+        u: OptTensor = None,
+        h: Union[List[Tensor], Tensor] = None,
+    ):
         """"""
         # x: [batch, steps, nodes, channels]
         steps = x.size(1)
@@ -263,12 +272,9 @@ class GRINCell(nn.Module):
             x_s = torch.where(m_s.bool(), x_s, xs_hat_1)
             # prepare inputs
             # retrieve maximum information from neighbors
-            xs_hat_2, repr_s = self.spatial_decoder(x_s,
-                                                    m_s,
-                                                    h_s,
-                                                    u=u_s,
-                                                    edge_index=edge_index,
-                                                    edge_weight=edge_weight)
+            xs_hat_2, repr_s = self.spatial_decoder(
+                x_s, m_s, h_s, u=u_s, edge_index=edge_index, edge_weight=edge_weight
+            )
             # readout of imputation state + mask to retrieve imputations
             # prepare inputs
             x_s = torch.where(m_s.bool(), x_s, xs_hat_2)

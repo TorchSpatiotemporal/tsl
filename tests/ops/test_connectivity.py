@@ -1,21 +1,28 @@
 # %%
 import numpy as np
+import pandas as pd
+import pytest
 import torch
 import torch_sparse
+from scipy.sparse import coo_matrix
 from torch_geometric.utils import is_undirected
 from torch_sparse import SparseTensor
 
-import pandas as pd
-import pytest
-from scipy.sparse import coo_matrix
-
-from tsl.ops.connectivity import (adj_to_edge_index, asymmetric_norm,
-                                  convert_torch_connectivity,
-                                  edge_index_to_adj, get_dummy_edge_index,
-                                  infer_backend, maybe_num_nodes,
-                                  normalize_connectivity, parse_connectivity,
-                                  power_series, reduce_graph, transpose,
-                                  weighted_degree)
+from tsl.ops.connectivity import (
+    adj_to_edge_index,
+    asymmetric_norm,
+    convert_torch_connectivity,
+    edge_index_to_adj,
+    get_dummy_edge_index,
+    infer_backend,
+    maybe_num_nodes,
+    normalize_connectivity,
+    parse_connectivity,
+    power_series,
+    reduce_graph,
+    transpose,
+    weighted_degree,
+)
 from tsl.ops.graph_generators import build_circle_graph
 
 num_nodes = 30
@@ -25,12 +32,10 @@ skip_edges = np.copy(edge_index[:, :-1:2])
 skip_edges[1, :] += 1
 num_nodes += 1
 edge_index = np.concatenate([edge_index, skip_edges], 1)
-edge_index, edge_weight = parse_connectivity((edge_index, edge_weight),
-                                             'edge_index',
-                                             num_nodes=num_nodes)
-adj_t = parse_connectivity((edge_index, edge_weight),
-                           'sparse',
-                           num_nodes=num_nodes)
+edge_index, edge_weight = parse_connectivity(
+    (edge_index, edge_weight), 'edge_index', num_nodes=num_nodes
+)
+adj_t = parse_connectivity((edge_index, edge_weight), 'sparse', num_nodes=num_nodes)
 
 assert not is_undirected(edge_index)
 
@@ -43,11 +48,11 @@ def _test_normalize_connectivity(norm):
 
 
 def test_normalize_dense():
-    a_ = convert_torch_connectivity((edge_index, edge_weight),
-                                    'dense',
-                                    num_nodes=num_nodes)
-    deg_inv = 1. / a_.sum(1)
-    deg_inv[deg_inv == float('inf')] = 0.
+    a_ = convert_torch_connectivity(
+        (edge_index, edge_weight), 'dense', num_nodes=num_nodes
+    )
+    deg_inv = 1.0 / a_.sum(1)
+    deg_inv[deg_inv == float('inf')] = 0.0
     a_ = deg_inv.view(-1, 1) * a_
     a, _ = normalize_connectivity(adj_t, None, 'mean', num_nodes)
     assert torch.allclose(a.to_dense(), a_)
@@ -92,9 +97,9 @@ def test_infer_backend():
     assert infer_backend(x) == np
 
     # Test for SparseTensor input
-    x = SparseTensor(row=torch.tensor([0, 1]),
-                     col=torch.tensor([1, 0]),
-                     value=torch.tensor([1, 2]))
+    x = SparseTensor(
+        row=torch.tensor([0, 1]), col=torch.tensor([1, 0]), value=torch.tensor([1, 2])
+    )
     assert infer_backend(x) == torch_sparse
 
     # Test for invalid input
@@ -105,7 +110,7 @@ def test_infer_backend():
 
 
 def test_convert_torch_connectivity():
-    dense = torch.eye(4) / 2.
+    dense = torch.eye(4) / 2.0
     sparse = SparseTensor.from_dense(dense)
     edge_index = torch.tensor([[0, 1, 2, 3], [0, 1, 2, 3]])
     edge_attr = torch.ones(4) / 2
@@ -129,26 +134,23 @@ def test_convert_torch_connectivity():
     assert torch.allclose(converted, edge_attr)
 
     # Test edge_index -> sparse
-    converted = convert_torch_connectivity(edge_index_attr,
-                                           'sparse',
-                                           input_layout='edge_index',
-                                           num_nodes=4)
+    converted = convert_torch_connectivity(
+        edge_index_attr, 'sparse', input_layout='edge_index', num_nodes=4
+    )
     assert isinstance(converted, SparseTensor)
     assert torch.allclose(converted.to_dense(), dense)
 
     # Test edge_index -> dense
-    converted = convert_torch_connectivity(edge_index_attr,
-                                           'dense',
-                                           input_layout='edge_index',
-                                           num_nodes=4)
+    converted = convert_torch_connectivity(
+        edge_index_attr, 'dense', input_layout='edge_index', num_nodes=4
+    )
     assert torch.allclose(converted, dense)
 
     # Test invalid input_layout
     try:
-        convert_torch_connectivity(edge_index_attr,
-                                   'sparse',
-                                   input_layout='invalid',
-                                   num_nodes=5)
+        convert_torch_connectivity(
+            edge_index_attr, 'sparse', input_layout='invalid', num_nodes=5
+        )
     except AssertionError:
         pass
     else:
@@ -156,10 +158,9 @@ def test_convert_torch_connectivity():
 
     # Test invalid target_layout
     try:
-        convert_torch_connectivity(edge_index_attr,
-                                   'invalid',
-                                   input_layout='edge_index',
-                                   num_nodes=5)
+        convert_torch_connectivity(
+            edge_index_attr, 'invalid', input_layout='edge_index', num_nodes=5
+        )
     except AssertionError:
         pass
     else:
@@ -177,9 +178,8 @@ def test_convert_torch_connectivity():
 def test_adj_to_edge_index():
     # Test for converting adjacency matrix to edge index
     adj = torch.tensor([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=torch.float)
-    expected_index = torch.tensor([[0, 1, 1, 2], [1, 0, 2, 1]],
-                                  dtype=torch.long)
-    expected_attr = torch.tensor([1., 1., 1., 1.], dtype=torch.float)
+    expected_index = torch.tensor([[0, 1, 1, 2], [1, 0, 2, 1]], dtype=torch.long)
+    expected_attr = torch.tensor([1.0, 1.0, 1.0, 1.0], dtype=torch.float)
 
     index, attr = adj_to_edge_index(adj)
 
@@ -189,9 +189,11 @@ def test_adj_to_edge_index():
     # Test for converting a batch of adjacency matrices to edge index
     batch_adj = torch.stack([adj, adj], dim=0)
     expected_index = torch.tensor(
-        [[0, 1, 1, 2, 3, 4, 4, 5], [1, 0, 2, 1, 4, 3, 5, 4]], dtype=torch.long)
-    expected_attr = torch.tensor([1., 1., 1., 1., 1., 1., 1., 1.],
-                                 dtype=torch.float)
+        [[0, 1, 1, 2, 3, 4, 4, 5], [1, 0, 2, 1, 4, 3, 5, 4]], dtype=torch.long
+    )
+    expected_attr = torch.tensor(
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], dtype=torch.float
+    )
 
     index, attr = adj_to_edge_index(batch_adj)
 
@@ -223,10 +225,10 @@ def test_transpose():
     expected_edge_index = torch.tensor([[1, 2, 0], [0, 1, 2]])
     assert torch.allclose(transpose(edge_index), expected_edge_index)
     # Test for sparse tensor
-    adj = SparseTensor(row=torch.tensor([0, 1, 2]),
-                       col=torch.tensor([1, 2, 0]))
-    expected_adj = SparseTensor(row=torch.tensor([1, 2, 0]),
-                                col=torch.tensor([0, 1, 2]))
+    adj = SparseTensor(row=torch.tensor([0, 1, 2]), col=torch.tensor([1, 2, 0]))
+    expected_adj = SparseTensor(
+        row=torch.tensor([1, 2, 0]), col=torch.tensor([0, 1, 2])
+    )
     assert torch.allclose(transpose(adj).to_dense(), expected_adj.to_dense())
     # Test for np.ndarray input
     edge_index_np = edge_index.numpy()
@@ -236,7 +238,7 @@ def test_transpose():
 
 def test_transpose_with_weights():
     edge_index = torch.tensor([[0, 1, 2], [1, 2, 0]])
-    weights = torch.tensor([1., 2., 3.])
+    weights = torch.tensor([1.0, 2.0, 3.0])
     ei, ew = transpose(edge_index, weights)
     assert torch.allclose(ei, torch.tensor([[1, 2, 0], [0, 1, 2]]))
     # weights are passed through unchanged
@@ -244,9 +246,9 @@ def test_transpose_with_weights():
 
 
 def test_maybe_num_nodes_sparse_tensor():
-    adj = SparseTensor(row=torch.tensor([0, 1, 2]),
-                       col=torch.tensor([1, 2, 0]),
-                       sparse_sizes=(3, 3))
+    adj = SparseTensor(
+        row=torch.tensor([0, 1, 2]), col=torch.tensor([1, 2, 0]), sparse_sizes=(3, 3)
+    )
     assert maybe_num_nodes(adj) == 3
 
 
@@ -254,7 +256,7 @@ def test_edge_index_to_adj_numpy_default_weights():
     edge_index = np.array([[0, 1], [1, 0]])
     adj = edge_index_to_adj(edge_index)
     assert isinstance(adj, np.ndarray)
-    np.testing.assert_array_equal(adj, np.array([[0., 1.], [1., 0.]]))
+    np.testing.assert_array_equal(adj, np.array([[0.0, 1.0], [1.0, 0.0]]))
 
 
 def test_convert_torch_connectivity_same_layout_passthrough():
@@ -265,9 +267,9 @@ def test_convert_torch_connectivity_same_layout_passthrough():
 
 def test_weighted_degree_torch():
     index = torch.tensor([0, 1, 1, 2])
-    weights = torch.tensor([1., 2., 3., 4.])
+    weights = torch.tensor([1.0, 2.0, 3.0, 4.0])
     out = weighted_degree(index, weights, num_nodes=3)
-    assert torch.allclose(out, torch.tensor([1., 5., 4.]))
+    assert torch.allclose(out, torch.tensor([1.0, 5.0, 4.0]))
 
 
 def test_weighted_degree_torch_default_weights():
@@ -279,9 +281,9 @@ def test_weighted_degree_torch_default_weights():
 
 def test_weighted_degree_numpy():
     index = np.array([0, 1, 1, 2])
-    weights = np.array([1., 2., 3., 4.])
+    weights = np.array([1.0, 2.0, 3.0, 4.0])
     out = weighted_degree(index, weights, num_nodes=3)
-    np.testing.assert_array_equal(out, np.array([1., 5., 4.]))
+    np.testing.assert_array_equal(out, np.array([1.0, 5.0, 4.0]))
 
 
 def test_weighted_degree_numpy_default_weights():
@@ -293,8 +295,9 @@ def test_weighted_degree_numpy_default_weights():
 
 def test_reduce_graph_torch():
     edge_index = torch.tensor([[0, 1, 2], [1, 2, 0]])
-    sub_edge_index, edge_mask = reduce_graph(torch.tensor([0, 1]), edge_index,
-                                             num_nodes=3)
+    sub_edge_index, edge_mask = reduce_graph(
+        torch.tensor([0, 1]), edge_index, num_nodes=3
+    )
     # only edge (0, 1) survives and nodes are relabeled
     assert torch.allclose(sub_edge_index, torch.tensor([[0], [1]]))
     assert edge_mask.tolist() == [True, False, False]
@@ -316,10 +319,13 @@ def test_power_series_numpy():
     assert ei.shape == (2, 3)
 
 
-@pytest.mark.parametrize('dummy,num_nodes,expected_shape', [
-    ('identity', 4, (2, 4)),
-    ('full', 3, (2, 9)),
-])
+@pytest.mark.parametrize(
+    'dummy,num_nodes,expected_shape',
+    [
+        ('identity', 4, (2, 4)),
+        ('full', 3, (2, 9)),
+    ],
+)
 def test_get_dummy_edge_index_deterministic(dummy, num_nodes, expected_shape):
     edge_index = get_dummy_edge_index(dummy, num_nodes)
     assert tuple(edge_index.shape) == expected_shape
@@ -327,8 +333,7 @@ def test_get_dummy_edge_index_deterministic(dummy, num_nodes, expected_shape):
 
 def test_get_dummy_edge_index_identity_values():
     edge_index = get_dummy_edge_index('identity', 3)
-    assert torch.allclose(edge_index,
-                          torch.tensor([[0, 1, 2], [0, 1, 2]]))
+    assert torch.allclose(edge_index, torch.tensor([[0, 1, 2], [0, 1, 2]]))
 
 
 def test_get_dummy_edge_index_none():
@@ -347,11 +352,10 @@ def test_get_dummy_edge_index_invalid():
 
 def test_asymmetric_norm_numpy():
     edge_index = np.array([[0, 0, 1], [1, 2, 2]])
-    edge_weight = np.array([1., 1., 1.])
-    _, norm_weight = asymmetric_norm(edge_index, edge_weight, dim=1,
-                                     num_nodes=3)
+    edge_weight = np.array([1.0, 1.0, 1.0])
+    _, norm_weight = asymmetric_norm(edge_index, edge_weight, dim=1, num_nodes=3)
     # dim=1: divide by in-degree of target nodes (node 2 has in-degree 2)
-    np.testing.assert_allclose(norm_weight, [1., 0.5, 0.5])
+    np.testing.assert_allclose(norm_weight, [1.0, 0.5, 0.5])
 
 
 def test_asymmetric_norm_sparse():

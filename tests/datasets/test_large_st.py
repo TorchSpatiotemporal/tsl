@@ -6,6 +6,7 @@ Leakage focus: the mask comes from the raw (resampled) NaN pattern; the default
 ``ffill().bfill()`` -- the backfill is non-causal, so we additionally confirm
 those backfilled cells stay flagged invalid by the mask.
 """
+
 import numpy as np
 import pytest
 
@@ -24,9 +25,14 @@ def _sd(imputation_mode='zero'):
 
 def test_contract():
     ds = _sd()
-    assert_dataset_contract(ds, n_nodes=N_NODES_SD, n_channels=1, has_mask=True,
-                            similarity_options={'precomputed'},
-                            conn_method='precomputed')
+    assert_dataset_contract(
+        ds,
+        n_nodes=N_NODES_SD,
+        n_channels=1,
+        has_mask=True,
+        similarity_options={'precomputed'},
+        conn_method='precomputed',
+    )
 
 
 def test_specifics():

@@ -1,20 +1,26 @@
 """Scalers."""
+
 import numpy as np
 import pytest
 import torch
 
 from tsl.data import SpatioTemporalDataset
 
-from .helpers import (_grid_target, fitted_standard_scaler, ref_horizon_steps,
-                      ref_window_steps)
+from .helpers import (
+    _grid_target,
+    fitted_standard_scaler,
+    ref_horizon_steps,
+    ref_window_steps,
+)
 
 
 def test_scaler_transforms_x_target_y_unscaled():
     n_steps, n_nodes, n_channels = 60, 2, 1
     target = _grid_target(n_steps, n_nodes, n_channels)
     sc = fitted_standard_scaler(target)
-    ds = SpatioTemporalDataset(target=target, window=4, horizon=2, delay=1,
-                               scalers={'target': sc})
+    ds = SpatioTemporalDataset(
+        target=target, window=4, horizon=2, delay=1, scalers={'target': sc}
+    )
     item = ds[0]
     idx = ds.indices[0].item()
     w_steps = ref_window_steps(idx, 4, 1)
@@ -30,15 +36,17 @@ def test_scaler_transforms_x_target_y_unscaled():
 def test_scaler_attached_to_item_transform():
     target = _grid_target(60, 2, 1)
     sc = fitted_standard_scaler(target)
-    ds = SpatioTemporalDataset(target=target, window=4, horizon=2,
-                               scalers={'target': sc})
+    ds = SpatioTemporalDataset(
+        target=target, window=4, horizon=2, scalers={'target': sc}
+    )
     item = ds[0]
     assert 'x' in item.transform
     # the attached scaler round-trips the (scaled) x back to raw units
     raw = item.transform['x'].inverse_transform(item.x)
     idx = ds.indices[0].item()
-    np.testing.assert_allclose(raw.numpy(),
-                               target[ref_window_steps(idx, 4, 1)], rtol=1e-6)
+    np.testing.assert_allclose(
+        raw.numpy(), target[ref_window_steps(idx, 4, 1)], rtol=1e-6
+    )
 
 
 def test_scaler_params_constant_across_samples():
@@ -46,8 +54,9 @@ def test_scaler_params_constant_across_samples():
     # per-batch refit would leak each batch's statistics into its inputs.
     target = _grid_target(80, 2, 1)
     sc = fitted_standard_scaler(target)
-    ds = SpatioTemporalDataset(target=target, window=4, horizon=2,
-                               scalers={'target': sc})
+    ds = SpatioTemporalDataset(
+        target=target, window=4, horizon=2, scalers={'target': sc}
+    )
     first = ds[0].transform['x']
     for p in (1, 10, ds.n_samples - 1):
         other = ds[p].transform['x']
@@ -78,6 +87,5 @@ def test_scaler_on_covariate_is_applied():
     w_steps = ref_window_steps(idx, 4, 1)
     assert 'u' in item.transform
     expected = item.transform['u'].transform(torch.as_tensor(u[w_steps]))
-    np.testing.assert_allclose(item.input['u'].numpy(), expected.numpy(),
-                               rtol=1e-6)
+    np.testing.assert_allclose(item.input['u'].numpy(), expected.numpy(), rtol=1e-6)
     assert not np.allclose(item.input['u'].numpy(), u[w_steps])

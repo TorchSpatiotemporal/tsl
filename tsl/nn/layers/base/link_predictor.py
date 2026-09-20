@@ -20,22 +20,21 @@ class LinkPredictor(nn.Module):
         activation: Activation function used in the hidden layer.
     """
 
-    def __init__(self,
-                 emb_size,
-                 ff_size,
-                 hidden_size,
-                 dropout=0.,
-                 activation='relu'):
+    def __init__(self, emb_size, ff_size, hidden_size, dropout=0.0, activation='relu'):
         super(LinkPredictor, self).__init__()
-        self.source_mlp = nn.Sequential(nn.Linear(emb_size, ff_size),
-                                        get_layer_activation(activation)(),
-                                        nn.Dropout(dropout),
-                                        nn.Linear(ff_size, hidden_size))
+        self.source_mlp = nn.Sequential(
+            nn.Linear(emb_size, ff_size),
+            get_layer_activation(activation)(),
+            nn.Dropout(dropout),
+            nn.Linear(ff_size, hidden_size),
+        )
 
-        self.target_mlp = nn.Sequential(nn.Linear(emb_size, ff_size),
-                                        get_layer_activation(activation)(),
-                                        nn.Dropout(dropout),
-                                        nn.Linear(ff_size, hidden_size))
+        self.target_mlp = nn.Sequential(
+            nn.Linear(emb_size, ff_size),
+            get_layer_activation(activation)(),
+            nn.Dropout(dropout),
+            nn.Linear(ff_size, hidden_size),
+        )
 
     def forward(self, x):
         """"""

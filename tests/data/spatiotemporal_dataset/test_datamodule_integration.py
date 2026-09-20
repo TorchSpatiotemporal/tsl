@@ -1,28 +1,34 @@
-"""Integration tests for the dataset -> DataModule -> DataLoader pipeline.
-"""
+"""Integration tests for the dataset -> DataModule -> DataLoader pipeline."""
+
 import numpy as np
 import pytest
 import torch
 
-from tsl.data import (SpatioTemporalDataModule, SpatioTemporalDataset,
-                      TemporalSplitter)
+from tsl.data import SpatioTemporalDataModule, SpatioTemporalDataset, TemporalSplitter
 from tsl.data.preprocessing.scalers import StandardScaler
-
 
 # -- builders / oracles -----------------------------------------------------
 
-def _make_dataset(n_steps=300, n_nodes=3, n_channels=1, window=8, horizon=4,
-                  **kwargs):
-    target = np.arange(n_steps * n_nodes * n_channels).reshape(
-        n_steps, n_nodes, n_channels).astype('float32')
-    return SpatioTemporalDataset(target=target, window=window, horizon=horizon,
-                                 **kwargs)
+
+def _make_dataset(n_steps=300, n_nodes=3, n_channels=1, window=8, horizon=4, **kwargs):
+    target = (
+        np.arange(n_steps * n_nodes * n_channels)
+        .reshape(n_steps, n_nodes, n_channels)
+        .astype('float32')
+    )
+    return SpatioTemporalDataset(
+        target=target, window=window, horizon=horizon, **kwargs
+    )
 
 
 def _make_dm(dataset, scalers=None, splitter=None, batch_size=16, **kwargs):
-    dm = SpatioTemporalDataModule(dataset=dataset, scalers=scalers,
-                                  splitter=splitter, batch_size=batch_size,
-                                  **kwargs)
+    dm = SpatioTemporalDataModule(
+        dataset=dataset,
+        scalers=scalers,
+        splitter=splitter,
+        batch_size=batch_size,
+        **kwargs,
+    )
     dm.setup()
     return dm
 
@@ -38,13 +44,15 @@ def _footprint(ds, indices):
 
 def _targets(ds, indices):
     """Time steps used as prediction targets (horizon) by the given samples."""
-    return set(ds.expand_indices(np.asarray(indices))['horizon'].numpy()
-               .ravel().tolist())
+    return set(
+        ds.expand_indices(np.asarray(indices))['horizon'].numpy().ravel().tolist()
+    )
 
 
 # ===========================================================================
 # Leakage: splits stay separated through the loaders.
 # ===========================================================================
+
 
 @pytest.mark.parametrize('window,horizon', [(8, 4), (12, 12), (6, 1)])
 def test_window_offset_split_targets_never_leak_into_train(window, horizon):
@@ -88,10 +96,14 @@ def test_split_lengths_and_slices_match_splitter():
 # Leakage: scalers are fit on the train split only.
 # ===========================================================================
 
+
 def test_scaler_is_fit_on_train_slice_only():
     ds = _make_dataset(window=8, horizon=4)
-    dm = _make_dm(ds, scalers={'target': StandardScaler(axis=0)},
-                  splitter=TemporalSplitter(0.1, 0.2))
+    dm = _make_dm(
+        ds,
+        scalers={'target': StandardScaler(axis=0)},
+        splitter=TemporalSplitter(0.1, 0.2),
+    )
     bias = ds.scalers['target'].bias.numpy().ravel()
     target = ds.numpy()
     train_mean = target[dm.train_slice.numpy()].mean(0).ravel()
@@ -103,8 +115,11 @@ def test_scaler_is_fit_on_train_slice_only():
 
 def test_val_and_test_batches_scaled_with_train_statistics():
     ds = _make_dataset(window=8, horizon=4)
-    dm = _make_dm(ds, scalers={'target': StandardScaler(axis=0)},
-                  splitter=TemporalSplitter(0.1, 0.2))
+    dm = _make_dm(
+        ds,
+        scalers={'target': StandardScaler(axis=0)},
+        splitter=TemporalSplitter(0.1, 0.2),
+    )
     scaler = ds.scalers['target']
     target = ds.numpy()
     for split in ('val', 'test'):
@@ -114,8 +129,7 @@ def test_val_and_test_batches_scaled_with_train_statistics():
         w_steps = ds.get_window_indices(torch.tensor(first)).numpy()
         # the input is the raw window normalized with the train-fit scaler
         expected = scaler.transform(torch.as_tensor(target[w_steps]))
-        np.testing.assert_allclose(batch.x[0].numpy(), expected.numpy(),
-                                   atol=1e-4)
+        np.testing.assert_allclose(batch.x[0].numpy(), expected.numpy(), atol=1e-4)
 
 
 def test_mask_scaling_uses_only_valid_train_values():
@@ -123,8 +137,12 @@ def test_mask_scaling_uses_only_valid_train_values():
     target = rng.normal(size=(300, 3, 1)).astype('float32')
     mask = rng.random((300, 3, 1)) > 0.3  # valid spread over time, no dead node
     ds = SpatioTemporalDataset(target=target, mask=mask, window=8, horizon=4)
-    dm = _make_dm(ds, scalers={'target': StandardScaler(axis=0)},
-                  splitter=TemporalSplitter(0.1, 0.2), mask_scaling=True)
+    dm = _make_dm(
+        ds,
+        scalers={'target': StandardScaler(axis=0)},
+        splitter=TemporalSplitter(0.1, 0.2),
+        mask_scaling=True,
+    )
     bias = ds.scalers['target'].bias.numpy()
     ts = dm.train_slice.numpy()
     ref = np.nanmean(np.where(mask[ts], target[ts], np.nan), axis=0)
@@ -134,6 +152,7 @@ def test_mask_scaling_uses_only_valid_train_values():
 # ===========================================================================
 # Batching / collation correctness.
 # ===========================================================================
+
 
 def test_batch_shapes_and_size():
     ds = _make_dataset(n_nodes=3, n_channels=2, window=8, horizon=4)

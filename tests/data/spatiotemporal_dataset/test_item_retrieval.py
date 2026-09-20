@@ -1,4 +1,5 @@
 """Item retrieval (x/y exact values & shapes vs reference)."""
+
 import numpy as np
 import pytest
 
@@ -6,24 +7,32 @@ from tsl.data import StaticBatch
 
 from .helpers import _make_grid_dataset, ref_horizon_steps, ref_window_steps
 
-
 ITEM_CONFIGS = [
     (4, 2, 1, 0, 1, 1),
     (12, 1, 1, 0, 1, 1),
-    (6, 3, 2, 1, 1, 1),   # stride + delay
-    (8, 4, 1, 0, 2, 2),   # lags subsample both ends
+    (6, 3, 2, 1, 1, 1),  # stride + delay
+    (8, 4, 1, 0, 2, 2),  # lags subsample both ends
     (4, 2, 1, -2, 1, 1),  # negative delay (window/horizon overlap)
-    (0, 3, 1, 0, 1, 1),   # horizon-only (no window)
+    (0, 3, 1, 0, 1, 1),  # horizon-only (no window)
 ]
 
 
-@pytest.mark.parametrize('window,horizon,stride,delay,window_lag,horizon_lag',
-                         ITEM_CONFIGS)
-def test_item_x_y_exact_values(window, horizon, stride, delay, window_lag,
-                               horizon_lag):
+@pytest.mark.parametrize(
+    'window,horizon,stride,delay,window_lag,horizon_lag', ITEM_CONFIGS
+)
+def test_item_x_y_exact_values(window, horizon, stride, delay, window_lag, horizon_lag):
     n_steps, n_nodes, n_channels = 60, 3, 2
-    ds, target = _make_grid_dataset(window, horizon, stride, delay, window_lag,
-                                    horizon_lag, n_steps, n_nodes, n_channels)
+    ds, target = _make_grid_dataset(
+        window,
+        horizon,
+        stride,
+        delay,
+        window_lag,
+        horizon_lag,
+        n_steps,
+        n_nodes,
+        n_channels,
+    )
     for p in (0, ds.n_samples // 2, ds.n_samples - 1):
         idx = ds.indices[p].item()
         item = ds[p]
@@ -48,13 +57,11 @@ def test_negative_index_matches_positive():
     np.testing.assert_array_equal(neg.y.numpy(), last.y.numpy())
     # -1 must address the last sample, whose window ends at the very last step
     idx = ds.indices[-1].item()
-    np.testing.assert_array_equal(
-        neg.x.numpy(), target[ref_window_steps(idx, 4, 1)])
+    np.testing.assert_array_equal(neg.x.numpy(), target[ref_window_steps(idx, 4, 1)])
 
 
 def test_slice_returns_static_batch_with_exact_values():
-    ds, target = _make_grid_dataset(window=4, horizon=2, n_nodes=3,
-                                    n_channels=2)
+    ds, target = _make_grid_dataset(window=4, horizon=2, n_nodes=3, n_channels=2)
     batch = ds[0:5]
     assert isinstance(batch, StaticBatch)
     # batch adds a leading 'b' dim to time-varying tensors

@@ -1,12 +1,12 @@
 """Unit tests for :class:`~tsl.data.preprocessing.scalers.RobustScaler`."""
+
 import numpy as np
 import pytest
 from scipy import stats
 
 from tsl.data.preprocessing.scalers import RobustScaler
 
-from .helpers import (constant_feature_target, masked_target, random_target,
-                      ref_robust)
+from .helpers import constant_feature_target, masked_target, random_target, ref_robust
 
 
 def test_default_iqr_median_and_range():
@@ -19,8 +19,8 @@ def test_default_iqr_median_and_range():
 
 def test_custom_quantile_range():
     x = random_target((60, 3, 2))
-    sc = RobustScaler(quantile_range=(10., 90.)).fit(x)
-    bias, scale = ref_robust(x, axis=0, quantile_range=(10., 90.))
+    sc = RobustScaler(quantile_range=(10.0, 90.0)).fit(x)
+    bias, scale = ref_robust(x, axis=0, quantile_range=(10.0, 90.0))
     np.testing.assert_allclose(sc.bias, bias, rtol=1e-6)
     np.testing.assert_allclose(sc.scale, scale, rtol=1e-6)
 
@@ -37,16 +37,16 @@ def test_various_axes(axis):
 def test_invalid_quantile_range_raises():
     x = random_target((20, 2, 1))
     with pytest.raises(ValueError):
-        RobustScaler(quantile_range=(75., 25.)).fit(x)
+        RobustScaler(quantile_range=(75.0, 25.0)).fit(x)
     with pytest.raises(ValueError):
-        RobustScaler(quantile_range=(-1., 75.)).fit(x)
+        RobustScaler(quantile_range=(-1.0, 75.0)).fit(x)
     with pytest.raises(ValueError):
-        RobustScaler(quantile_range=(25., 110.)).fit(x)
+        RobustScaler(quantile_range=(25.0, 110.0)).fit(x)
 
 
 def test_unit_variance_adjusts_scale():
     x = random_target((60, 3, 2))
-    q = (25., 75.)
+    q = (25.0, 75.0)
     sc = RobustScaler(quantile_range=q, unit_variance=True).fit(x)
     bias, scale = ref_robust(x, axis=0, quantile_range=q, unit_variance=True)
     np.testing.assert_allclose(sc.scale, scale, rtol=1e-6)

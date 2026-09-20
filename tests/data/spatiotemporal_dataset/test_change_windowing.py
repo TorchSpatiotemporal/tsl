@@ -1,5 +1,5 @@
-"""Test change_windowing context manager.
-"""
+"""Test change_windowing context manager."""
+
 import numpy as np
 import pytest
 
@@ -7,12 +7,19 @@ from .helpers import _make_grid_dataset, ref_horizon_steps, ref_window_steps
 
 
 def test_change_windowing_active_inside_and_restored_after():
-    ds, target = _make_grid_dataset(window=4, horizon=2, delay=0, stride=1,
-                                    n_steps=60, n_nodes=2, n_channels=1)
+    ds, target = _make_grid_dataset(
+        window=4, horizon=2, delay=0, stride=1, n_steps=60, n_nodes=2, n_channels=1
+    )
     # snapshot the full windowing state before entering the context
-    before = dict(window=ds.window, horizon=ds.horizon, delay=ds.delay,
-                  stride=ds.stride, window_lag=ds.window_lag,
-                  horizon_lag=ds.horizon_lag, n_samples=ds.n_samples)
+    before = dict(
+        window=ds.window,
+        horizon=ds.horizon,
+        delay=ds.delay,
+        stride=ds.stride,
+        window_lag=ds.window_lag,
+        horizon_lag=ds.horizon_lag,
+        n_samples=ds.n_samples,
+    )
     before_indices = ds.indices.clone()
 
     with ds.change_windowing(window=10, horizon=5, delay=1) as d:
@@ -21,20 +28,27 @@ def test_change_windowing_active_inside_and_restored_after():
         idx = d.indices[0].item()
         item = d[0]
         np.testing.assert_array_equal(
-            item.x.numpy(), target[ref_window_steps(idx, 10, 1)])
+            item.x.numpy(), target[ref_window_steps(idx, 10, 1)]
+        )
         np.testing.assert_array_equal(
-            item.y.numpy(), target[ref_horizon_steps(idx, 10, 5, 1, 1)])
+            item.y.numpy(), target[ref_horizon_steps(idx, 10, 5, 1, 1)]
+        )
 
     # on exit every windowing attribute and the cached indices are restored
-    after = dict(window=ds.window, horizon=ds.horizon, delay=ds.delay,
-                 stride=ds.stride, window_lag=ds.window_lag,
-                 horizon_lag=ds.horizon_lag, n_samples=ds.n_samples)
+    after = dict(
+        window=ds.window,
+        horizon=ds.horizon,
+        delay=ds.delay,
+        stride=ds.stride,
+        window_lag=ds.window_lag,
+        horizon_lag=ds.horizon_lag,
+        n_samples=ds.n_samples,
+    )
     assert after == before
     np.testing.assert_array_equal(ds.indices.numpy(), before_indices.numpy())
     # and retrieval is back to the original windowing
     idx0 = ds.indices[0].item()
-    np.testing.assert_array_equal(
-        ds[0].x.numpy(), target[ref_window_steps(idx0, 4, 1)])
+    np.testing.assert_array_equal(ds[0].x.numpy(), target[ref_window_steps(idx0, 4, 1)])
 
 
 def test_change_windowing_restores_after_exception():

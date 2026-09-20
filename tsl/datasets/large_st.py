@@ -94,6 +94,7 @@ class LargeST(DatetimeDataset):
         precision (int or str): The float precision of the dataset.
             (default: :obj:`32`)
     """
+
     base_url = __base_url__
     url = {
         "2017": __base_url__ + "?path=%2F2017&files=data.h5",
@@ -106,13 +107,15 @@ class LargeST(DatetimeDataset):
 
     similarity_options = {"precomputed"}
 
-    def __init__(self,
-                 root: str = None,
-                 subset: SubsetType = "CA",
-                 year: Optional[Union[int, Sequence[int]]] = 2019,
-                 imputation_mode: Literal["nearest", "zero", None] = "zero",
-                 freq: str = "15T",
-                 precision: Union[int, str] = 32):
+    def __init__(
+        self,
+        root: str = None,
+        subset: SubsetType = "CA",
+        year: Optional[Union[int, Sequence[int]]] = 2019,
+        imputation_mode: Literal["nearest", "zero", None] = "zero",
+        freq: str = "15T",
+        precision: Union[int, str] = 32,
+    ):
         # set root path
         self.root = root
 
@@ -120,17 +123,19 @@ class LargeST(DatetimeDataset):
         if subset not in __subsets__:
             raise ValueError(
                 f"Incorrect choice for 'subset' ({subset}). "
-                f"Available options are {', '.join(__subsets__)}.")
+                f"Available options are {', '.join(__subsets__)}."
+            )
         self.subset = subset
 
-        view_years = years_set = set(range(2017,
-                                           2022))  # between 2017 and 2021
+        view_years = years_set = set(range(2017, 2022))  # between 2017 and 2021
         if year is not None:
             year = {year} if isinstance(year, int) else set(year)
             view_years = view_years.intersection(year)
             if not len(view_years):
-                raise ValueError(f"Incorrect choice for 'year' ({year}). "
-                                 f"Must be a subset of {years_set}.")
+                raise ValueError(
+                    f"Incorrect choice for 'year' ({year}). "
+                    f"Must be a subset of {years_set}."
+                )
         self.years = sorted(view_years)
 
         self.imputation_mode = imputation_mode
@@ -144,22 +149,21 @@ class LargeST(DatetimeDataset):
         # load dataset
         readings, mask, metadata, adj = self.load()
         covariates = {"metadata": (metadata, 'n f'), "adj": (adj, 'n n')}
-        super().__init__(target=readings,
-                         freq=freq,
-                         mask=mask,
-                         covariates=covariates,
-                         similarity_score="precomputed",
-                         temporal_aggregation="mean",
-                         spatial_aggregation="mean",
-                         name=f"LargeST-{subset}",
-                         precision=precision)
+        super().__init__(
+            target=readings,
+            freq=freq,
+            mask=mask,
+            covariates=covariates,
+            similarity_score="precomputed",
+            temporal_aggregation="mean",
+            spatial_aggregation="mean",
+            name=f"LargeST-{subset}",
+            precision=precision,
+        )
 
     @property
     def raw_file_names(self) -> Dict[str, str]:
-        out = {
-            str(year): os.path.join(str(year), "data.h5")
-            for year in self.years
-        }
+        out = {str(year): os.path.join(str(year), "data.h5") for year in self.years}
         out["metadata"] = os.path.join("sensors", "metadata.csv")
         out["adj"] = os.path.join("sensors", "adj.npz")
         return out
@@ -173,9 +177,9 @@ class LargeST(DatetimeDataset):
                     sub_dir = os.path.dirname(filepath)
                     os.makedirs(sub_dir, exist_ok=True)
                     # download, extract, and remove .zip file
-                    in_dir = download_url(self.url["sensors"],
-                                          sub_dir,
-                                          filename="sensors.zip")
+                    in_dir = download_url(
+                        self.url["sensors"], sub_dir, filename="sensors.zip"
+                    )
                     extract_zip(in_dir, sub_dir)
                     os.unlink(in_dir)
                 else:  # download directly .h5 file containing readings per year
@@ -216,8 +220,10 @@ class LargeST(DatetimeDataset):
             readings.append(data_df)
 
         readings = (
-            readings[0] if len(readings) == 1  # avoid useless
-            else pd.concat(readings, axis=0))  # computations
+            readings[0]
+            if len(readings) == 1  # avoid useless
+            else pd.concat(readings, axis=0)
+        )  # computations
 
         # load adjacency
         edge_index, edge_weight = np.load(filenames["adj"]).values()

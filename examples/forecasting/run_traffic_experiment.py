@@ -74,15 +74,16 @@ def get_dataset(dataset_name):
 def get_logger(cfg: DictConfig, exp: Experiment) -> Optional[Logger]:
     if cfg.logger is None:
         return None
-    assert 'backend' in cfg.logger, \
-        "cfg.logger must have a 'backend' attribute."
+    assert 'backend' in cfg.logger, "cfg.logger must have a 'backend' attribute."
     if cfg.logger.backend == 'wandb':
-        exp_logger = WandbLogger(name=cfg.run.name,
-                                 save_dir=cfg.run.dir,
-                                 offline=cfg.logger.offline,
-                                 project=cfg.logger.project,
-                                 config=exp.get_config_dict(),
-                                 tags=cfg.tags)
+        exp_logger = WandbLogger(
+            name=cfg.run.name,
+            save_dir=cfg.run.dir,
+            offline=cfg.logger.offline,
+            project=cfg.logger.project,
+            config=exp.get_config_dict(),
+            tags=cfg.tags,
+        )
     elif cfg.logger.backend == 'tensorboard':
         exp_name = f'{cfg.run.name}_{"_".join(cfg.tags)}'
         exp_logger = TensorBoardLogger(save_dir=cfg.run.dir, name=exp_name)
@@ -130,11 +131,13 @@ def run_traffic(cfg: DictConfig):
 
     model_cls = get_model_class(cfg.model.name)
 
-    model_kwargs = dict(n_nodes=torch_dataset.n_nodes,
-                        input_size=torch_dataset.n_channels,
-                        output_size=torch_dataset.n_channels,
-                        horizon=torch_dataset.horizon,
-                        exog_size=torch_dataset.input_map.u.shape[-1])
+    model_kwargs = dict(
+        n_nodes=torch_dataset.n_nodes,
+        input_size=torch_dataset.n_channels,
+        output_size=torch_dataset.n_channels,
+        horizon=torch_dataset.horizon,
+        exog_size=torch_dataset.input_map.u.shape[-1],
+    )
 
     model_cls.filter_model_args_(model_kwargs)
     model_kwargs.update(cfg.model.hparams)
@@ -151,8 +154,7 @@ def run_traffic(cfg: DictConfig):
     }
 
     if cfg.lr_scheduler is not None:
-        scheduler_class = getattr(torch.optim.lr_scheduler,
-                                  cfg.lr_scheduler.name)
+        scheduler_class = getattr(torch.optim.lr_scheduler, cfg.lr_scheduler.name)
         scheduler_kwargs = dict(cfg.lr_scheduler.hparams)
     else:
         scheduler_class = scheduler_kwargs = None
@@ -174,9 +176,9 @@ def run_traffic(cfg: DictConfig):
     # training                             #
     ########################################
 
-    early_stop_callback = EarlyStopping(monitor='val_mae',
-                                        patience=cfg.patience,
-                                        mode='min')
+    early_stop_callback = EarlyStopping(
+        monitor='val_mae', patience=cfg.patience, mode='min'
+    )
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=cfg.run.dir,
@@ -211,28 +213,31 @@ def run_traffic(cfg: DictConfig):
     output = trainer.predict(predictor, dataloaders=dm.test_dataloader())
     output = predictor.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
-    y_hat, y_true, mask = (output['y_hat'], output['y'],
-                           output.get('mask', None))
-    res = dict(test_mae=numpy_metrics.mae(y_hat, y_true, mask),
-               test_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
-               test_mape=numpy_metrics.mape(y_hat, y_true, mask))
+    y_hat, y_true, mask = (output['y_hat'], output['y'], output.get('mask', None))
+    res = dict(
+        test_mae=numpy_metrics.mae(y_hat, y_true, mask),
+        test_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
+        test_mape=numpy_metrics.mape(y_hat, y_true, mask),
+    )
 
     output = trainer.predict(predictor, dataloaders=dm.val_dataloader())
     output = predictor.collate_prediction_outputs(output)
     output = torch_to_numpy(output)
-    y_hat, y_true, mask = (output['y_hat'], output['y'],
-                           output.get('mask', None))
+    y_hat, y_true, mask = (output['y_hat'], output['y'], output.get('mask', None))
     res.update(
-        dict(val_mae=numpy_metrics.mae(y_hat, y_true, mask),
-             val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
-             val_mape=numpy_metrics.mape(y_hat, y_true, mask)))
+        dict(
+            val_mae=numpy_metrics.mae(y_hat, y_true, mask),
+            val_rmse=numpy_metrics.rmse(y_hat, y_true, mask),
+            val_mape=numpy_metrics.mape(y_hat, y_true, mask),
+        )
+    )
 
     return res
 
 
 if __name__ == '__main__':
-    exp = Experiment(run_fn=run_traffic,
-                     config_path='config/traffic',
-                     config_name='default')
+    exp = Experiment(
+        run_fn=run_traffic, config_path='config/traffic', config_name='default'
+    )
     res = exp.run()
     logger.info(res)

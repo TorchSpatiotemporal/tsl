@@ -1,10 +1,10 @@
 """Unit tests for the module-level helpers ``zeros_to_one_`` and
 ``fit_wrapper`` in :mod:`tsl.data.preprocessing.scalers`."""
+
 import numpy as np
 import torch
 
-from tsl.data.preprocessing.scalers import (Scaler, StandardScaler,
-                                            zeros_to_one_)
+from tsl.data.preprocessing.scalers import Scaler, StandardScaler, zeros_to_one_
 
 
 def test_zeros_to_one_scalar_near_zero():
@@ -39,7 +39,8 @@ def test_fit_wrapper_numpy_input_keeps_numpy_params():
 
 def test_fit_wrapper_tensor_input_triggers_torch():
     x = torch.as_tensor(
-        np.random.default_rng(0).standard_normal((20, 2)).astype(np.float32))
+        np.random.default_rng(0).standard_normal((20, 2)).astype(np.float32)
+    )
     sc = StandardScaler().fit(x)
     assert isinstance(sc.bias, torch.Tensor)
     assert isinstance(sc.scale, torch.Tensor)

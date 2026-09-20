@@ -12,7 +12,6 @@ from . import casting
 
 
 class TabularParsingMixin:
-
     def _parse_target(self, obj: FrameArray) -> FrameArray:
         # if target is DataFrame
         if isinstance(obj, pd.DataFrame):
@@ -24,14 +23,15 @@ class TabularParsingMixin:
             # reshape to [time, nodes, features]
             while obj.ndim < 3:
                 obj = obj[..., None]
-            assert obj.ndim == 3, \
+            assert obj.ndim == 3, (
                 "Target signal must be 3-dimensional with pattern 't n f'."
-            obj = casting.convert_precision_numpy(obj,
-                                                  precision=self.precision)
+            )
+            obj = casting.convert_precision_numpy(obj, precision=self.precision)
         return obj
 
-    def _parse_covariate(self, obj: FrameArray, pattern: Optional[str] = None) \
-            -> Tuple[FrameArray, str]:
+    def _parse_covariate(
+        self, obj: FrameArray, pattern: Optional[str] = None
+    ) -> Tuple[FrameArray, str]:
         # compute object shape
         shape = framearray_shape(obj)
 
@@ -45,8 +45,9 @@ class TabularParsingMixin:
         dims = pattern.split(' ')  # 't n f' -> ['t', 'n', 'f']
 
         if isinstance(obj, pd.DataFrame):
-            assert self.is_target_dataframe, \
+            assert self.is_target_dataframe, (
                 "Cannot add DataFrame covariates if target is ndarray."
+            )
             # check covariate index matches steps or nodes in the dataset
             # according to the dim token
             index = self._token_to_index(dims[0], obj.index)
@@ -66,8 +67,7 @@ class TabularParsingMixin:
             # check shape
             for d, s in zip(dims, obj.shape):
                 self._token_to_index(d, s)
-            obj = casting.convert_precision_numpy(obj,
-                                                  precision=self.precision)
+            obj = casting.convert_precision_numpy(obj, precision=self.precision)
 
         return obj, pattern
 
@@ -81,9 +81,10 @@ class TabularParsingMixin:
             if no_index:
                 assert index_or_size == len(self.nodes)
             else:
-                assert set(index_or_size).issubset(self.nodes), \
-                    "You are trying to add a covariate dataframe with " \
+                assert set(index_or_size).issubset(self.nodes), (
+                    "You are trying to add a covariate dataframe with "
                     "nodes that are not in the dataset."
+                )
             return self.nodes
         if token in ['c', 'f'] and not no_index:
             return index_or_size
@@ -91,8 +92,9 @@ class TabularParsingMixin:
     def _columns_multiindex(self, nodes=None, channels=None):
         nodes = nodes if nodes is not None else self.nodes
         channels = channels if channels is not None else self.channels
-        return pd.MultiIndex.from_product([nodes, channels],
-                                          names=['nodes', 'channels'])
+        return pd.MultiIndex.from_product(
+            [nodes, channels], names=['nodes', 'channels']
+        )
 
     def _value_to_kwargs(self, value: Union[FrameArray, List, Tuple, Mapping]):
         keys = ['value', 'pattern']
@@ -108,11 +110,11 @@ class TabularParsingMixin:
 
 
 class TemporalFeaturesMixin:
-
     def __check_temporal_index(self):
         if not casting.is_datetime_like_index(self.index):
-            raise NotImplementedError("This method can be used only with "
-                                      "datetime-like index.")
+            raise NotImplementedError(
+                "This method can be used only with datetime-like index."
+            )
 
     def datetime_encoded(self, units: Union[str, List]) -> pd.DataFrame:
         r"""Transform dataset's temporal index into covariates using sinusoidal
@@ -121,7 +123,9 @@ class TemporalFeaturesMixin:
         each unit."""
         self.__check_temporal_index()
         units = ensure_list(units)
-        index_nano = self.index.tz_localize(None).astype("datetime64[ns]").view(np.int64)
+        index_nano = (
+            self.index.tz_localize(None).astype("datetime64[ns]").view(np.int64)
+        )
         datetime = dict()
         for unit in units:
             nano_unit = casting.time_unit_to_nanoseconds(unit)
@@ -141,8 +145,9 @@ class TemporalFeaturesMixin:
             # check that unit is a valid datetime unit
             casting.check_time_unit(unit, include_onehot=True)
             datetime[unit] = getattr(self.index, unit)
-        dummies = pd.get_dummies(pd.DataFrame(datetime, index=self.index),
-                                 columns=units)
+        dummies = pd.get_dummies(
+            pd.DataFrame(datetime, index=self.index), columns=units
+        )
         return dummies
 
     def datetime_idx(self, units: Union[str, List]) -> pd.DataFrame:
@@ -174,17 +179,18 @@ class TemporalFeaturesMixin:
         try:
             import holidays
         except ModuleNotFoundError:
-            raise RuntimeError("You should install optional dependency "
-                               "'holidays' to call 'datetime_holidays'.")
+            raise RuntimeError(
+                "You should install optional dependency "
+                "'holidays' to call 'datetime_holidays'."
+            )
 
         years = np.unique(self.index.year.values)
         h = holidays.country_holidays(country, subdiv=subdiv, years=years)
 
         # label all the timestamps, whether holiday or not
-        out = pd.DataFrame(0,
-                           dtype=np.uint8,
-                           index=self.index.normalize(),
-                           columns=['holiday'])
+        out = pd.DataFrame(
+            0, dtype=np.uint8, index=self.index.normalize(), columns=['holiday']
+        )
         for date in h.keys():
             try:
                 out.loc[[date]] = 1
@@ -196,7 +202,6 @@ class TemporalFeaturesMixin:
 
 
 class MissingValuesMixin:
-
     def set_eval_mask(self, eval_mask: FrameArray):
         eval_mask = self._parse_target(eval_mask)
         eval_mask = framearray_to_numpy(eval_mask).astype(bool)

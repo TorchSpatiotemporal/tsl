@@ -3,6 +3,7 @@
 Leakage focus: same as MetrLA -- mask from raw readings, forward-fill imputation
 only touches masked-out cells.
 """
+
 import numpy as np
 import pytest
 
@@ -17,9 +18,14 @@ N_NODES = 325
 
 def test_contract():
     ds = PemsBay()
-    assert_dataset_contract(ds, n_nodes=N_NODES, n_channels=1, has_mask=True,
-                            similarity_options={'distance', 'stcn'},
-                            conn_method='distance')
+    assert_dataset_contract(
+        ds,
+        n_nodes=N_NODES,
+        n_channels=1,
+        has_mask=True,
+        similarity_options={'distance', 'stcn'},
+        conn_method='distance',
+    )
 
 
 def test_specifics():

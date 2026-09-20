@@ -1,4 +1,5 @@
 """Shared pytest configuration for the test suite."""
+
 import pytest
 
 
@@ -16,7 +17,8 @@ def pytest_collection_modifyitems(config, items):
         return
 
     skip_download = pytest.mark.skip(
-        reason="needs --run-datasets to download/load real datasets")
+        reason="needs --run-datasets to download/load real datasets"
+    )
     for item in items:
         if "dataset_download" in item.keywords:
             item.add_marker(skip_download)

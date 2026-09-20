@@ -42,18 +42,20 @@ class MultiLinear(nn.Module):
         torch.Size([64, 24, 10, 32])
     """
 
-    def __init__(self,
-                 in_channels: int,
-                 out_channels: int,
-                 n_instances: int,
-                 *,
-                 ndim: int = None,
-                 pattern: str = None,
-                 instance_dim: Union[int, str] = -2,
-                 channel_dim: Union[int, str] = -1,
-                 bias: bool = True,
-                 device=None,
-                 dtype=None) -> None:
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        n_instances: int,
+        *,
+        ndim: int = None,
+        pattern: str = None,
+        instance_dim: Union[int, str] = -2,
+        channel_dim: Union[int, str] = -1,
+        bias: bool = True,
+        device=None,
+        dtype=None,
+    ) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super(MultiLinear, self).__init__()
         self.in_channels = in_channels
@@ -69,10 +71,12 @@ class MultiLinear(nn.Module):
         #   pattern='t n f', instance_dim=-2, instance_dim=-1
         if pattern is not None:
             pattern = pattern.replace(' ', '')
-            self.instance_dim = instance_dim if isinstance(instance_dim, str) \
-                else pattern[instance_dim]
-            self.channel_dim = channel_dim if isinstance(channel_dim, str) \
-                else pattern[channel_dim]
+            self.instance_dim = (
+                instance_dim if isinstance(instance_dim, str) else pattern[instance_dim]
+            )
+            self.channel_dim = (
+                channel_dim if isinstance(channel_dim, str) else pattern[channel_dim]
+            )
             self.einsum_pattern = self._compute_einsum_pattern(pattern=pattern)
             self.bias_shape = self._compute_bias_shape(pattern=pattern)
             self.reshape_bias = False
@@ -93,8 +97,7 @@ class MultiLinear(nn.Module):
                 self.einsum_pattern = None
                 self.bias_shape = (n_instances, out_channels)
                 self.reshape_bias = True
-                self._hook = self.register_forward_pre_hook(
-                    self.initialize_module)
+                self._hook = self.register_forward_pre_hook(self.initialize_module)
             else:
                 self.einsum_pattern = self._compute_einsum_pattern(ndim)
                 self.bias_shape = self._compute_bias_shape(ndim)
@@ -103,16 +106,19 @@ class MultiLinear(nn.Module):
         #   1. pattern is None
         #   2. ndim is None and instance_dim >= 0 or channel_dim >= 0
         else:
-            raise ValueError("One of 'pattern' or 'ndim' must be given if one "
-                             "of 'instance_dim' or 'channel_dim' is positive.")
+            raise ValueError(
+                "One of 'pattern' or 'ndim' must be given if one "
+                "of 'instance_dim' or 'channel_dim' is positive."
+            )
 
         self.weight: nn.Parameter = nn.Parameter(
-            torch.empty((n_instances, in_channels, out_channels),
-                        **factory_kwargs))
+            torch.empty((n_instances, in_channels, out_channels), **factory_kwargs)
+        )
 
         if bias:
             self.bias: nn.Parameter = nn.Parameter(
-                torch.empty(*self.bias_shape, **factory_kwargs))
+                torch.empty(*self.bias_shape, **factory_kwargs)
+            )
         else:
             self.register_parameter('bias', None)
 
@@ -121,7 +127,8 @@ class MultiLinear(nn.Module):
     def extra_repr(self) -> str:
         """"""
         return 'in_channels={}, out_channels={}, n_instances={}'.format(
-            self.in_channels, self.out_channels, self.n_instances)
+            self.in_channels, self.out_channels, self.n_instances
+        )
 
     def reset_parameters(self) -> None:
         bound = 1 / math.sqrt(self.in_channels)

@@ -5,11 +5,16 @@ These have no graph (``similarity_options is None``) and are not imputed: the ma
 simply flags zero entries, so the leakage check is that the mask matches the raw
 zero pattern and the target is left untouched.
 """
+
 import numpy as np
 import pytest
 
-from tsl.datasets import (ElectricityBenchmark, ExchangeBenchmark,
-                          SolarBenchmark, TrafficBenchmark)
+from tsl.datasets import (
+    ElectricityBenchmark,
+    ExchangeBenchmark,
+    SolarBenchmark,
+    TrafficBenchmark,
+)
 
 from .helpers import assert_dataset_contract
 
@@ -27,8 +32,9 @@ CASES = [
 @pytest.mark.parametrize('cls,n_nodes,freq', CASES)
 def test_contract(cls, n_nodes, freq):
     ds = cls()
-    assert_dataset_contract(ds, n_nodes=n_nodes, n_channels=1, has_mask=True,
-                            conn_method=None)  # no connectivity for these
+    assert_dataset_contract(
+        ds, n_nodes=n_nodes, n_channels=1, has_mask=True, conn_method=None
+    )  # no connectivity for these
     assert ds.similarity_options is None
     assert ds.freq is not None
 
@@ -37,5 +43,5 @@ def test_contract(cls, n_nodes, freq):
 def test_mask_matches_raw_zeros(cls, n_nodes, freq):
     ds = cls()
     # the mask flags exactly the non-zero entries of the (un-imputed) target
-    expected = ds.numpy() != 0.
+    expected = ds.numpy() != 0.0
     np.testing.assert_array_equal(ds.mask, expected)

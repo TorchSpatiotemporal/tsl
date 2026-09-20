@@ -15,18 +15,19 @@ from .mlp import MLP
 
 
 class MLPAttention(MessagePassing):
-
-    def __init__(self,
-                 input_size: Union[int, Tuple[int, int]],
-                 output_size: int,
-                 msg_size: Optional[int] = None,
-                 msg_layers: int = 1,
-                 root_weight: bool = True,
-                 reweigh: Optional[str] = None,
-                 norm: bool = True,
-                 dropout: float = 0.0,
-                 dim: int = -2,
-                 **kwargs):
+    def __init__(
+        self,
+        input_size: Union[int, Tuple[int, int]],
+        output_size: int,
+        msg_size: Optional[int] = None,
+        msg_layers: int = 1,
+        root_weight: bool = True,
+        reweigh: Optional[str] = None,
+        norm: bool = True,
+        dropout: float = 0.0,
+        dim: int = -2,
+        **kwargs,
+    ):
         kwargs.setdefault('aggr', 'add')
         super().__init__(node_dim=dim, **kwargs)
 
@@ -46,14 +47,15 @@ class MLPAttention(MessagePassing):
         self.dropout = dropout
 
         # key bias is discarded in softmax
-        self.lin_src = Linear(self.src_size,
-                              self.output_size,
-                              weight_initializer='glorot',
-                              bias_initializer='zeros')
-        self.lin_tgt = Linear(self.tgt_size,
-                              self.output_size,
-                              weight_initializer='glorot',
-                              bias=False)
+        self.lin_src = Linear(
+            self.src_size,
+            self.output_size,
+            weight_initializer='glorot',
+            bias_initializer='zeros',
+        )
+        self.lin_tgt = Linear(
+            self.tgt_size, self.output_size, weight_initializer='glorot', bias=False
+        )
 
         if self.root_weight:
             self.lin_skip = Linear(self.tgt_size, self.output_size, bias=False)
@@ -62,18 +64,20 @@ class MLPAttention(MessagePassing):
 
         self.msg_nn = nn.Sequential(
             nn.PReLU(init=0.2),
-            MLP(self.output_size,
+            MLP(
+                self.output_size,
                 self.msg_size,
                 self.output_size,
                 n_layers=self.msg_layers,
                 dropout=self.dropout,
-                activation='prelu'))
+                activation='prelu',
+            ),
+        )
 
         if self.reweigh == 'softmax':
             self.msg_gate = nn.Linear(self.output_size, 1, bias=False)
         else:
-            self.msg_gate = nn.Sequential(nn.Linear(self.output_size, 1),
-                                          nn.Sigmoid())
+            self.msg_gate = nn.Sequential(nn.Linear(self.output_size, 1), nn.Sigmoid())
 
         if norm:
             self.norm = LayerNorm(self.output_size)
@@ -104,10 +108,7 @@ class MLPAttention(MessagePassing):
         msg = (msg_src, msg_tgt)
 
         # propagate_type: (msg: PairTensor, mask: OptTensor)
-        out = self.propagate(edge_index,
-                             msg=msg,
-                             mask=mask,
-                             size=(N_src, N_tgt))
+        out = self.propagate(edge_index, msg=msg, mask=mask, size=(N_src, N_tgt))
 
         # skip connection
         if self.root_weight:
@@ -121,31 +122,25 @@ class MLPAttention(MessagePassing):
     def normalize_weights(self, weights, index, num_nodes, mask=None):
         # mask weights
         if mask is not None:
-            fill_value = float("-inf") if self.reweigh == 'softmax' else 0.
+            fill_value = float("-inf") if self.reweigh == 'softmax' else 0.0
             weights = weights.masked_fill(torch.logical_not(mask), fill_value)
         # optional reweighing
         if self.reweigh == 'l1':
             expanded_index = broadcast(index, weights, self.node_dim)
-            weights_sum = scatter(weights,
-                                  expanded_index,
-                                  self.node_dim,
-                                  dim_size=num_nodes,
-                                  reduce='sum')
+            weights_sum = scatter(
+                weights, expanded_index, self.node_dim, dim_size=num_nodes, reduce='sum'
+            )
             weights_sum = weights_sum.index_select(self.node_dim, index)
             weights = weights / (weights_sum + 1e-5)
         elif self.reweigh == 'softmax':
-            weights = sparse_softmax(weights,
-                                     index,
-                                     num_nodes=num_nodes,
-                                     dim=self.node_dim)
+            weights = sparse_softmax(
+                weights, index, num_nodes=num_nodes, dim=self.node_dim
+            )
         return weights
 
-    def message(self,
-                msg_j: Tensor,
-                msg_i: Tensor,
-                index,
-                size_i,
-                mask_j: OptTensor = None) -> Tensor:
+    def message(
+        self, msg_j: Tensor, msg_i: Tensor, index, size_i, mask_j: OptTensor = None
+    ) -> Tensor:
         msg = self.msg_nn(msg_j + msg_i)
         gate = self.msg_gate(msg)
         alpha = self.normalize_weights(gate, index, size_i, mask_j)
@@ -154,39 +149,46 @@ class MLPAttention(MessagePassing):
         return out
 
     def __repr__(self) -> str:
-        return (f'{self.__class__.__name__}({self.output_size}, '
-                f'dim={self.node_dim}, '
-                f'root_weight={self.root_weight})')
+        return (
+            f'{self.__class__.__name__}({self.output_size}, '
+            f'dim={self.node_dim}, '
+            f'root_weight={self.root_weight})'
+        )
 
 
 class TemporalMLPAttention(MLPAttention):
-
-    def __init__(self,
-                 input_size: Union[int, Tuple[int, int]],
-                 output_size: int,
-                 msg_size: Optional[int] = None,
-                 msg_layers: int = 1,
-                 root_weight: bool = True,
-                 reweigh: Optional[str] = None,
-                 norm: bool = True,
-                 dropout: float = 0.0,
-                 **kwargs):
+    def __init__(
+        self,
+        input_size: Union[int, Tuple[int, int]],
+        output_size: int,
+        msg_size: Optional[int] = None,
+        msg_layers: int = 1,
+        root_weight: bool = True,
+        reweigh: Optional[str] = None,
+        norm: bool = True,
+        dropout: float = 0.0,
+        **kwargs,
+    ):
         kwargs.setdefault('dim', 1)
-        super().__init__(input_size=input_size,
-                         output_size=output_size,
-                         msg_size=msg_size,
-                         msg_layers=msg_layers,
-                         root_weight=root_weight,
-                         reweigh=reweigh,
-                         dropout=dropout,
-                         norm=norm,
-                         **kwargs)
+        super().__init__(
+            input_size=input_size,
+            output_size=output_size,
+            msg_size=msg_size,
+            msg_layers=msg_layers,
+            root_weight=root_weight,
+            reweigh=reweigh,
+            dropout=dropout,
+            norm=norm,
+            **kwargs,
+        )
 
-    def forward(self,
-                x: PairTensor,
-                mask: OptTensor = None,
-                temporal_mask: OptTensor = None,
-                causal_lag: Optional[int] = None):
+    def forward(
+        self,
+        x: PairTensor,
+        mask: OptTensor = None,
+        temporal_mask: OptTensor = None,
+        causal_lag: Optional[int] = None,
+    ):
         # x: [b s * c]    query: [b l * c]    key: [b s * c]
         # mask: [b s * c]    temporal_mask: [l s]
         if isinstance(x, Tensor):
@@ -202,10 +204,8 @@ class TemporalMLPAttention(MLPAttention):
         # compute temporal index, from j to i
         if temporal_mask is None and isinstance(causal_lag, int):
             temporal_mask = tuple(
-                torch.tril_indices(l,
-                                   l,
-                                   offset=-causal_lag,
-                                   device=x_src.device))
+                torch.tril_indices(l, l, offset=-causal_lag, device=x_src.device)
+            )
         if temporal_mask is not None:
             assert temporal_mask.size() == (l, s)
             i, j = torch.meshgrid(i, j)
@@ -213,6 +213,4 @@ class TemporalMLPAttention(MLPAttention):
         else:
             edge_index = torch.cartesian_prod(j, i).T
 
-        return super(TemporalMLPAttention, self).forward(x,
-                                                         edge_index,
-                                                         mask=mask)
+        return super(TemporalMLPAttention, self).forward(x, edge_index, mask=mask)

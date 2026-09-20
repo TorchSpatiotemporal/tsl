@@ -9,35 +9,39 @@ from torch_geometric.typing import OptTensor
 from tsl.nn.blocks.encoders import MLP
 from tsl.nn.layers.base import NodeEmbedding, PositionalEncoding
 from tsl.nn.layers.graph_convs import (
-    HierarchicalSpatiotemporalCrossAttention, SpatiotemporalCrossAttention)
+    HierarchicalSpatiotemporalCrossAttention,
+    SpatiotemporalCrossAttention,
+)
 from tsl.nn.models.base_model import BaseModel
 
 
 class SPINPositionalEncoder(nn.Module):
-
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 n_layers: int = 1,
-                 n_nodes: Optional[int] = None):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        n_layers: int = 1,
+        n_nodes: Optional[int] = None,
+    ):
         super(SPINPositionalEncoder, self).__init__()
         self.lin = nn.Linear(in_channels, out_channels)
         self.activation = nn.LeakyReLU()
-        self.mlp = MLP(out_channels,
-                       out_channels,
-                       out_channels,
-                       n_layers=n_layers,
-                       activation='relu')
+        self.mlp = MLP(
+            out_channels,
+            out_channels,
+            out_channels,
+            n_layers=n_layers,
+            activation='relu',
+        )
         self.positional = PositionalEncoding(out_channels)
         if n_nodes is not None:
             self.node_emb = NodeEmbedding(n_nodes, out_channels)
         else:
             self.register_parameter('node_emb', None)
 
-    def forward(self,
-                x: Tensor,
-                node_emb: OptTensor = None,
-                node_index: OptTensor = None) -> Tensor:
+    def forward(
+        self, x: Tensor, node_emb: OptTensor = None, node_index: OptTensor = None
+    ) -> Tensor:
         if node_emb is None:
             node_emb = self.node_emb(node_index=node_index)
         # x: [b t (n) f], node_emb: [n f] -> [b t n f] (broadcasting)
@@ -59,17 +63,19 @@ class SPINModel(BaseModel):
 
     return_type = tuple
 
-    def __init__(self,
-                 input_size: int,
-                 hidden_size: int,
-                 n_nodes: int,
-                 exog_size: Optional[int] = None,
-                 output_size: Optional[int] = None,
-                 temporal_self_attention: bool = True,
-                 reweigh: Optional[str] = 'softmax',
-                 n_layers: int = 4,
-                 eta: int = 3,
-                 message_layers: int = 1):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        n_nodes: int,
+        exog_size: Optional[int] = None,
+        output_size: Optional[int] = None,
+        temporal_self_attention: bool = True,
+        reweigh: Optional[str] = 'softmax',
+        n_layers: int = 4,
+        eta: int = 3,
+        message_layers: int = 1,
+    ):
         super(SPINModel, self).__init__()
 
         exog_size = exog_size or input_size
@@ -79,10 +85,9 @@ class SPINModel(BaseModel):
         self.eta = eta
         self.temporal_self_attention = temporal_self_attention
 
-        self.u_enc = SPINPositionalEncoder(in_channels=exog_size,
-                                           out_channels=hidden_size,
-                                           n_layers=2,
-                                           n_nodes=n_nodes)
+        self.u_enc = SPINPositionalEncoder(
+            in_channels=exog_size, out_channels=hidden_size, n_layers=2, n_nodes=n_nodes
+        )
 
         self.h_enc = MLP(input_size, hidden_size, n_layers=2)
         self.h_norm = LayerNorm(hidden_size)
@@ -105,19 +110,22 @@ class SPINModel(BaseModel):
                 mask_spatial=layer < eta,
                 norm=True,
                 root_weight=True,
-                dropout=0.0)
+                dropout=0.0,
+            )
             readout = MLP(hidden_size, hidden_size, output_size, n_layers=2)
             self.x_skip.append(x_skip)
             self.encoder.append(encoder)
             self.readout.append(readout)
 
-    def forward(self,
-                x: Tensor,
-                u: Tensor,
-                mask: Tensor,
-                edge_index: Tensor,
-                node_index: OptTensor = None,
-                target_nodes: OptTensor = None) -> Tuple[Tensor, List[Tensor]]:
+    def forward(
+        self,
+        x: Tensor,
+        u: Tensor,
+        mask: Tensor,
+        edge_index: Tensor,
+        node_index: OptTensor = None,
+        target_nodes: OptTensor = None,
+    ) -> Tuple[Tensor, List[Tensor]]:
         """"""
         if target_nodes is None:
             target_nodes = slice(None)
@@ -165,20 +173,24 @@ class SPINModel(BaseModel):
 
         return x_hat, imputations
 
-    def predict(self,
-                x: Tensor,
-                u: Tensor,
-                mask: Tensor,
-                edge_index: Tensor,
-                node_index: OptTensor = None,
-                target_nodes: OptTensor = None) -> Tensor:
+    def predict(
+        self,
+        x: Tensor,
+        u: Tensor,
+        mask: Tensor,
+        edge_index: Tensor,
+        node_index: OptTensor = None,
+        target_nodes: OptTensor = None,
+    ) -> Tensor:
         """"""
-        imputation = self.forward(x=x,
-                                  u=u,
-                                  mask=mask,
-                                  edge_index=edge_index,
-                                  node_index=node_index,
-                                  target_nodes=target_nodes)[0]
+        imputation = self.forward(
+            x=x,
+            u=u,
+            mask=mask,
+            edge_index=edge_index,
+            node_index=node_index,
+            target_nodes=target_nodes,
+        )[0]
         return imputation
 
 
@@ -188,23 +200,26 @@ class SPINHierarchicalModel(BaseModel):
     with Sparse Observations" <https://arxiv.org/abs/2205.13479>`_
     (Marisca et al., NeurIPS 2022).
     """
+
     return_type = tuple
 
-    def __init__(self,
-                 input_size: int,
-                 h_size: int,
-                 z_size: int,
-                 n_nodes: int,
-                 z_heads: int = 1,
-                 exog_size: Optional[int] = None,
-                 output_size: Optional[int] = None,
-                 n_layers: int = 5,
-                 eta: int = 3,
-                 message_layers: int = 1,
-                 reweigh: Optional[str] = 'softmax',
-                 update_z_cross: bool = True,
-                 norm: bool = True,
-                 spatial_aggr: str = 'add'):
+    def __init__(
+        self,
+        input_size: int,
+        h_size: int,
+        z_size: int,
+        n_nodes: int,
+        z_heads: int = 1,
+        exog_size: Optional[int] = None,
+        output_size: Optional[int] = None,
+        n_layers: int = 5,
+        eta: int = 3,
+        message_layers: int = 1,
+        reweigh: Optional[str] = 'softmax',
+        update_z_cross: bool = True,
+        norm: bool = True,
+        spatial_aggr: str = 'add',
+    ):
         super(SPINHierarchicalModel, self).__init__()
 
         exog_size = exog_size or input_size
@@ -223,9 +238,9 @@ class SPINHierarchicalModel(BaseModel):
         inits.uniform(z_size, self.z)
         self.z_norm = LayerNorm(z_size)
 
-        self.u_enc = SPINPositionalEncoder(in_channels=exog_size,
-                                           out_channels=h_size,
-                                           n_layers=2)
+        self.u_enc = SPINPositionalEncoder(
+            in_channels=exog_size, out_channels=h_size, n_layers=2
+        )
 
         self.h_enc = MLP(input_size, h_size, n_layers=2)
         self.h_norm = LayerNorm(h_size)
@@ -252,19 +267,22 @@ class SPINHierarchicalModel(BaseModel):
                 norm=norm,
                 root_weight=True,
                 aggr=spatial_aggr,
-                dropout=0.0)
+                dropout=0.0,
+            )
             readout = MLP(h_size, z_size, output_size, n_layers=2)
             self.x_skip.append(x_skip)
             self.encoder.append(encoder)
             self.readout.append(readout)
 
-    def forward(self,
-                x: Tensor,
-                u: Tensor,
-                mask: Tensor,
-                edge_index: Tensor,
-                node_index: OptTensor = None,
-                target_nodes: OptTensor = None) -> Tuple[Tensor, List[Tensor]]:
+    def forward(
+        self,
+        x: Tensor,
+        u: Tensor,
+        mask: Tensor,
+        edge_index: Tensor,
+        node_index: OptTensor = None,
+        target_nodes: OptTensor = None,
+    ) -> Tuple[Tensor, List[Tensor]]:
         """"""
         if target_nodes is None:
             target_nodes = slice(None)
@@ -313,18 +331,22 @@ class SPINHierarchicalModel(BaseModel):
 
         return x_hat, imputations
 
-    def predict(self,
-                x: Tensor,
-                u: Tensor,
-                mask: Tensor,
-                edge_index: Tensor,
-                node_index: OptTensor = None,
-                target_nodes: OptTensor = None) -> Tensor:
+    def predict(
+        self,
+        x: Tensor,
+        u: Tensor,
+        mask: Tensor,
+        edge_index: Tensor,
+        node_index: OptTensor = None,
+        target_nodes: OptTensor = None,
+    ) -> Tensor:
         """"""
-        imputation = self.forward(x=x,
-                                  u=u,
-                                  mask=mask,
-                                  edge_index=edge_index,
-                                  node_index=node_index,
-                                  target_nodes=target_nodes)[0]
+        imputation = self.forward(
+            x=x,
+            u=u,
+            mask=mask,
+            edge_index=edge_index,
+            node_index=node_index,
+            target_nodes=target_nodes,
+        )[0]
         return imputation

@@ -45,17 +45,19 @@ class RNNImputerModel(BaseModel):
             (default: :obj:`False`)
     """
 
-    def __init__(self,
-                 input_size: int,
-                 hidden_size: int = 64,
-                 exog_size: int = 0,
-                 cell: str = 'gru',
-                 concat_mask: bool = True,
-                 fully_connected: bool = False,
-                 n_nodes: Optional[int] = None,
-                 detach_input: bool = False,
-                 n_layers: int = 1,
-                 cat_states_layers: bool = False):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int = 64,
+        exog_size: int = 0,
+        cell: str = 'gru',
+        concat_mask: bool = True,
+        fully_connected: bool = False,
+        n_nodes: Optional[int] = None,
+        detach_input: bool = False,
+        n_layers: int = 1,
+        cat_states_layers: bool = False,
+    ):
         super(RNNImputerModel, self).__init__()
 
         self.input_size = input_size
@@ -75,24 +77,30 @@ class RNNImputerModel(BaseModel):
             self._to_pattern = '(b n) t f'
 
         if concat_mask and fully_connected:
-            logger.warning("Parameter 'concat_mask' can be True only when "
-                           "'fully_connected' is False.")
+            logger.warning(
+                "Parameter 'concat_mask' can be True only when "
+                "'fully_connected' is False."
+            )
             concat_mask = False
 
-        self.rnn = RNNI(input_size=input_size,
-                        hidden_size=hidden_size,
-                        exog_size=exog_size,
-                        cell=cell,
-                        concat_mask=concat_mask,
-                        n_layers=n_layers,
-                        detach_input=detach_input,
-                        cat_states_layers=cat_states_layers)
+        self.rnn = RNNI(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            exog_size=exog_size,
+            cell=cell,
+            concat_mask=concat_mask,
+            n_layers=n_layers,
+            detach_input=detach_input,
+            cat_states_layers=cat_states_layers,
+        )
 
-    def forward(self,
-                x: Tensor,
-                mask: Tensor,
-                u: Optional[Tensor] = None,
-                return_hidden: bool = False) -> Union[Tensor, list]:
+    def forward(
+        self,
+        x: Tensor,
+        mask: Tensor,
+        u: Optional[Tensor] = None,
+        return_hidden: bool = False,
+    ) -> Union[Tensor, list]:
         """"""
         # x: [batch, time, nodes, features]
         nodes = x.size(2)
@@ -102,9 +110,9 @@ class RNNImputerModel(BaseModel):
 
         if u is not None:
             if self.fully_connected:  # fc and 'b t f'
-                assert u.ndim == 3, \
-                    "Only graph-level exogenous are supported in " \
-                    "fully connected mode."
+                assert u.ndim == 3, (
+                    "Only graph-level exogenous are supported in fully connected mode."
+                )
             elif u.ndim == 3:  # no fc and 'b t f'
                 u = repeat(u, f'b t f -> {self._to_pattern}', n=nodes)
             else:  # no fc and 'b t n f'
@@ -121,10 +129,7 @@ class RNNImputerModel(BaseModel):
             h = rearrange(h, f'{self._to_pattern} -> b t n f', n=nodes)
         return [x_hat, h]
 
-    def predict(self,
-                x: Tensor,
-                mask: Tensor,
-                u: Optional[Tensor] = None) -> Tensor:
+    def predict(self, x: Tensor, mask: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""
         return self.forward(x=x, mask=mask, u=u, return_hidden=False)
 
@@ -169,18 +174,20 @@ class BiRNNImputerModel(BaseModel):
 
     return_type = list
 
-    def __init__(self,
-                 input_size: int,
-                 hidden_size: int = 64,
-                 exog_size: int = 0,
-                 cell: str = 'gru',
-                 concat_mask: bool = True,
-                 fully_connected: bool = False,
-                 n_nodes: Optional[int] = None,
-                 detach_input: bool = False,
-                 n_layers: int = 1,
-                 cat_states_layers: bool = False,
-                 dropout: float = 0.):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int = 64,
+        exog_size: int = 0,
+        cell: str = 'gru',
+        concat_mask: bool = True,
+        fully_connected: bool = False,
+        n_nodes: Optional[int] = None,
+        detach_input: bool = False,
+        n_layers: int = 1,
+        cat_states_layers: bool = False,
+        dropout: float = 0.0,
+    ):
         super(BiRNNImputerModel, self).__init__()
 
         self.input_size = input_size
@@ -200,27 +207,33 @@ class BiRNNImputerModel(BaseModel):
             self._to_pattern = '(b n) t f'
 
         if concat_mask and fully_connected:
-            logger.warning("Parameter 'concat_mask' can be True only when "
-                           "'fully_connected' is False.")
+            logger.warning(
+                "Parameter 'concat_mask' can be True only when "
+                "'fully_connected' is False."
+            )
             concat_mask = False
 
-        self.fwd_rnn = RNNI(input_size=input_size,
-                            hidden_size=hidden_size,
-                            exog_size=exog_size,
-                            cell=cell,
-                            concat_mask=concat_mask,
-                            n_layers=n_layers,
-                            detach_input=detach_input,
-                            cat_states_layers=cat_states_layers)
-        self.bwd_rnn = RNNI(input_size=input_size,
-                            hidden_size=hidden_size,
-                            exog_size=exog_size,
-                            cell=cell,
-                            concat_mask=concat_mask,
-                            flip_time=True,
-                            n_layers=n_layers,
-                            detach_input=detach_input,
-                            cat_states_layers=cat_states_layers)
+        self.fwd_rnn = RNNI(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            exog_size=exog_size,
+            cell=cell,
+            concat_mask=concat_mask,
+            n_layers=n_layers,
+            detach_input=detach_input,
+            cat_states_layers=cat_states_layers,
+        )
+        self.bwd_rnn = RNNI(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            exog_size=exog_size,
+            cell=cell,
+            concat_mask=concat_mask,
+            flip_time=True,
+            n_layers=n_layers,
+            detach_input=detach_input,
+            cat_states_layers=cat_states_layers,
+        )
 
         self.dropout = nn.Dropout(dropout)
 
@@ -230,16 +243,19 @@ class BiRNNImputerModel(BaseModel):
             assert n_nodes is not None
             self.readout = nn.Sequential(
                 nn.Linear(2 * out_size, input_size),
-                Rearrange('... t (n h) -> ... t n h', n=n_nodes))
+                Rearrange('... t (n h) -> ... t n h', n=n_nodes),
+            )
         else:
             self.readout = nn.Linear(2 * out_size, self.input_size)
 
-    def forward(self,
-                x: Tensor,
-                mask: Tensor,
-                u: Optional[Tensor] = None,
-                return_hidden: bool = False,
-                return_predictions: bool = True) -> Union[Tensor, list]:
+    def forward(
+        self,
+        x: Tensor,
+        mask: Tensor,
+        u: Optional[Tensor] = None,
+        return_hidden: bool = False,
+        return_predictions: bool = True,
+    ) -> Union[Tensor, list]:
         """"""
         # x: [batch, time, nodes, features]
         nodes = x.size(2)
@@ -249,9 +265,9 @@ class BiRNNImputerModel(BaseModel):
 
         if u is not None:
             if self.fully_connected:  # fc and 'b t f'
-                assert u.ndim == 3, \
-                    "Only graph-level exogenous are supported in " \
-                    "fully connected mode."
+                assert u.ndim == 3, (
+                    "Only graph-level exogenous are supported in fully connected mode."
+                )
             elif u.ndim == 3:  # no fc and 'b t f'
                 u = repeat(u, f'b t f -> {self._to_pattern}', n=nodes)
             else:  # no fc and 'b t n f'
@@ -273,24 +289,15 @@ class BiRNNImputerModel(BaseModel):
         res = [x_hat]
 
         if return_predictions:
-            x_hat_fwd = rearrange(x_hat_fwd,
-                                  f'{self._to_pattern} -> b t n f',
-                                  n=nodes)
-            x_hat_bwd = rearrange(x_hat_bwd,
-                                  f'{self._to_pattern} -> b t n f',
-                                  n=nodes)
+            x_hat_fwd = rearrange(x_hat_fwd, f'{self._to_pattern} -> b t n f', n=nodes)
+            x_hat_bwd = rearrange(x_hat_bwd, f'{self._to_pattern} -> b t n f', n=nodes)
             res.append((x_hat_fwd, x_hat_bwd))
         if return_hidden:
             res.append(h)
         return res
 
-    def predict(self,
-                x: Tensor,
-                mask: Tensor,
-                u: Optional[Tensor] = None) -> Tensor:
+    def predict(self, x: Tensor, mask: Tensor, u: Optional[Tensor] = None) -> Tensor:
         """"""
-        return self.forward(x=x,
-                            mask=mask,
-                            u=u,
-                            return_hidden=False,
-                            return_predictions=False)
+        return self.forward(
+            x=x, mask=mask, u=u, return_hidden=False, return_predictions=False
+        )

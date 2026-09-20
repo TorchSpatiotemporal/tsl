@@ -3,6 +3,7 @@
 download), so the focus is determinism given a seed and the structural contract
 of the generated tensors.
 """
+
 import math
 
 import numpy as np
@@ -10,8 +11,7 @@ import pytest
 import torch
 from torch import nn
 
-from tsl.datasets import (GaussianNoiseSyntheticDataset, GPVARDataset,
-                          GPVARDatasetAZ)
+from tsl.datasets import GaussianNoiseSyntheticDataset, GPVARDataset, GPVARDatasetAZ
 
 NUM_NODES, NUM_FEATURES, NUM_STEPS = 4, 1, 50
 EDGE_INDEX = torch.tensor([[0, 1, 2, 3], [1, 2, 3, 0]])
@@ -28,16 +28,19 @@ class MeanModel(nn.Module):
         return x.mean(dim=1, keepdim=True)
 
 
-def make_gaussian(seed=0, sigma_noise=0.2, connectivity=EDGE_INDEX,
-                  num_steps=NUM_STEPS):
-    return GaussianNoiseSyntheticDataset(num_features=NUM_FEATURES,
-                                         num_nodes=NUM_NODES,
-                                         num_steps=num_steps,
-                                         connectivity=connectivity,
-                                         model=MeanModel(),
-                                         sigma_noise=sigma_noise,
-                                         seed=seed,
-                                         name='synth')
+def make_gaussian(
+    seed=0, sigma_noise=0.2, connectivity=EDGE_INDEX, num_steps=NUM_STEPS
+):
+    return GaussianNoiseSyntheticDataset(
+        num_features=NUM_FEATURES,
+        num_nodes=NUM_NODES,
+        num_steps=num_steps,
+        connectivity=connectivity,
+        model=MeanModel(),
+        sigma_noise=sigma_noise,
+        seed=seed,
+        name='synth',
+    )
 
 
 # -- GaussianNoiseSyntheticDataset ------------------------------------------
@@ -98,30 +101,34 @@ def test_kwargs_filtering_keeps_optimal_pred_consistent():
 
 def test_gpvar_node_count_per_community():
     # build_tri_community_graph yields 6 nodes per (triangular) community
-    ds = GPVARDataset(num_communities=2, num_steps=NUM_STEPS,
-                      filter_params=[[0.5, 0.1]])
+    ds = GPVARDataset(
+        num_communities=2, num_steps=NUM_STEPS, filter_params=[[0.5, 0.1]]
+    )
     assert ds.n_nodes == 6 * 2
 
 
 def test_gpvar_has_self_loops():
-    ds = GPVARDataset(num_communities=2, num_steps=NUM_STEPS,
-                      filter_params=[[0.5, 0.1]])
+    ds = GPVARDataset(
+        num_communities=2, num_steps=NUM_STEPS, filter_params=[[0.5, 0.1]]
+    )
     edge_index, _ = ds.get_connectivity(layout='edge_index')
     self_loops = (edge_index[0] == edge_index[1]).sum().item()
     assert self_loops == ds.n_nodes
 
 
 def test_gpvar_output_bounded_by_tanh():
-    ds = GPVARDataset(num_communities=2, num_steps=NUM_STEPS,
-                      filter_params=[[0.5, 0.1]])
+    ds = GPVARDataset(
+        num_communities=2, num_steps=NUM_STEPS, filter_params=[[0.5, 0.1]]
+    )
     # the GP-VAR filter wraps its output in tanh, so the noise-free signal is in
     # (-1, 1)
     assert np.all(np.abs(ds.optimal_pred) <= 1.0 + 1e-6)
 
 
 def test_gpvar_generator_is_deterministic():
-    ds = GPVARDataset(num_communities=2, num_steps=NUM_STEPS,
-                      filter_params=[[0.5, 0.1]])
+    ds = GPVARDataset(
+        num_communities=2, num_steps=NUM_STEPS, filter_params=[[0.5, 0.1]]
+    )
     x0, y0, _ = ds.generate_data(seed=0)
     x1, y1, _ = ds.generate_data(seed=0)
     np.testing.assert_array_equal(x0, x1)

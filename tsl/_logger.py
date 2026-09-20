@@ -7,9 +7,7 @@ if not _HYDRA_AVAILABLE:
         'version': 1,
         'disable_existing_loggers': False,
         'formatters': {
-            'standard': {
-                'format': '%(asctime)s [%(levelname)s]: %(message)s'
-            },
+            'standard': {'format': '%(asctime)s [%(levelname)s]: %(message)s'},
         },
         'handlers': {
             'default': {
@@ -20,12 +18,8 @@ if not _HYDRA_AVAILABLE:
             },
         },
         'loggers': {
-            'log': {
-                'handlers': ['default'],
-                'level': 'INFO',
-                'propagate': True
-            }
-        }
+            'log': {'handlers': ['default'], 'level': 'INFO', 'propagate': True}
+        },
     }
     logging.config.dictConfig(DEFAULT_LOGGING)
 logger = logging.getLogger('tsl')

@@ -18,11 +18,13 @@ class NodeEmbedding(nn.Module):
             (default :obj:`True`)
     """
 
-    def __init__(self,
-                 n_nodes: int,
-                 emb_size: int,
-                 initializer: Union[str, Tensor] = 'uniform',
-                 requires_grad: bool = True):
+    def __init__(
+        self,
+        n_nodes: int,
+        emb_size: int,
+        initializer: Union[str, Tensor] = 'uniform',
+        requires_grad: bool = True,
+    ):
         super(NodeEmbedding, self).__init__()
         self.n_nodes = int(n_nodes)
         self.emb_size = int(emb_size)
@@ -34,14 +36,16 @@ class NodeEmbedding(nn.Module):
             self.initializer = initializer
             self.register_buffer('_default_values', None)
 
-        self.emb = nn.Parameter(Tensor(self.n_nodes, self.emb_size),
-                                requires_grad=requires_grad)
+        self.emb = nn.Parameter(
+            Tensor(self.n_nodes, self.emb_size), requires_grad=requires_grad
+        )
 
         self.reset_emb()
 
     def __repr__(self) -> str:
         return "{}(n_nodes={}, embedding_size={})".format(
-            self.__class__.__name__, self.n_nodes, self.emb_size)
+            self.__class__.__name__, self.n_nodes, self.emb_size
+        )
 
     def reset_emb(self):
         with torch.no_grad():
@@ -52,8 +56,8 @@ class NodeEmbedding(nn.Module):
                 self.emb.data.copy_(self._default_values)
             else:
                 raise RuntimeError(
-                    f"Embedding initializer '{self.initializer}'"
-                    " is not supported.")
+                    f"Embedding initializer '{self.initializer}' is not supported."
+                )
 
     def reset_parameters(self):
         self.reset_emb()
@@ -61,10 +65,12 @@ class NodeEmbedding(nn.Module):
     def get_emb(self):
         return self.emb
 
-    def forward(self,
-                expand: Optional[List] = None,
-                node_index: OptTensor = None,
-                nodes_first: bool = True):
+    def forward(
+        self,
+        expand: Optional[List] = None,
+        node_index: OptTensor = None,
+        nodes_first: bool = True,
+    ):
         """"""
         emb = self.get_emb()
         if node_index is not None:
@@ -74,7 +80,5 @@ class NodeEmbedding(nn.Module):
         if expand is None:
             return emb
         shape = [*emb.size()]
-        view = [
-            1 if d > 0 else shape.pop(0 if nodes_first else -1) for d in expand
-        ]
+        view = [1 if d > 0 else shape.pop(0 if nodes_first else -1) for d in expand]
         return emb.view(*view).expand(*expand)

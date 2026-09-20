@@ -28,16 +28,18 @@ class Dense(nn.Module):
             (default: :obj:`True`)
     """
 
-    def __init__(self,
-                 input_size: int,
-                 output_size: int,
-                 activation: str = 'relu',
-                 dropout: float = 0.,
-                 bias: bool = True):
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int,
+        activation: str = 'relu',
+        dropout: float = 0.0,
+        bias: bool = True,
+    ):
         super(Dense, self).__init__()
         self.affinity = nn.Linear(input_size, output_size, bias=bias)
         self.activation = utils.get_layer_activation(activation)()
-        self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
+        self.dropout = nn.Dropout(dropout) if dropout > 0.0 else nn.Identity()
 
     def reset_parameters(self) -> None:
         """"""

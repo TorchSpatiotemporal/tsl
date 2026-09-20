@@ -17,10 +17,12 @@ def _tail_split(dataset, length, mask=None):
 
 def test_custom_splitter_covers_and_disjoint():
     dataset = _make_dt_dataset(window=4, horizon=4, periods=400)
-    splitter = CustomSplitter(val_split_fn=_tail_split,
-                              test_split_fn=_tail_split,
-                              val_kwargs=dict(length=0.1),
-                              test_kwargs=dict(length=0.2))
+    splitter = CustomSplitter(
+        val_split_fn=_tail_split,
+        test_split_fn=_tail_split,
+        val_kwargs=dict(length=0.1),
+        test_kwargs=dict(length=0.2),
+    )
     out = splitter.split(dataset)
     tr, va, te = out['train'], out['val'], out['test']
     # the three splits partition all samples...
@@ -33,10 +35,12 @@ def test_custom_splitter_covers_and_disjoint():
 
 
 def test_custom_splitter_policies_report_fn_names():
-    splitter = CustomSplitter(val_split_fn=_tail_split,
-                              test_split_fn=_tail_split,
-                              val_kwargs=dict(length=0.1),
-                              test_kwargs=dict(length=0.2))
+    splitter = CustomSplitter(
+        val_split_fn=_tail_split,
+        test_split_fn=_tail_split,
+        val_kwargs=dict(length=0.1),
+        test_kwargs=dict(length=0.2),
+    )
     assert splitter.val_policy == '_tail_split'
     assert splitter.test_policy == '_tail_split'
 
@@ -51,11 +55,13 @@ def test_mask_test_indices_in_val_keeps_val_test_disjoint():
     # The test tail is masked out before the val fn runs, so val draws from the
     # remaining samples and stays disjoint from test.
     dataset = _make_dt_dataset(window=4, horizon=4, periods=400)
-    splitter = CustomSplitter(val_split_fn=_tail_split,
-                              test_split_fn=_tail_split,
-                              val_kwargs=dict(length=0.2),
-                              test_kwargs=dict(length=0.2),
-                              mask_test_indices_in_val=True)
+    splitter = CustomSplitter(
+        val_split_fn=_tail_split,
+        test_split_fn=_tail_split,
+        val_kwargs=dict(length=0.2),
+        test_kwargs=dict(length=0.2),
+        mask_test_indices_in_val=True,
+    )
     out = splitter.split(dataset)
     assert np.intersect1d(out['val'], out['test']).size == 0
 
@@ -68,10 +74,12 @@ def test_custom_splitter_empty_test_set():
     def empty_test(ds, **kwargs):
         return np.arange(len(ds)), np.array([], dtype=int)
 
-    splitter = CustomSplitter(val_split_fn=_tail_split,
-                              test_split_fn=empty_test,
-                              val_kwargs=dict(length=0.1),
-                              mask_test_indices_in_val=True)
+    splitter = CustomSplitter(
+        val_split_fn=_tail_split,
+        test_split_fn=empty_test,
+        val_kwargs=dict(length=0.1),
+        mask_test_indices_in_val=True,
+    )
     out = splitter.split(dataset)
     assert len(out['test']) == 0
     assert len(out['val']) and len(out['train'])
@@ -88,10 +96,12 @@ def test_no_mask_passes_no_mask_kwarg_to_val_fn():
         cut = len(idx) - int(length * len(idx))
         return idx[:cut], idx[cut:]
 
-    splitter = CustomSplitter(val_split_fn=val_fn,
-                              test_split_fn=_tail_split,
-                              val_kwargs=dict(length=0.1),
-                              test_kwargs=dict(length=0.2),
-                              mask_test_indices_in_val=False)
+    splitter = CustomSplitter(
+        val_split_fn=val_fn,
+        test_split_fn=_tail_split,
+        val_kwargs=dict(length=0.1),
+        test_kwargs=dict(length=0.2),
+        mask_test_indices_in_val=False,
+    )
     out = splitter.split(dataset)
     assert len(out['train']) and len(out['val']) and len(out['test'])

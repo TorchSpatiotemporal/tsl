@@ -29,7 +29,7 @@ _torch_activations_dict = {
     'tanh': 'Tanh',
     'silu': 'SiLU',
     'swish': 'SiLU',
-    'linear': 'Identity'
+    'linear': 'Identity',
 }
 
 

@@ -29,6 +29,7 @@ class MetrLA(DatetimeDataset):
     Static attributes:
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
+
     url = "https://drive.switch.ch/index.php/s/Z8cKHAVyiDqkzaG/download"
 
     similarity_options = {'distance'}
@@ -38,19 +39,23 @@ class MetrLA(DatetimeDataset):
         self.root = root
         # load dataset
         df, dist, mask = self.load(impute_zeros=impute_zeros)
-        super().__init__(target=df,
-                         mask=mask,
-                         freq=freq,
-                         similarity_score="distance",
-                         temporal_aggregation="nearest",
-                         name="MetrLA")
+        super().__init__(
+            target=df,
+            mask=mask,
+            freq=freq,
+            similarity_score="distance",
+            temporal_aggregation="nearest",
+            name="MetrLA",
+        )
         self.add_covariate('dist', dist, pattern='n n')
 
     @property
     def raw_file_names(self):
         return [
-            'metr_la.h5', 'distances_la.csv', 'sensor_locations_la.csv',
-            'sensor_ids_la.txt'
+            'metr_la.h5',
+            'distances_la.csv',
+            'sensor_locations_la.csv',
+            'sensor_ids_la.txt',
         ]
 
     @property
@@ -84,8 +89,10 @@ class MetrLA(DatetimeDataset):
         path = os.path.join(self.root_dir, 'metr_la_dist.npy')
         np.save(path, dist)
         # Rename locations file
-        os.rename(os.path.join(self.root_dir, 'sensor_locations_la.csv'),
-                  os.path.join(self.root_dir, 'locations.csv'))
+        os.rename(
+            os.path.join(self.root_dir, 'sensor_locations_la.csv'),
+            os.path.join(self.root_dir, 'locations.csv'),
+        )
         # Remove raw data
         self.clean_downloads()
 
@@ -104,9 +111,9 @@ class MetrLA(DatetimeDataset):
 
     def load(self, impute_zeros=True):
         df, dist = self.load_raw()
-        mask = (df.values != 0.).astype('uint8')
+        mask = (df.values != 0.0).astype('uint8')
         if impute_zeros:
-            df = df.replace(to_replace=0., method='ffill')
+            df = df.replace(to_replace=0.0, method='ffill')
         return df, dist, mask
 
     def compute_similarity(self, method: str, **kwargs):

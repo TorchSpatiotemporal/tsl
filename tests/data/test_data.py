@@ -3,6 +3,7 @@
 Tensors use the *grid* discipline -- every cell holds a unique value -- so that
 view filtering, rearranging and subgraph results can be matched element-wise.
 """
+
 import numpy as np
 import pytest
 import torch
@@ -12,8 +13,8 @@ from tsl.data import Data
 from tsl.data.data import get_size, pattern_size_repr
 from tsl.data.preprocessing.scalers import ScalerModule
 
-
 # -- builders ---------------------------------------------------------------
+
 
 def _grid(*shape):
     return torch.arange(int(np.prod(shape))).float().reshape(*shape)
@@ -23,23 +24,26 @@ def _graph_data(n_nodes=3, t=4, c=2, scaler=None):
     """A small static graph: window 'x' and horizon 'y' on the nodes plus a
     triangular connectivity."""
     edge_index = torch.tensor([[0, 1, 2], [1, 2, 0]])
-    edge_weight = torch.tensor([1., 2., 3.])
+    edge_weight = torch.tensor([1.0, 2.0, 3.0])
     transform = {'x': scaler} if scaler is not None else None
-    return Data(input={'x': _grid(t, n_nodes, c)},
-                target={'y': _grid(2, n_nodes, c)},
-                edge_index=edge_index,
-                edge_weight=edge_weight,
-                transform=transform,
-                pattern={'x': 't n c', 'y': 't n c',
-                         'edge_index': '2 e', 'edge_weight': 'e'})
+    return Data(
+        input={'x': _grid(t, n_nodes, c)},
+        target={'y': _grid(2, n_nodes, c)},
+        edge_index=edge_index,
+        edge_weight=edge_weight,
+        transform=transform,
+        pattern={'x': 't n c', 'y': 't n c', 'edge_index': '2 e', 'edge_weight': 'e'},
+    )
 
 
 # -- get_size / pattern_size_repr -------------------------------------------
 
+
 def test_get_size_tensor_and_sparse():
     assert get_size(torch.zeros(4, 3)) == (4, 3)
-    st = SparseTensor.from_edge_index(torch.tensor([[0, 1], [1, 2]]),
-                                      sparse_sizes=(3, 3))
+    st = SparseTensor.from_edge_index(
+        torch.tensor([[0, 1], [1, 2]]), sparse_sizes=(3, 3)
+    )
     assert get_size(st) == (3, 3)
 
 
@@ -50,6 +54,7 @@ def test_pattern_size_repr():
 
 
 # -- StorageView ------------------------------------------------------------
+
 
 def test_views_filter_keys():
     d = Data(input={'x': _grid(2), 'u': _grid(2)}, target={'y': _grid(2)})
@@ -119,6 +124,7 @@ def test_views_share_underlying_store():
 
 # -- Data construction ------------------------------------------------------
 
+
 def test_construction_defaults():
     d = Data()
     assert d.mask is None
@@ -129,13 +135,17 @@ def test_construction_defaults():
 
 
 def test_mask_and_transform_flags():
-    d = Data(input={'x': _grid(2)}, mask=torch.ones(2, dtype=torch.bool),
-             transform={'x': ScalerModule(bias=0., scale=1.)})
+    d = Data(
+        input={'x': _grid(2)},
+        mask=torch.ones(2, dtype=torch.bool),
+        transform={'x': ScalerModule(bias=0.0, scale=1.0)},
+    )
     assert d.has_mask is True
     assert d.has_transform is True
 
 
 # -- __cat_dim__ ------------------------------------------------------------
+
 
 def test_cat_dim_node_dimension():
     d = Data(input={'a': torch.zeros(3, 2)}, pattern={'a': 'n c'})
@@ -168,6 +178,7 @@ def test_cat_dim_falls_back_when_no_pattern():
 
 # -- stores_as --------------------------------------------------------------
 
+
 def test_stores_as_copies_keys_and_pattern():
     src = _graph_data()
     dst = Data()
@@ -186,6 +197,7 @@ def test_stores_as_copies_keys_and_pattern():
 
 # -- rearrange --------------------------------------------------------------
 
+
 def test_rearrange_element_updates_value_and_pattern():
     d = Data(input={'x': _grid(4, 3)}, pattern={'x': 't n'})
     d.rearrange_element('x', 'n t')
@@ -200,23 +212,23 @@ def test_rearrange_explicit_start_mismatch_raises():
 
 
 def test_rearrange_updates_transform_in_lockstep():
-    scaler = ScalerModule(bias=torch.zeros(4, 3),
-                          scale=_grid(4, 3) + 1, pattern='t n')
-    d = Data(input={'x': _grid(4, 3)}, transform={'x': scaler},
-             pattern={'x': 't n'})
+    scaler = ScalerModule(bias=torch.zeros(4, 3), scale=_grid(4, 3) + 1, pattern='t n')
+    d = Data(input={'x': _grid(4, 3)}, transform={'x': scaler}, pattern={'x': 't n'})
     d.rearrange_element('x', 'n t')
     assert d.transform['x'].pattern == 'n t'
     assert tuple(d.transform['x'].scale.shape) == (3, 4)
 
 
 def test_rearrange_multiple():
-    d = Data(input={'x': _grid(4, 3), 'u': _grid(4, 3)},
-             pattern={'x': 't n', 'u': 't n'})
+    d = Data(
+        input={'x': _grid(4, 3), 'u': _grid(4, 3)}, pattern={'x': 't n', 'u': 't n'}
+    )
     d.rearrange({'x': 'n t', 'u': 'n t'})
     assert d.pattern['x'] == 'n t' and d.pattern['u'] == 'n t'
 
 
 # -- subgraph ---------------------------------------------------------------
+
 
 def test_subgraph_inplace_reduces_graph():
     d = _graph_data()
@@ -225,7 +237,7 @@ def test_subgraph_inplace_reduces_graph():
     assert tuple(d['x'].shape) == (4, 2, 2)
     # only the 0->1 edge survives among {0->1, 1->2, 2->0}
     assert d.edge_index.tolist() == [[0], [1]]
-    assert d.edge_weight.tolist() == [1.]
+    assert d.edge_weight.tolist() == [1.0]
 
 
 def test_subgraph_bool_subset():
@@ -236,16 +248,18 @@ def test_subgraph_bool_subset():
 
 
 def test_subgraph_slices_scaler():
-    scaler = ScalerModule(bias=torch.zeros(1, 3, 1),
-                          scale=_grid(1, 3, 1) + 1, pattern='t n c')
+    scaler = ScalerModule(
+        bias=torch.zeros(1, 3, 1), scale=_grid(1, 3, 1) + 1, pattern='t n c'
+    )
     d = _graph_data(scaler=scaler)
     d.subgraph_(torch.tensor([0, 1]))
     assert tuple(d.transform['x'].scale.shape) == (1, 2, 1)
 
 
 def test_subgraph_does_not_mutate_original():
-    scaler = ScalerModule(bias=torch.zeros(1, 3, 1),
-                          scale=_grid(1, 3, 1) + 1, pattern='t n c')
+    scaler = ScalerModule(
+        bias=torch.zeros(1, 3, 1), scale=_grid(1, 3, 1) + 1, pattern='t n c'
+    )
     d = _graph_data(scaler=scaler)
     sub = d.subgraph(torch.tensor([0, 1]))
     # the returned subgraph is reduced ...
@@ -261,6 +275,7 @@ def test_subgraph_does_not_mutate_original():
 
 
 # -- numpy ------------------------------------------------------------------
+
 
 def test_numpy_converts_tensors():
     d = Data(input={'x': _grid(2, 3)}, pattern={'x': 't n'})

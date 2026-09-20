@@ -4,6 +4,7 @@ The mixin is exercised in isolation through a minimal host that only exposes the
 attributes the mixin reads (``precision``, ``n_steps``, ``n_nodes``, ``n_edges``,
 ``edge_index``).
 """
+
 import numpy as np
 import pytest
 import torch
@@ -12,8 +13,7 @@ from tsl.data.mixin import DataParsingMixin
 
 
 class _Host(DataParsingMixin):
-    def __init__(self, n_steps=10, n_nodes=3, n_edges=4, precision=32,
-                 edge_index=None):
+    def __init__(self, n_steps=10, n_nodes=3, n_edges=4, precision=32, edge_index=None):
         self.n_steps = n_steps
         self.n_nodes = n_nodes
         self.n_edges = n_edges
@@ -27,6 +27,7 @@ def _host(**kwargs):
 
 # -- _parse_target ----------------------------------------------------------
 
+
 def test_parse_target_promotes_to_t_n_c():
     h = _host()
     out = h._parse_target(np.arange(30).reshape(10, 3).astype('float32'))
@@ -39,9 +40,14 @@ def test_parse_target_1d_promoted():
     assert tuple(out.shape) == (10, 1, 1)
 
 
-@pytest.mark.parametrize('precision,dtype', [
-    (16, torch.float16), (32, torch.float32), (64, torch.float64),
-])
+@pytest.mark.parametrize(
+    'precision,dtype',
+    [
+        (16, torch.float16),
+        (32, torch.float32),
+        (64, torch.float64),
+    ],
+)
 def test_parse_target_precision(precision, dtype):
     h = _host(precision=precision)
     out = h._parse_target(np.zeros((10, 3), dtype='float64'))
@@ -49,6 +55,7 @@ def test_parse_target_precision(precision, dtype):
 
 
 # -- _parse_covariate -------------------------------------------------------
+
 
 def test_parse_covariate_infers_pattern():
     h = _host()
@@ -59,8 +66,7 @@ def test_parse_covariate_infers_pattern():
 
 def test_parse_covariate_explicit_pattern_validated():
     h = _host()
-    obj, pattern = h._parse_covariate(np.zeros((10, 2), dtype='float32'),
-                                      pattern='t f')
+    obj, pattern = h._parse_covariate(np.zeros((10, 2), dtype='float32'), pattern='t f')
     assert pattern == 't f'
 
 
@@ -72,8 +78,9 @@ def test_parse_covariate_pattern_shape_mismatch():
 
 def test_parse_covariate_allow_broadcasting():
     h = _host()
-    obj, _ = h._parse_covariate(np.zeros((1, 3), dtype='float32'),
-                                pattern='t n', allow_broadcasting=True)
+    obj, _ = h._parse_covariate(
+        np.zeros((1, 3), dtype='float32'), pattern='t n', allow_broadcasting=True
+    )
     assert tuple(obj.shape) == (1, 3)
     # without broadcasting the size-1 axis is rejected
     with pytest.raises(ValueError):
@@ -82,15 +89,16 @@ def test_parse_covariate_allow_broadcasting():
 
 def test_parse_covariate_precision_gated():
     h = _host(precision=32)
-    converted, _ = h._parse_covariate(np.zeros((10, 3), dtype='float64'),
-                                      pattern='t n')
+    converted, _ = h._parse_covariate(np.zeros((10, 3), dtype='float64'), pattern='t n')
     assert converted.dtype == torch.float32
-    kept, _ = h._parse_covariate(np.zeros((10, 3), dtype='float64'),
-                                 pattern='t n', convert_precision=False)
+    kept, _ = h._parse_covariate(
+        np.zeros((10, 3), dtype='float64'), pattern='t n', convert_precision=False
+    )
     assert kept.dtype == torch.float64
 
 
 # -- _parse_connectivity ----------------------------------------------------
+
 
 def test_parse_connectivity_none():
     assert _host()._parse_connectivity(None) == (None, None)
@@ -99,9 +107,10 @@ def test_parse_connectivity_none():
 def test_parse_connectivity_edge_index_with_weight():
     h = _host()
     edge_index = torch.tensor([[0, 1, 2, 0], [1, 2, 0, 1]])
-    edge_weight = torch.tensor([1., 2., 3., 4.], dtype=torch.float64)
-    ei, ew = h._parse_connectivity((edge_index, edge_weight),
-                                   target_layout='edge_index')
+    edge_weight = torch.tensor([1.0, 2.0, 3.0, 4.0], dtype=torch.float64)
+    ei, ew = h._parse_connectivity(
+        (edge_index, edge_weight), target_layout='edge_index'
+    )
     assert tuple(ei.shape) == (2, 4)
     assert ew.dtype == torch.float32  # precision converted
 
@@ -109,14 +118,14 @@ def test_parse_connectivity_edge_index_with_weight():
 def test_parse_connectivity_dense_validates_nodes_no_weight():
     h = _host()
     edge_index = torch.tensor([[0, 1, 2, 0], [1, 2, 0, 1]])
-    edge_weight = torch.tensor([1., 2., 3., 4.])
-    adj, ew = h._parse_connectivity((edge_index, edge_weight),
-                                    target_layout='dense')
+    edge_weight = torch.tensor([1.0, 2.0, 3.0, 4.0])
+    adj, ew = h._parse_connectivity((edge_index, edge_weight), target_layout='dense')
     assert tuple(adj.shape) == (3, 3)
     assert ew is None
 
 
 # -- _check_pattern / _check_same_dim ---------------------------------------
+
 
 def test_check_pattern_validates_each_token():
     h = _host(n_steps=10, n_nodes=3)
@@ -141,6 +150,7 @@ def test_check_same_dim_broadcasting():
 
 # -- _check_name ------------------------------------------------------------
 
+
 def test_check_name_rejects_existing_attribute():
     h = _host()
     with pytest.raises(ValueError):
@@ -153,6 +163,7 @@ def test_check_name_accepts_fresh_name():
 
 
 # -- _value_to_kwargs -------------------------------------------------------
+
 
 def test_value_to_kwargs_dataarray():
     h = _host()

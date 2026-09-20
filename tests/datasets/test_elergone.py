@@ -6,6 +6,7 @@ The default ``correntropy`` similarity is computed over the full (140k-step)
 series and is too expensive to run here, so connectivity is only checked for the
 *declared-but-unimplemented* ``pearson`` option (must raise NotImplementedError).
 """
+
 import numpy as np
 import pytest
 
@@ -20,9 +21,14 @@ N_NODES = 370
 
 def test_contract():
     ds = Elergone()
-    assert_dataset_contract(ds, n_nodes=N_NODES, n_channels=1, has_mask=True,
-                            similarity_options={'correntropy', 'pearson'},
-                            conn_method=None)  # correntropy too slow to compute
+    assert_dataset_contract(
+        ds,
+        n_nodes=N_NODES,
+        n_channels=1,
+        has_mask=True,
+        similarity_options={'correntropy', 'pearson'},
+        conn_method=None,
+    )  # correntropy too slow to compute
 
 
 def test_specifics():
@@ -41,4 +47,4 @@ def test_pearson_option_not_implemented():
 def test_mask_matches_zero_fill():
     ds = Elergone()
     # missing values are zero-filled and then masked out -> mask == (value != 0)
-    np.testing.assert_array_equal(ds.mask, ds.numpy() != 0.)
+    np.testing.assert_array_equal(ds.mask, ds.numpy() != 0.0)

@@ -51,8 +51,7 @@ add_module_names = False
 
 # exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-napoleon_custom_sections = [("Shape", "params_style"),
-                            ("Shapes", "params_style")]
+napoleon_custom_sections = [("Shape", "params_style"), ("Shapes", "params_style")]
 
 numfig = True  # Enumerate figures and tables
 
@@ -65,7 +64,7 @@ intersphinx_mapping = {
     'pd': ('https://pandas.pydata.org/docs/', None),
     'PyTorch': ('https://pytorch.org/docs/stable/', None),
     'pytorch_lightning': ('https://lightning.ai/docs/pytorch/latest/', None),
-    'PyG': ('https://pytorch-geometric.readthedocs.io/en/latest/', None)
+    'PyG': ('https://pytorch-geometric.readthedocs.io/en/latest/', None),
 }
 
 # -- Theme options -----------------------------------------------------------
@@ -93,7 +92,7 @@ html_theme_options = {
     "dark_css_variables": {
         "color-brand-primary": "#FF5722",
         "color-brand-content": "#FF5722",
-    }
+    },
 }
 
 pygments_style = "tango"
