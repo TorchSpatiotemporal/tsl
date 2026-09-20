@@ -7,9 +7,9 @@ channels:
   - defaults
 dependencies:
   - python=3.10
-  - pytorch>=2.0.0
+  - pytorch>=1.11
   - pytorch-cuda>=11.7         # remove for cpu installation
-  - pyg
+  - pyg>=2.4
   - pytorch-scatter
   - pytorch-sparse
   - lightning

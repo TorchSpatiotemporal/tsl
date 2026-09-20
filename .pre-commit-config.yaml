@@ -7,7 +7,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: end-of-file-fixer
         name: End-of-file fixer
@@ -15,7 +15,7 @@ repos:
         name: Remove trailing whitespaces
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.1
+    rev: v0.16.0
     hooks:
       - id: ruff-check
         name: Ruff lint

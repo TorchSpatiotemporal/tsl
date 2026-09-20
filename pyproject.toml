@@ -1,0 +1,149 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "torch-spatiotemporal"
+dynamic = ["version"]
+description = "A PyTorch Library for Relational Time Series Processing"
+readme = "README.md"
+requires-python = ">=3.8,<3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Ivan Marisca" }, { name = "Andrea Cini" }]
+keywords = [
+    "pytorch",
+    "pytorch-geometric",
+    "geometric-deep-learning",
+    "graph-neural-networks",
+    "temporal-graph-networks",
+    "spatiotemporal-graph-neural-networks",
+    "spatiotemporal-data-processing",
+    "spatiotemporal-forecasting",
+    "time-series-analysis",
+    "forecasting",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "einops",
+    "numpy>1.20.3,<2",
+    "pandas>=1.4",
+    "pytorch-lightning>=1.8",
+    "pyyaml",
+    "scikit-learn",
+    "scipy",
+    "tables",
+    "torchmetrics>=0.7",
+    "tqdm>=4.66.3",
+]
+
+[project.optional-dependencies]
+experiment = ["hydra-core", "omegaconf"]
+holidays = ["holidays"]
+full = ["torch-spatiotemporal[experiment,holidays]"]
+doc = [
+    "docutils",
+    "furo",
+    "myst-nb",
+    "sphinx",
+    "sphinx-copybutton",
+    "sphinx-design",
+    "sphinx-hoverxref",
+    "sphinxext-opengraph",
+    "torch-spatiotemporal[full]",
+]
+dev = [
+    "build",
+    "coverage[toml]",
+    "pre-commit",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "twine",
+    "torch-spatiotemporal[doc]",
+]
+
+[dependency-groups]
+full = ["torch-spatiotemporal[full]"]
+doc = ["torch-spatiotemporal[doc]"]
+dev = ["torch-spatiotemporal[dev]"]
+
+[project.urls]
+Homepage = "https://github.com/TorchSpatiotemporal/tsl"
+Documentation = "https://torch-spatiotemporal.readthedocs.io/"
+Repository = "https://github.com/TorchSpatiotemporal/tsl"
+Issues = "https://github.com/TorchSpatiotemporal/tsl/issues"
+
+[tool.hatch.version]
+path = "tsl/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["/LICENSE", "/README.md", "/pyproject.toml", "/tsl"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["tsl"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E203"]
+
+[tool.ruff.lint.per-file-ignores]
+"*/__init__.py" = ["F401", "F403", "E402"]
+"tests/test_imports.py" = ["E402", "F401"]
+
+[tool.ruff.format]
+quote-style = "preserve"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+addopts = ["--cov=tsl", "--cov-report=term-missing", "--color=yes"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+    "dataset_download: marks tests that download real datasets (run with '--run-datasets')",
+]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore:scatter_reduce():UserWarning",
+    "ignore:Sparse CSR tensor support is in beta state:UserWarning",
+    "ignore:Sparse CSC tensor support is in beta state:UserWarning",
+    "ignore:The '.*_dataloader' does not have many workers.*",
+]
+
+[tool.coverage.run]
+branch = true
+parallel = true
+source = ["tsl"]
+
+[tool.coverage.paths]
+source = ["tsl", "*/site-packages/tsl"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+#fail_under = 90
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "register_parameter",
+    "torch.cuda.is_available",
+    "pass",
+]

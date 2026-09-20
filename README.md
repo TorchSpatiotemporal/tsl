@@ -5,7 +5,7 @@
     <hr>
     <p>
     <a href='https://pypi.org/project/torch-spatiotemporal/'><img alt="PyPI" src="https://img.shields.io/pypi/v/torch-spatiotemporal"></a>
-    <img alt="PyPI - Python Version" src="https://img.shields.io/badge/python-%3E%3D3.8-blue">
+    <img alt="PyPI - Python Version" src="https://img.shields.io/badge/python-3.8--3.11-blue">
     <!-- img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/torch-spatiotemporal" -->
     <img alt="Total downloads" src="https://static.pepy.tech/badge/torch-spatiotemporal">
     <a href='https://torch-spatiotemporal.readthedocs.io/en/latest/?badge=latest'><img src='https://readthedocs.org/projects/torch-spatiotemporal/badge/?version=latest' alt='Documentation Status' /></a>
@@ -46,23 +46,79 @@ You can also explore the examples provided in the `examples` directory to see ho
 
 ## Installation
 
-Before installing <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl, make sure you have installed <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pytorch.svg" width="20px" align="center"/> <a href="https://pytorch.org">PyTorch</a> (>=1.9.0) and <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pyg.svg" width="20px" align="center"/> <a href="https://pyg.org">PyG</a> (>=2.0.3) in your virtual environment (see [PyG installation guidelines](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html)). <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl is available for Python>=3.8. We recommend installation from github to be up-to-date with the latest version:
+<img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl supports Python 3.8 through 3.11 and requires a pre-installed PyTorch/PyG stack: <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pytorch.svg" width="20px" align="center"/> PyTorch, <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pyg.svg" width="20px" align="center"/> PyG >= 2.4, `torch-scatter`, and `torch-sparse`.
+
+The recommended setup for local development is [uv](https://docs.astral.sh/uv/):
 
 ```bash
-pip install git+https://github.com/TorchSpatiotemporal/tsl.git
+uv venv --python 3.10
+source .venv/bin/activate
+UV_TORCH_BACKEND=auto uv pip install torch
+# Install PyG and its compiled extensions for this exact Torch build by following:
+# https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html
+# uv pip install torch-geometric==2.5 torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
+uv pip install -e ".[experiment]"
 ```
 
-Alternatively, you can install the library from the pypi repository:
+On Windows PowerShell:
+
+```powershell
+uv venv --python 3.10
+.venv\Scripts\Activate.ps1
+$env:UV_TORCH_BACKEND = "auto"
+uv pip install torch
+# Follow the PyG installation guide linked above.
+uv pip install -e ".[experiment]"
+```
+
+Install PyTorch first so uv can select the wheel that matches the machine. `UV_TORCH_BACKEND=auto` lets uv choose the most compatible PyTorch backend when using `uv pip`: CUDA on NVIDIA systems with a compatible driver, and CPU wheels otherwise. macOS uses PyTorch's macOS wheels; GPU acceleration there is handled by PyTorch/MPS rather than CUDA.
+
+Install the PyG stack after PyTorch, using the [PyG installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html) when compiled extensions require a platform-specific wheel. Then install tsl.
+
+For a regular user install from PyPI:
 
 ```bash
-pip install torch-spatiotemporal
+UV_TORCH_BACKEND=auto uv pip install torch
+# Follow the PyG installation guide linked above.
+uv pip install torch-spatiotemporal
 ```
 
-To avoid dependencies issues, we recommend using [Anaconda](https://www.anaconda.com/) and the provided environment configuration by running the command:
+For development tools and tests, install the dev tools into the same environment:
+
+```bash
+UV_TORCH_BACKEND=auto uv pip install torch
+# Follow the PyG installation guide linked above.
+uv pip install -e ".[dev]"
+uv run pytest
+```
+
+If PyTorch is already installed and you do not need uv's automatic PyTorch backend detection, the project dependency groups are also available. Use `--inexact` so uv does not remove the externally installed PyTorch package:
+
+```bash
+uv sync --group dev --inexact
+uv run pytest
+```
+
+The default test command uses the coverage settings in `pyproject.toml`. To skip slow tests explicitly:
+
+```bash
+uv run pytest -m "not slow"
+```
+
+### PyG compiled extensions
+
+The PyG compiled extensions are mandatory at runtime but deliberately not package dependencies. Their wheels depend on the exact PyTorch and CUDA build, so install PyTorch first and then follow the [PyG installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html) for your installed Torch/CUDA version.
+
+### Conda
+
+The repository still includes `conda_env.yml` for users who prefer conda:
 
 ```bash
 conda env create -f conda_env.yml
+conda activate tsl
 ```
+
+The conda environment remains CUDA-oriented by default. Remove the `nvidia` channel and `pytorch-cuda` dependency from `conda_env.yml` for a CPU-only conda environment.
 
 ## Tutorial
 
