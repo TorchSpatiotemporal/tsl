@@ -1,7 +1,8 @@
 from typing import Tuple
 
 import torch
-from torch import Tensor
+
+from tsl.typing import Tensor
 
 from ..recurrent.base import GRUCellBase, LSTMCellBase
 from .linear import MultiLinear

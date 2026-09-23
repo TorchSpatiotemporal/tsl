@@ -1,10 +1,9 @@
 from typing import List, Optional, Tuple
 
 import torch
-from torch import Tensor, nn
+from torch import nn
 from torch.nn import LayerNorm
 from torch_geometric.nn import inits
-from torch_geometric.typing import OptTensor
 
 from tsl.nn.blocks.encoders import MLP
 from tsl.nn.layers.base import NodeEmbedding, PositionalEncoding
@@ -13,6 +12,7 @@ from tsl.nn.layers.graph_convs import (
     SpatiotemporalCrossAttention,
 )
 from tsl.nn.models.base_model import BaseModel
+from tsl.typing import OptTensor, Tensor
 
 
 class SPINPositionalEncoder(nn.Module):

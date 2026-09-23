@@ -1,5 +1,7 @@
 from einops.layers.torch import Rearrange
-from torch import Tensor, nn
+from torch import nn
+
+from tsl.typing import Tensor
 
 
 class LinearReadout(nn.Module):

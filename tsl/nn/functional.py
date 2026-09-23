@@ -1,38 +1,16 @@
-import math
-from typing import List, Optional, Tuple, Union
+from typing import Optional
 
 import torch
-import torch.nn.functional as F
 from torch import Tensor
-from torch_geometric.utils.num_nodes import maybe_num_nodes
-from torch_scatter import gather_csr, scatter, segment_csr
-from torch_scatter.utils import broadcast
 
-import tsl
+from tsl.imports import require_optional_dependency
+from tsl.nn.utils import broadcast
 
 __all__ = [
-    'expand_then_cat',
     'gated_tanh',
     'sparse_softmax',
     'sparse_multi_head_attention',
 ]
-
-
-def expand_then_cat(
-    tensors: Union[Tuple[Tensor, ...], List[Tensor]], dim: int = -1
-) -> Tensor:
-    """Match the dimensions of tensors in the input list and then concatenate.
-
-    Args:
-        tensors (list): Tensors to concatenate.
-        dim (int): Dimension along which to concatenate.
-            (default: -1)
-    """
-    shapes = [t.shape for t in tensors]
-    expand_dims = torch.max(torch.tensor(shapes), 0).values
-    expand_dims[dim] = -1
-    tensors = [t.expand(*expand_dims) for t in tensors]
-    return torch.cat(tensors, dim=dim)
 
 
 @torch.jit.script
@@ -50,14 +28,48 @@ def gated_tanh(input: Tensor, dim: int = -1) -> Tensor:
     Args:
         input (Tensor): Input tensor.
         dim (int): Dimension on which the input is split.
-            (default: -1)
+            (default: :obj:`-1`)
     """
 
     out, gate = torch.tensor_split(input, 2, dim=dim)
     return torch.tanh(out) * torch.sigmoid(gate)
 
 
-@torch.jit.script
+def scatter_sum(
+    src: torch.Tensor,
+    index: torch.Tensor,
+    dim: int = -1,
+    out: Optional[torch.Tensor] = None,
+    dim_size: Optional[int] = None,
+) -> torch.Tensor:
+    """Scatter sum function.
+
+    This function has been adapted from `torch_scatter` to avoid the dependency on the
+    `torch_scatter` package.
+    """
+    index = broadcast(index, src, dim)
+    if out is None:
+        size = list(src.size())
+        if dim_size is not None:
+            size[dim] = dim_size
+        elif index.numel() == 0:
+            size[dim] = 0
+        else:
+            size[dim] = int(index.max()) + 1
+        out = torch.zeros(size, dtype=src.dtype, device=src.device)
+        return out.scatter_add_(dim, index, src)
+    else:
+        return out.scatter_add_(dim, index, src)
+
+
+def _get_scatter_function(name):
+    """Load a TorchScript scatter function after validating its dependency."""
+    require_optional_dependency('torch_scatter', 'torch-scatter')
+    from . import _functional_scatter
+
+    return getattr(_functional_scatter, name)
+
+
 def sparse_softmax(
     src: Tensor,
     index: Optional[Tensor] = None,
@@ -86,29 +98,14 @@ def sparse_softmax(
         dim (int): The dimension on which to normalize, i.e., the edge
             dimension.
             (default: :obj:`-2`)
+
+    Raises:
+        ImportError: If the optional :mod:`torch_scatter` dependency is not
+            installed.
     """
-    if ptr is not None:
-        dim = dim + src.dim() if dim < 0 else dim
-        size = ([1] * dim) + [-1]
-        ptr = ptr.view(size)
-        src_max = gather_csr(segment_csr(src, ptr, reduce='max'), ptr)
-        out = (src - src_max).exp()
-        out_sum = gather_csr(segment_csr(out, ptr, reduce='sum'), ptr)
-    elif index is not None:
-        N = maybe_num_nodes(index, num_nodes)
-        expanded_index = broadcast(index, src, dim)
-        src_max = scatter(src, expanded_index, dim, dim_size=N, reduce='max')
-        src_max = src_max.index_select(dim, index)
-        out = (src - src_max).exp()
-        out_sum = scatter(out, expanded_index, dim, dim_size=N, reduce='sum')
-        out_sum = out_sum.index_select(dim, index)
-    else:
-        raise NotImplementedError
-
-    return out / (out_sum + tsl.epsilon)
+    return _get_scatter_function('sparse_softmax')(src, index, ptr, num_nodes, dim)
 
 
-@torch.jit.script
 def sparse_multi_head_attention(
     q: Tensor,
     k: Tensor,
@@ -148,18 +145,11 @@ def sparse_multi_head_attention(
 
         Output: attention values have shape :math:`(B, Nt, E)`; attention
             weights have shape :math:`(S, H)`
+
+    Raises:
+        ImportError: If the optional :mod:`torch_scatter` dependency is not
+            installed.
     """
-    dim = 0
-    B, H, E = q.shape
-    N = maybe_num_nodes(index, dim_size)
-    # scores
-    alpha = (q * k).sum(dim=-1) / math.sqrt(E)
-    alpha = sparse_softmax(alpha, index, num_nodes=N, dim=dim)
-    if dropout_p > 0.0:
-        alpha = F.dropout(alpha, p=dropout_p)
-    v *= alpha.view(-1, H, 1)
-    # out
-    out = torch.zeros((N, H, v.size(2)), dtype=v.dtype, device=v.device)
-    add_index = broadcast(index, v, dim)
-    out.scatter_add_(dim, add_index, v)
-    return out, alpha
+    return _get_scatter_function('sparse_multi_head_attention')(
+        q, k, v, index, dim_size, dropout_p
+    )

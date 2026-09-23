@@ -2,20 +2,20 @@ from typing import List, Optional, Union
 
 import torch
 import torch.nn as nn
-from torch import LongTensor, Tensor
-from torch_geometric.typing import Adj, OptTensor
+from torch import Tensor
 from torch_geometric.utils import (
     from_scipy_sparse_matrix,
     remove_self_loops,
     to_scipy_sparse_matrix,
 )
 from torch_geometric.utils.num_nodes import maybe_num_nodes
-from torch_sparse import SparseTensor, remove_diag
 
+from tsl.imports import is_optional_instance, require_optional_dependency
 from tsl.nn.layers.base import NodeEmbedding
 from tsl.nn.layers.graph_convs import DiffConv
 from tsl.nn.layers.norm import LayerNorm
 from tsl.ops.connectivity import asymmetric_norm, power_series, transpose
+from tsl.typing import Adj, LongTensor, OptTensor
 
 from .dcrnn import DCRNNCell
 
@@ -101,6 +101,24 @@ class SpatialDecoder(nn.Module):
         edge_weight: OptTensor = None,
         u: OptTensor = None,
     ):
+        """Decode graph-aware imputation features.
+
+        Args:
+            x (Tensor): Node features.
+            mask (Tensor): Observation mask.
+            h (Tensor): Hidden node states.
+            edge_index (Adj): COO or SparseTensor graph connectivity.
+            edge_weight (Tensor, optional): COO edge weights. (default:
+                :obj:`None`)
+            u (Tensor, optional): Exogenous features. (default: :obj:`None`)
+
+        Returns:
+            tuple: Decoded values and their hidden representation.
+
+        Raises:
+            ImportError: If SparseTensor connectivity requires the optional
+                :mod:`torch_sparse` dependency.
+        """
         # x: [batch, nodes, channels]
         x_in = [x, mask, h]
         if u is not None:
@@ -117,8 +135,9 @@ class SpatialDecoder(nn.Module):
         else:
             if isinstance(edge_index, Tensor):
                 edge_index, edge_weight = remove_self_loops(edge_index, edge_weight)
-            elif isinstance(edge_index, SparseTensor):
-                edge_index = remove_diag(edge_index)
+            elif is_optional_instance(edge_index, 'torch_sparse', 'SparseTensor'):
+                sparse = require_optional_dependency('torch_sparse', 'torch-sparse')
+                edge_index = sparse.remove_diag(edge_index)
             out = self.graph_conv(x_in, edge_index, edge_weight)
         # out MLP
         out = torch.cat([out, h], -1)

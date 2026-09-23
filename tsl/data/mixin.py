@@ -3,10 +3,9 @@ from typing import List, Mapping, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 from torch import Tensor
-from torch_geometric.typing import Adj
 
 from tsl.ops.connectivity import parse_connectivity
-from tsl.typing import DataArray, SparseTensArray
+from tsl.typing import Adj, DataArray, SparseTensArray
 
 from ..ops.pattern import check_pattern, infer_pattern
 from ..utils import casting

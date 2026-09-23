@@ -3,10 +3,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import torch
-import torch_sparse
 from scipy.sparse import coo_matrix
 from torch_geometric.utils import is_undirected
-from torch_sparse import SparseTensor
 
 from tsl.ops.connectivity import (
     adj_to_edge_index,
@@ -25,29 +23,35 @@ from tsl.ops.connectivity import (
 )
 from tsl.ops.graph_generators import build_circle_graph
 
-num_nodes = 30
-_, edge_index, edge_weight = build_circle_graph(num_nodes)
-# %%
-skip_edges = np.copy(edge_index[:, :-1:2])
-skip_edges[1, :] += 1
-num_nodes += 1
-edge_index = np.concatenate([edge_index, skip_edges], 1)
-edge_index, edge_weight = parse_connectivity(
-    (edge_index, edge_weight), 'edge_index', num_nodes=num_nodes
-)
-adj_t = parse_connectivity((edge_index, edge_weight), 'sparse', num_nodes=num_nodes)
 
-assert not is_undirected(edge_index)
+def _connectivity_case():
+    num_nodes = 30
+    _, edge_index, edge_weight = build_circle_graph(num_nodes)
+    skip_edges = np.copy(edge_index[:, :-1:2])
+    skip_edges[1, :] += 1
+    num_nodes += 1
+    edge_index = np.concatenate([edge_index, skip_edges], 1)
+    edge_index, edge_weight = parse_connectivity(
+        (edge_index, edge_weight), 'edge_index', num_nodes=num_nodes
+    )
+    assert not is_undirected(edge_index)
+    return edge_index, edge_weight, num_nodes
 
 
+@pytest.mark.torch_sparse
 def _test_normalize_connectivity(norm):
+    edge_index, edge_weight, num_nodes = _connectivity_case()
+    adj_t = parse_connectivity((edge_index, edge_weight), 'sparse', num_nodes=num_nodes)
     ei, ew = normalize_connectivity(edge_index, edge_weight, norm, num_nodes)
     a_ = convert_torch_connectivity((ei, ew), 'sparse', num_nodes=num_nodes)
     a, _ = normalize_connectivity(adj_t, None, norm, num_nodes)
     assert torch.allclose(a.to_dense(), a_.to_dense())
 
 
+@pytest.mark.torch_sparse
 def test_normalize_dense():
+    edge_index, edge_weight, num_nodes = _connectivity_case()
+    adj_t = parse_connectivity((edge_index, edge_weight), 'sparse', num_nodes=num_nodes)
     a_ = convert_torch_connectivity(
         (edge_index, edge_weight), 'dense', num_nodes=num_nodes
     )
@@ -58,6 +62,7 @@ def test_normalize_dense():
     assert torch.allclose(a.to_dense(), a_)
 
 
+@pytest.mark.torch_sparse
 def test_normalize_connectivity():
     norms = ['mean', 'sym', 'asym', 'none', 'gcn', None]
     for n in norms:
@@ -96,20 +101,27 @@ def test_infer_backend():
     x = np.array([1, 2, 3])
     assert infer_backend(x) == np
 
+    # Test for invalid input
+    with pytest.raises(RuntimeError):
+        infer_backend(None)
+
+
+@pytest.mark.torch_sparse
+def test_infer_backend_sparse_tensor():
+    import torch_sparse
+    from torch_sparse import SparseTensor
+
     # Test for SparseTensor input
     x = SparseTensor(
         row=torch.tensor([0, 1]), col=torch.tensor([1, 0]), value=torch.tensor([1, 2])
     )
     assert infer_backend(x) == torch_sparse
 
-    # Test for invalid input
-    try:
-        infer_backend(None)
-    except RuntimeError:
-        pass
 
-
+@pytest.mark.torch_sparse
 def test_convert_torch_connectivity():
+    from torch_sparse import SparseTensor
+
     dense = torch.eye(4) / 2.0
     sparse = SparseTensor.from_dense(dense)
     edge_index = torch.tensor([[0, 1, 2, 3], [0, 1, 2, 3]])
@@ -224,16 +236,21 @@ def test_transpose():
     edge_index = torch.tensor([[0, 1, 2], [1, 2, 0]])
     expected_edge_index = torch.tensor([[1, 2, 0], [0, 1, 2]])
     assert torch.allclose(transpose(edge_index), expected_edge_index)
-    # Test for sparse tensor
+    # Test for np.ndarray input
+    edge_index_np = edge_index.numpy()
+    expected_edge_index_np = expected_edge_index.numpy()
+    assert np.allclose(transpose(edge_index_np), expected_edge_index_np)
+
+
+@pytest.mark.torch_sparse
+def test_transpose_sparse_tensor():
+    from torch_sparse import SparseTensor
+
     adj = SparseTensor(row=torch.tensor([0, 1, 2]), col=torch.tensor([1, 2, 0]))
     expected_adj = SparseTensor(
         row=torch.tensor([1, 2, 0]), col=torch.tensor([0, 1, 2])
     )
     assert torch.allclose(transpose(adj).to_dense(), expected_adj.to_dense())
-    # Test for np.ndarray input
-    edge_index_np = edge_index.numpy()
-    expected_edge_index_np = expected_edge_index.numpy()
-    assert np.allclose(transpose(edge_index_np), expected_edge_index_np)
 
 
 def test_transpose_with_weights():
@@ -245,7 +262,10 @@ def test_transpose_with_weights():
     assert torch.allclose(ew, weights)
 
 
+@pytest.mark.torch_sparse
 def test_maybe_num_nodes_sparse_tensor():
+    from torch_sparse import SparseTensor
+
     adj = SparseTensor(
         row=torch.tensor([0, 1, 2]), col=torch.tensor([1, 2, 0]), sparse_sizes=(3, 3)
     )
@@ -259,7 +279,10 @@ def test_edge_index_to_adj_numpy_default_weights():
     np.testing.assert_array_equal(adj, np.array([[0.0, 1.0], [1.0, 0.0]]))
 
 
+@pytest.mark.torch_sparse
 def test_convert_torch_connectivity_same_layout_passthrough():
+    from torch_sparse import SparseTensor
+
     adj = SparseTensor.from_dense(torch.eye(3))
     out = convert_torch_connectivity(adj, 'sparse', input_layout='sparse')
     assert out is adj
@@ -358,7 +381,10 @@ def test_asymmetric_norm_numpy():
     np.testing.assert_allclose(norm_weight, [1.0, 0.5, 0.5])
 
 
+@pytest.mark.torch_sparse
 def test_asymmetric_norm_sparse():
+    from torch_sparse import SparseTensor
+
     edge_index = torch.tensor([[0, 1, 2], [1, 2, 0]])
     adj_t = SparseTensor.from_edge_index(edge_index, torch.ones(3), (3, 3))
     out, ew = asymmetric_norm(adj_t, None, dim=1)
@@ -373,12 +399,18 @@ def test_parse_connectivity_dataframe():
     assert edge_index.shape == (2, 3)
 
 
+@pytest.mark.torch_sparse
 def test_parse_connectivity_scipy_sparse():
+    from torch_sparse import SparseTensor
+
     out = parse_connectivity(coo_matrix(np.eye(3)), 'sparse')
     assert isinstance(out, SparseTensor)
 
 
+@pytest.mark.torch_sparse
 def test_parse_connectivity_sparse_tensor_passthrough():
+    from torch_sparse import SparseTensor
+
     adj = SparseTensor.from_dense(torch.eye(3))
     out = parse_connectivity(adj, 'sparse')
     assert isinstance(out, SparseTensor)

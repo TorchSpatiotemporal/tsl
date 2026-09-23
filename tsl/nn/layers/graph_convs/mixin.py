@@ -1,8 +1,7 @@
 from typing import Optional, Tuple
 
-from torch import Tensor
-
 from tsl.ops.connectivity import normalize_connectivity
+from tsl.typing import Tensor
 
 
 class NormalizedAdjacencyMixin:

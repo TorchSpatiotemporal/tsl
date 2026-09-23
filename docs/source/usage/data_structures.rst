@@ -30,6 +30,7 @@ adding utilities for spatiotemporal data processing. The main APIs of
 * :obj:`Data.edge_index`: graph connectivity. Can be in COO format (i.e., a :class:`~torch.Tensor` of shape :obj:`[2, E]`)
   or in form of a :class:`torch_sparse.SparseTensor` with shape :obj:`[N, N]`. For dynamic graphs -- with time-varying topology --
   :obj:`edge_index` is a Python list of :class:`~torch.Tensor`.
+  SparseTensor connectivity requires the optional ``torch-sparse`` package.
 * :obj:`Data.edge_weight`: weights of the graph connectivity, if :obj:`Data.edge_index` is not a :class:`torch_sparse.SparseTensor`.
   For dynamic graphs, :obj:`edge_weight` is a Python list of :class:`~torch.Tensor`.
 * :obj:`Data.mask`: binary mask indicating the data in :obj:`Data.target.y` to be used

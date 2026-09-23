@@ -4,19 +4,18 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import torch
-import torch_sparse
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, csc_matrix, csr_matrix
 from torch import Tensor
 from torch_geometric.data.storage import recursive_apply
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
-from torch_geometric.typing import Adj, OptTensor
 from torch_geometric.utils import add_remaining_self_loops, subgraph
-from torch_sparse import SparseTensor, fill_diag
 
+from tsl.imports import is_optional_instance, require_optional_dependency
 from tsl.typing import (
+    Adj,
     DataArray,
     OptTensArray,
-    ScipySparseMatrix,
+    OptTensor,
     SparseTensArray,
     TensArray,
     TorchConnectivity,
@@ -36,14 +35,27 @@ def maybe_num_nodes(edge_index, num_nodes=None):
 
 
 def infer_backend(obj, backend: ModuleType = None):
+    """Infer the array-processing backend associated with an object.
+
+    Args:
+        obj: Object whose backend must be inferred.
+        backend (ModuleType, optional): Explicit backend to return.
+            (default: :obj:`None`)
+
+    Returns:
+        ModuleType: The inferred backend.
+
+    Raises:
+        RuntimeError: If no supported backend can be inferred.
+    """
     if backend is not None:
         return backend
     elif isinstance(obj, Tensor):
         return torch
     elif isinstance(obj, np.ndarray):
         return np
-    elif isinstance(obj, SparseTensor):
-        return torch_sparse
+    elif is_optional_instance(obj, 'torch_sparse', 'SparseTensor'):
+        return require_optional_dependency('torch_sparse', 'torch-sparse')
     raise RuntimeError(f"Cannot infer valid backed from {type(obj)}.")
 
 
@@ -53,6 +65,25 @@ def convert_torch_connectivity(
     input_layout: Optional[str] = None,
     num_nodes: Optional[int] = None,
 ):
+    """Convert connectivity between dense, COO, and SparseTensor layouts.
+
+    Args:
+        connectivity (TorchConnectivity): Connectivity to convert.
+        target_layout (str): Target layout, one of :obj:`"dense"`,
+            :obj:`"sparse"`, or :obj:`"edge_index"`.
+        input_layout (str, optional): Layout of :obj:`connectivity`. When
+            :obj:`None`, it is inferred. (default: :obj:`None`)
+        num_nodes (int, optional): Number of graph nodes used when creating a
+            sparse layout. (default: :obj:`None`)
+
+    Returns:
+        TorchConnectivity: Connectivity in :obj:`target_layout`.
+
+    Raises:
+        ImportError: If a SparseTensor layout is requested but the optional
+            :mod:`torch_sparse` dependency is not installed.
+        RuntimeError: If the input layout cannot be inferred.
+    """
     formats = [None, 'dense', 'sparse', 'edge_index']
     assert input_layout in formats and target_layout in formats[1:]
 
@@ -60,7 +91,7 @@ def convert_torch_connectivity(
 
     # infer input_layout from data
     if input_layout is None:
-        if isinstance(connectivity, SparseTensor):
+        if is_optional_instance(connectivity, 'torch_sparse', 'SparseTensor'):
             input_layout = 'sparse'
         elif isinstance(connectivity, (list, tuple)):
             connectivity, edge_attr = connectivity
@@ -84,7 +115,8 @@ def convert_torch_connectivity(
             -2
         ) == connectivity.size(-1)
     elif input_layout == 'sparse':
-        assert isinstance(connectivity, SparseTensor) and connectivity.dim() == 2
+        sparse = require_optional_dependency('torch_sparse', 'torch-sparse')
+        assert isinstance(connectivity, sparse.SparseTensor) and connectivity.dim() == 2
     elif input_layout == 'edge_index':
         if isinstance(connectivity, (list, tuple)):
             connectivity, edge_attr = connectivity
@@ -100,8 +132,9 @@ def convert_torch_connectivity(
 
     # edge index -> sparse tensor
     if input_layout == 'edge_index' and target_layout == 'sparse':
+        sparse = require_optional_dependency('torch_sparse', 'torch-sparse')
         edge_index, edge_attr = connectivity
-        return SparseTensor.from_edge_index(
+        return sparse.SparseTensor.from_edge_index(
             edge_index, edge_attr, (num_nodes, num_nodes)
         ).t()
     # edge index -> dense tensor
@@ -110,7 +143,8 @@ def convert_torch_connectivity(
         return edge_index_to_adj(edge_index, edge_weights, num_nodes=num_nodes)
     # dense tensor -> sparse tensor
     if input_layout == 'dense' and target_layout == 'sparse':
-        return SparseTensor.from_dense(connectivity)
+        sparse = require_optional_dependency('torch_sparse', 'torch-sparse')
+        return sparse.SparseTensor.from_dense(connectivity)
     # dense tensor -> edge index
     if input_layout == 'dense' and target_layout == 'edge_index':
         return adj_to_edge_index(connectivity)
@@ -190,7 +224,17 @@ def edge_index_to_adj(
 def transpose(
     edge_index: SparseTensArray, edge_weights: OptTensArray = None
 ) -> Union[TensArray, Tuple[TensArray, TensArray]]:
-    if isinstance(edge_index, SparseTensor):
+    """Transpose COO or SparseTensor connectivity.
+
+    Args:
+        edge_index (SparseTensArray): Connectivity to transpose.
+        edge_weights (TensArray, optional): COO edge weights. (default:
+            :obj:`None`)
+
+    Returns:
+        TensArray or tuple: Transposed connectivity, with weights for COO input.
+    """
+    if is_optional_instance(edge_index, 'torch_sparse', 'SparseTensor'):
         return edge_index.t()
     if edge_weights is not None:
         return edge_index[[1, 0]], edge_weights
@@ -282,10 +326,10 @@ def asymmetric_norm(
     """
     backend = infer_backend(edge_index)
 
-    if backend is torch_sparse:
+    if backend.__name__ == 'torch_sparse':
         assert edge_weight is None
         if add_self_loops:
-            edge_index = fill_diag(edge_index, 1)
+            edge_index = backend.fill_diag(edge_index, 1)
         deg = edge_index.sum(dim=dim).to(torch.float)
         deg_inv = deg.pow(-1.0)
         deg_inv[deg_inv == float('inf')] = 0
@@ -308,11 +352,27 @@ def asymmetric_norm(
 def normalize_connectivity(
     edge_index, edge_weight, norm, num_nodes
 ) -> Tuple[Adj, OptTensor]:
+    """Normalize connectivity according to the requested graph convention.
+
+    Args:
+        edge_index (Adj): COO or SparseTensor connectivity.
+        edge_weight (Tensor, optional): COO edge weights.
+        norm (str, optional): Normalization convention.
+        num_nodes (int, optional): Number of graph nodes.
+
+    Returns:
+        tuple: Normalized connectivity and optional edge weights.
+
+    Raises:
+        ImportError: If SparseTensor connectivity requires the optional
+            :mod:`torch_sparse` dependency.
+        NotImplementedError: If :obj:`norm` is unsupported.
+    """
     if norm == 'sym':
         norm_edge_index = gcn_norm(
             edge_index, edge_weight, num_nodes, add_self_loops=False
         )
-        if isinstance(edge_index, SparseTensor):
+        if is_optional_instance(edge_index, 'torch_sparse', 'SparseTensor'):
             return norm_edge_index, None
         return norm_edge_index
     elif (norm == 'asym') or (norm == 'mean'):
@@ -323,11 +383,13 @@ def normalize_connectivity(
         norm_edge_index = gcn_norm(
             edge_index, edge_weight, num_nodes, add_self_loops=True
         )
-        if isinstance(edge_index, SparseTensor):
+        if is_optional_instance(edge_index, 'torch_sparse', 'SparseTensor'):
             return norm_edge_index, None
         return norm_edge_index
     elif (norm == 'none') or (norm is None):
-        if (edge_weight is None) and not isinstance(edge_index, SparseTensor):
+        if (edge_weight is None) and not is_optional_instance(
+            edge_index, 'torch_sparse', 'SparseTensor'
+        ):
             edge_weight = torch.ones((edge_index.size(1),), device=edge_index.device)
         return edge_index, edge_weight
     else:
@@ -414,6 +476,23 @@ def parse_connectivity(
     target_layout: Optional[str] = None,
     num_nodes: Optional[int] = None,
 ) -> Tuple[Optional[Adj], Optional[Tensor]]:
+    """Parse graph connectivity into a PyTorch-compatible representation.
+
+    Args:
+        connectivity (SparseTensArray or tuple): Dense, COO, SciPy sparse, or
+            SparseTensor connectivity.
+        target_layout (str, optional): Requested output layout. (default:
+            :obj:`None`)
+        num_nodes (int, optional): Number of graph nodes. (default: :obj:`None`)
+
+    Returns:
+        tuple: Parsed connectivity and optional edge weights.
+
+    Raises:
+        ImportError: If SciPy sparse input or a SparseTensor output requires the
+            optional :mod:`torch_sparse` dependency.
+        TypeError: If :obj:`connectivity` has an unsupported type.
+    """
     # Convert to torch
     # from np.ndarray, pd.DataFrame or torch.Tensor
     if isinstance(connectivity, (pd.DataFrame, np.ndarray, Tensor)):
@@ -421,9 +500,10 @@ def parse_connectivity(
     elif isinstance(connectivity, (list, tuple)):
         connectivity = recursive_apply(connectivity, casting.copy_to_tensor)
     # from scipy sparse matrix
-    elif isinstance(connectivity, ScipySparseMatrix.__args__):
-        connectivity = SparseTensor.from_scipy(connectivity)
-    elif not isinstance(connectivity, SparseTensor):
+    elif isinstance(connectivity, (coo_matrix, csr_matrix, csc_matrix)):
+        sparse = require_optional_dependency('torch_sparse', 'torch-sparse')
+        connectivity = sparse.SparseTensor.from_scipy(connectivity)
+    elif not is_optional_instance(connectivity, 'torch_sparse', 'SparseTensor'):
         raise TypeError(
             "`connectivity` must be a dense matrix or in "
             "COO format (i.e., an `edge_index`)."

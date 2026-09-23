@@ -1,12 +1,12 @@
 import torch
-from torch import Tensor, nn
+from torch import nn
 from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.typing import Adj, OptTensor
-from torch_sparse import SparseTensor, matmul
 
+from tsl.imports import require_optional_dependency
 from tsl.nn.layers.graph_convs.mixin import NormalizedAdjacencyMixin
 from tsl.nn.utils import get_functional_activation
+from tsl.typing import Adj, OptTensor, SparseTensor, Tensor
 
 
 class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
@@ -38,6 +38,10 @@ class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
         cached (bool): If :obj:`True`, then cached the normalized edge weights
             computed in the first call.
             (default :obj:`False`)
+
+    Note:
+        SparseTensor connectivity requires the optional :mod:`torch_sparse`
+        dependency. COO connectivity does not.
     """
 
     def __init__(
@@ -104,7 +108,18 @@ class GraphConv(MessagePassing, NormalizedAdjacencyMixin):
         return edge_weight.view(-1, 1) * x_j
 
     def message_and_aggregate(self, adj_t: SparseTensor, x: Tensor) -> Tensor:
-        """"""
-        # adj_t: SparseTensor [nodes, nodes]
-        # x: [(batch,) nodes, channels]
-        return matmul(adj_t, x, reduce=self.aggr)
+        """Aggregate messages over SparseTensor connectivity.
+
+        Args:
+            adj_t (torch_sparse.SparseTensor): Transposed graph connectivity.
+            x (Tensor): Node features.
+
+        Returns:
+            Tensor: Aggregated node features.
+
+        Raises:
+            ImportError: If the optional :mod:`torch_sparse` dependency is not
+                installed.
+        """
+        sparse = require_optional_dependency('torch_sparse', 'torch-sparse')
+        return sparse.matmul(adj_t, x, reduce=self.aggr)

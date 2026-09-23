@@ -3,11 +3,11 @@ from typing import Optional, Union
 
 import torch
 from einops import rearrange
-from torch import Tensor, nn
+from torch import nn
 from torch_geometric.nn.dense import Linear
-from torch_geometric.typing import OptTensor
 
 from tsl.nn.utils import get_functional_activation
+from tsl.typing import OptTensor, Tensor
 
 
 class PositionalEncoding(nn.Module):

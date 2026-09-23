@@ -2,11 +2,12 @@ from functools import partial
 from typing import Optional
 
 import torch.nn.functional as F
-from torch import Tensor, nn
+from torch import nn
 
 from tsl.nn import utils
 from tsl.nn.layers.base import MultiHeadAttention
 from tsl.nn.layers.norm import LayerNorm
+from tsl.typing import Tensor
 
 
 class TransformerLayer(nn.Module):

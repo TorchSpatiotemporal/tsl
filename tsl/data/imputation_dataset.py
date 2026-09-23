@@ -32,7 +32,9 @@ class ImputationDataset(SpatioTemporalDataset):
             or an (:obj:`edge_index` :math:`\in \mathbb{N}^{2 \times E}`,
             :obj:`edge_weight` :math:`\in \mathbb{R}^{E})` tuple. The input
             layout will be preserved (e.g., a sparse matrix will be stored as a
-            :class:`torch_sparse.SparseTensor`). In any case, the connectivity
+            :class:`torch_sparse.SparseTensor`). SparseTensor connectivity
+            requires the optional :mod:`torch_sparse` dependency. In any case,
+            the connectivity
             will be stored in the attribute :obj:`edge_index`, and the weights
             will be eventually stored as :obj:`edge_weight`.
             (default: :obj:`None`)

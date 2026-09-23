@@ -7,9 +7,8 @@ from torch.utils.data.dataloader import default_collate
 from torch_geometric.data import Batch
 from torch_geometric.data.collate import collate
 from torch_geometric.data.separate import separate
-from torch_geometric.typing import Adj
 
-from ..typing import IndexSlice
+from ..typing import Adj, IndexSlice
 from ..utils import ensure_list
 from .data import Data
 from .preprocessing import ScalerModule
@@ -105,6 +104,8 @@ class StaticBatch(Data):
         edge_index (Adj, optional): Shared graph connectivity, either in COO
             format (a :class:`~torch.Tensor` of shape :obj:`[2, E]`) or as a
             :class:`torch_sparse.SparseTensor` with shape :obj:`[N, N]`.
+            SparseTensor connectivity requires the optional
+            :mod:`torch_sparse` dependency.
             (default: :obj:`None`)
         edge_weight (Tensor, optional): Weights of the edges (if
             :attr:`edge_index` is not a :class:`torch_sparse.SparseTensor`).

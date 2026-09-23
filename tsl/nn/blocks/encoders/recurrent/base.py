@@ -1,9 +1,10 @@
 from typing import List, Optional, Tuple, Union
 
 import torch
-from torch import Tensor, nn
+from torch import nn
 
 from tsl.nn.layers.recurrent.base import RNNCellBase, StateType
+from tsl.typing import Tensor
 from tsl.utils import ensure_list
 
 

@@ -1,5 +1,4 @@
 import torch
-from torch import Tensor
 from torch.nn import Parameter
 from torch_geometric.nn import inits
 
@@ -35,7 +34,7 @@ class LayerNorm(torch.nn.Module):
         inits.ones(self.weight)
         inits.zeros(self.bias)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """"""
         mean = torch.mean(x, dim=-1, keepdim=True)
         std = torch.std(x, dim=-1, unbiased=False, keepdim=True)

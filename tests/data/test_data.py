@@ -7,7 +7,6 @@ view filtering, rearranging and subgraph results can be matched element-wise.
 import numpy as np
 import pytest
 import torch
-from torch_sparse import SparseTensor
 
 from tsl.data import Data
 from tsl.data.data import get_size, pattern_size_repr
@@ -39,8 +38,14 @@ def _graph_data(n_nodes=3, t=4, c=2, scaler=None):
 # -- get_size / pattern_size_repr -------------------------------------------
 
 
-def test_get_size_tensor_and_sparse():
+def test_get_size_tensor():
     assert get_size(torch.zeros(4, 3)) == (4, 3)
+
+
+@pytest.mark.torch_sparse
+def test_get_size_sparse():
+    from torch_sparse import SparseTensor
+
     st = SparseTensor.from_edge_index(
         torch.tensor([[0, 1], [1, 2]]), sparse_sizes=(3, 3)
     )
@@ -162,7 +167,10 @@ def test_cat_dim_stack_when_no_node_or_edge():
     assert d.__cat_dim__('a', d['a']) is None
 
 
+@pytest.mark.torch_sparse
 def test_cat_dim_sparse_double_node():
+    from torch_sparse import SparseTensor
+
     edge_index = torch.tensor([[0, 1, 2], [1, 2, 0]])
     st = SparseTensor.from_edge_index(edge_index, sparse_sizes=(3, 3))
     d = Data(input={'adj': st}, pattern={'adj': 'n n'})
@@ -245,6 +253,23 @@ def test_subgraph_bool_subset():
     d.subgraph_(torch.tensor([True, False, True]))
     assert d.num_nodes == 2
     assert tuple(d['x'].shape) == (4, 2, 2)
+
+
+def test_subgraph_without_connectivity_reduces_node_attributes():
+    d = Data(
+        input={'x': _grid(2, 3, 1)},
+        target={'y': _grid(2, 3, 1)},
+        mask=torch.tensor([[[True], [False], [True]]]),
+        pattern={'x': 't n f', 'y': 't n f', 'mask': 't n f'},
+    )
+
+    d.subgraph_(torch.tensor([True, False, True]))
+
+    assert d.edge_index is None
+    assert d.edge_weight is None
+    assert tuple(d.x.shape) == (2, 2, 1)
+    assert tuple(d.y.shape) == (2, 2, 1)
+    assert torch.equal(d.mask, torch.tensor([[[True], [True]]]))
 
 
 def test_subgraph_slices_scaler():

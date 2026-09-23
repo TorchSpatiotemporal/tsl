@@ -1,9 +1,9 @@
 import torch
-from torch import Tensor, nn
+from torch import nn
 from torch_geometric.nn import MessagePassing
-from torch_geometric.typing import Adj
 
 from tsl.nn.utils import get_layer_activation
+from tsl.typing import Adj, Tensor
 
 
 class GatedGraphNetwork(MessagePassing):

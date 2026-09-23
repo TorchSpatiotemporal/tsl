@@ -7,11 +7,11 @@ from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.nn.inits import glorot, zeros
-from torch_geometric.typing import Adj, OptPairTensor, OptTensor
 from torch_geometric.utils import add_self_loops, remove_self_loops
-from torch_sparse import SparseTensor, set_diag
 
+from tsl.imports import is_optional_instance, require_optional_dependency
 from tsl.nn.functional import sparse_softmax
+from tsl.typing import Adj, OptPairTensor, OptTensor
 
 
 class GATConv(MessagePassing):
@@ -101,6 +101,10 @@ class GATConv(MessagePassing):
           :math:`((*, |\mathcal{V}_t|, *, F_{out})` if bipartite
           attention_weights :math:`((2, |\mathcal{E}|), (|\mathcal{E}|, H)))` if
           :obj:`need_weights` is :obj:`True` else :obj:`None`
+
+    Note:
+        SparseTensor connectivity requires the optional :mod:`torch_sparse`
+        dependency. COO connectivity does not.
     """
 
     def __init__(
@@ -205,7 +209,22 @@ class GATConv(MessagePassing):
         edge_attr: OptTensor = None,
         need_weights: bool = False,
     ):
-        """"""
+        """Apply graph attention to node features.
+
+        Args:
+            x (Tensor or tuple): Node features.
+            edge_index (Adj): COO or SparseTensor graph connectivity.
+            edge_attr (Tensor, optional): Edge features. (default: :obj:`None`)
+            need_weights (bool): Whether to return attention weights. (default:
+                :obj:`False`)
+
+        Returns:
+            tuple: Output node features and optional attention weights.
+
+        Raises:
+            ImportError: If SparseTensor connectivity requires the optional
+                :mod:`torch_sparse` dependency.
+        """
         node_dim = self.node_dim
         self.node_dim = (node_dim + x.dim()) if node_dim < 0 else node_dim
 
@@ -235,9 +254,10 @@ class GATConv(MessagePassing):
                 edge_index, edge_attr = add_self_loops(
                     edge_index, edge_attr, fill_value=self.fill_value, num_nodes=N
                 )
-            elif isinstance(edge_index, SparseTensor):
+            elif is_optional_instance(edge_index, 'torch_sparse', 'SparseTensor'):
                 if self.edge_dim is None:
-                    edge_index = set_diag(edge_index)
+                    sparse = require_optional_dependency('torch_sparse', 'torch-sparse')
+                    edge_index = sparse.set_diag(edge_index)
                 else:
                     raise NotImplementedError(
                         "The usage of 'edge_attr' and 'add_self_loops' "
@@ -264,7 +284,7 @@ class GATConv(MessagePassing):
             alpha = torch.movedim(alpha, self.node_dim, 0)
             if isinstance(edge_index, Tensor):
                 alpha = (edge_index, alpha)
-            elif isinstance(edge_index, SparseTensor):
+            elif is_optional_instance(edge_index, 'torch_sparse', 'SparseTensor'):
                 alpha = edge_index.set_value(alpha, layout='coo')
         else:
             alpha = None

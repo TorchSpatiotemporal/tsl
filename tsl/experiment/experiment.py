@@ -7,24 +7,19 @@ from contextlib import contextmanager
 from functools import wraps
 from typing import Callable, List, Optional, Union
 
+import hydra
 import torch
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import DictConfig, OmegaConf, flag_override
+from omegaconf.errors import ConfigAttributeError
 from pytorch_lightning import seed_everything
 
 from tsl import config, logger
-from tsl.imports import _HYDRA_AVAILABLE
 from tsl.utils.python_utils import ensure_list
 
-if _HYDRA_AVAILABLE:
-    import hydra
-    from hydra.core.hydra_config import HydraConfig
-    from omegaconf import DictConfig, OmegaConf, flag_override
-    from omegaconf.errors import ConfigAttributeError
+from .resolvers import register_resolvers
 
-    from .resolvers import register_resolvers
-
-    register_resolvers()
-else:
-    hydra = DictConfig = None
+register_resolvers()
 
 
 def get_hydra_cli_arg(key: str, delete: bool = False):
@@ -87,12 +82,6 @@ class Experiment:
     This class relies heavily on the `Hydra <https://hydra.cc/>`_ framework,
     check `Hydra docs <https://hydra.cc/docs/intro/>`_ for usage information.
 
-    Hydra is an optional dependency of tsl, to install it using pip:
-
-    .. code-block:: bash
-
-        pip install hydra-core
-
     Args:
         run_fn (callable): Python function that actually runs the experiment
             when called. The run function must accept a single argument,
@@ -115,12 +104,6 @@ class Experiment:
         config_name: Optional[str] = None,
         pre_run_hooks: Union[Callable, List[Callable]] = None,
     ):
-        if not _HYDRA_AVAILABLE:
-            raise RuntimeError(
-                "Install optional dependency 'hydra-core'"
-                f" to use {self.__class__.__name__}."
-            )
-
         # store the run configuration
         self.cfg: Optional[DictConfig] = None
 

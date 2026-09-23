@@ -1,4 +1,6 @@
-from torch import Tensor, nn
+from torch import nn
+
+from tsl.typing import Tensor
 
 
 class Select(nn.Module):

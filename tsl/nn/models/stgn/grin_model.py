@@ -2,12 +2,11 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from torch import Tensor
-from torch_geometric.typing import Adj, OptTensor
 
 from tsl.nn.layers.base import NodeEmbedding
 from tsl.nn.layers.recurrent import GRINCell
 from tsl.nn.models.base_model import BaseModel
+from tsl.typing import Adj, OptTensor, Tensor
 
 
 class GRINModel(BaseModel):

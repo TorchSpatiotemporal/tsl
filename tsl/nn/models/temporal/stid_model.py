@@ -2,8 +2,9 @@ from typing import Optional, Sequence, Union
 
 import torch
 from einops import rearrange
-from torch import Tensor, nn
+from torch import nn
 
+from tsl.typing import Tensor
 from tsl.utils import ensure_list
 
 from ...blocks import MLP, LinearReadout

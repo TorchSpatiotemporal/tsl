@@ -1,7 +1,9 @@
 from typing import Tuple, Union
 
 import torch
-from torch import Tensor, nn
+from torch import nn
+
+from tsl.typing import Tensor
 
 StateType = Union[Tensor, Tuple[Tensor]]
 

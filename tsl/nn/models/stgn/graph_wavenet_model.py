@@ -4,7 +4,6 @@ import torch
 from einops import repeat
 from torch import Tensor, nn
 from torch.nn import functional as F
-from torch_geometric.typing import Adj, OptTensor
 
 from tsl.nn.blocks.decoders import MLPDecoder
 from tsl.nn.blocks.encoders import TemporalConvNet
@@ -12,6 +11,7 @@ from tsl.nn.layers.base import NodeEmbedding
 from tsl.nn.layers.graph_convs import DenseGraphConvOrderK, DiffConv
 from tsl.nn.layers.norm import Norm
 from tsl.nn.models.base_model import BaseModel
+from tsl.typing import Adj, OptTensor
 
 
 class GraphWaveNetModel(BaseModel):

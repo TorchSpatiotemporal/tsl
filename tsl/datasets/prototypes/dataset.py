@@ -3,15 +3,13 @@ import os
 from typing import Iterable, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 import numpy as np
-from numpy import ndarray
-from pandas import DataFrame, Series
 from scipy.sparse import coo_matrix, csc_matrix, csr_matrix
 
 import tsl
 from tsl import config, logger
 
 from ...data.datamodule import Splitter, splitters
-from ...typing import ScipySparseMatrix
+from ...typing import DataFrame, ScipySparseMatrix, Series, ndarray
 from ...utils.io import load_pickle, save_pickle
 from ...utils.python_utils import ensure_list, files_exist, hash_dict
 

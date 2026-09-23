@@ -2,9 +2,9 @@ from typing import Tuple, Union
 
 import torch.nn as nn
 from einops import rearrange
-from torch import Tensor
 
 from tsl.nn.functional import gated_tanh
+from tsl.typing import Tensor
 
 
 class TemporalConv(nn.Module):

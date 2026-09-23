@@ -19,7 +19,7 @@ class Rearrange(BaseTransform):
             else:
                 self.batch_patterns[key] = pattern
 
-    def __call__(self, data: Data) -> Data:
+    def forward(self, data: Data) -> Data:
         if isinstance(data, StaticBatch):
             data.rearrange(self.batch_patterns)
         else:

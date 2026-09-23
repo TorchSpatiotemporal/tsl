@@ -1,9 +1,8 @@
 from typing import Optional
 
-from torch import Tensor
-
 from tsl.nn.layers.graph_convs.dense_graph_conv import DenseGraphConvOrderK
 from tsl.nn.layers.recurrent import DenseDCRNNCell
+from tsl.typing import Tensor
 
 from .base import RNNBase
 

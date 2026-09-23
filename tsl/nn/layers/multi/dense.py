@@ -1,6 +1,7 @@
-from torch import Tensor, nn
+from torch import nn
 
 from tsl.nn.utils import get_layer_activation
+from tsl.typing import Tensor
 
 from .linear import MultiLinear
 

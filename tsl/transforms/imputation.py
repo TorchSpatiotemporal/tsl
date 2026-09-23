@@ -18,6 +18,6 @@ class MaskInput(BaseTransform):
         self.input_key = input_key
         self.mask_key = mask_key
 
-    def __call__(self, data: Data) -> Data:
-        data[self.input_key] *= data[self.mask_key]
+    def forward(self, data: Data) -> Data:
+        data[self.input_key] = data[self.input_key] * data[self.mask_key]
         return data

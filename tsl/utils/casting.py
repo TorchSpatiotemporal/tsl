@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 from typing import Any, Literal, Union
 
 import torch
 from einops import rearrange
 from torch import Tensor
 from torch_geometric.data.storage import recursive_apply
-from torch_sparse import SparseTensor
 
+from tsl.imports import is_optional_instance
 from tsl.ops.framearray import framearray_to_numpy
-from tsl.typing import IndexSlice
+from tsl.typing import IndexSlice, SparseTensor
 from tsl.utils.python_utils import precision_stoi
 
 
@@ -33,10 +35,27 @@ def copy_to_tensor(obj) -> Tensor:
 def convert_precision_tensor(
     tensor: Union[Tensor, SparseTensor], precision: Union[int, str] = None
 ) -> Union[Tensor, SparseTensor]:
+    """Convert a tensor to the requested numeric precision.
+
+    Args:
+        tensor (Tensor or torch_sparse.SparseTensor): Tensor to convert.
+        precision (int or str, optional): Target precision. (default: :obj:`None`)
+
+    Returns:
+        Tensor or torch_sparse.SparseTensor: Converted tensor.
+
+    Raises:
+        ImportError: If :obj:`tensor` is a SparseTensor and the optional
+            :mod:`torch_sparse` dependency cannot be imported.
+    """
     if precision is None:
         return tensor
     precision = precision_stoi(precision)
-    dtype = tensor.dtype() if isinstance(tensor, SparseTensor) else tensor.dtype
+    dtype = (
+        tensor.dtype()
+        if is_optional_instance(tensor, 'torch_sparse', 'SparseTensor')
+        else tensor.dtype
+    )
     # float to float{precision}
     if dtype in [torch.float16, torch.float32, torch.float64]:
         new_dtype = getattr(torch, f'float{precision}')

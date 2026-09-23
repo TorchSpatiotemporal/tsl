@@ -3,7 +3,6 @@ from typing import Mapping, Type
 
 import numpy as np
 import torch
-from torch import nn
 from tqdm import tqdm
 
 from tsl.datasets import TabularDataset
@@ -52,7 +51,7 @@ class GaussianNoiseSyntheticDataset(TabularDataset):
         num_steps: int,
         connectivity: SparseTensArray,
         min_window: int = 1,
-        model: nn.Module = None,
+        model: torch.nn.Module = None,
         model_class: Type = None,
         model_kwargs: Mapping = None,
         sigma_noise: float = 0.2,

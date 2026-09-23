@@ -1,11 +1,12 @@
 from typing import Literal, Mapping, Optional
 
+from numpy import ndarray
 from pytorch_lightning import LightningDataModule
+from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, Subset
 
 import tsl
 
-from ...typing import Index
 from ..loader import StaticGraphLoader
 from ..spatiotemporal_dataset import SpatioTemporalDataset
 from .splitters import Splitter
@@ -144,7 +145,7 @@ class SpatioTemporalDataModule(LightningDataModule):
             setattr(self, name, _set)
         else:
             indices = _set
-            assert isinstance(indices, Index.__args__), (
+            assert isinstance(indices, (list, tuple, Tensor, ndarray)), (
                 f"type {type(indices)} of `{name}` is not a valid type. "
                 "It must be a dataset or a sequence of indices."
             )

@@ -3,7 +3,6 @@ from typing import List, Optional, Union
 
 import torch
 from torch import Tensor, nn
-from torch_geometric.typing import OptTensor
 
 
 class NodeEmbedding(nn.Module):
@@ -68,7 +67,7 @@ class NodeEmbedding(nn.Module):
     def forward(
         self,
         expand: Optional[List] = None,
-        node_index: OptTensor = None,
+        node_index: Optional[Tensor] = None,
         nodes_first: bool = True,
     ):
         """"""

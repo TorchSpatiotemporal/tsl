@@ -1,8 +1,9 @@
 from typing import List, Tuple, Union
 
-from torch import Tensor, nn
+from torch import nn
 
-from tsl.nn.functional import expand_then_cat
+from tsl.nn.utils import expand_then_cat
+from tsl.typing import Tensor
 
 
 class Concatenate(nn.Module):

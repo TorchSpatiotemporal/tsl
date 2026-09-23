@@ -8,10 +8,16 @@ import torch
 from pandas import DatetimeIndex
 from torch import Tensor
 from torch.utils.data import Dataset
-from torch_geometric.typing import Adj
-from torch_sparse import SparseTensor
 
-from tsl.typing import DataArray, IndexSlice, SparseTensArray, TemporalIndex, TensArray
+from tsl.imports import is_optional_instance
+from tsl.typing import (
+    Adj,
+    DataArray,
+    IndexSlice,
+    SparseTensArray,
+    TemporalIndex,
+    TensArray,
+)
 
 from ..ops.connectivity import reduce_graph
 from ..ops.pattern import broadcast, check_pattern, outer_pattern, take
@@ -59,7 +65,9 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
             or an (:obj:`edge_index` :math:`\in \mathbb{N}^{2 \times E}`,
             :obj:`edge_weight` :math:`\in \mathbb{R}^{E})` tuple. The input
             layout will be preserved (e.g., a sparse matrix will be stored as a
-            :class:`torch_sparse.SparseTensor`). In any case, the connectivity
+            :class:`torch_sparse.SparseTensor`). SparseTensor connectivity
+            requires the optional :mod:`torch_sparse` dependency. In any case,
+            the connectivity
             will be stored in the attribute :obj:`edge_index`, and the weights
             will be eventually stored as :obj:`edge_weight`.
             (default: :obj:`None`)
@@ -333,7 +341,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         """Number of edges in the dataset, if a connectivity is set."""
         if self.edge_index is None:
             return None
-        if isinstance(self.edge_index, SparseTensor):
+        if is_optional_instance(self.edge_index, 'torch_sparse', 'SparseTensor'):
             return self.edge_index.numel()
         if self._is_coo_edge_index():
             return self.edge_index.size(1)
@@ -892,7 +900,8 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         :obj:`edge_weight` :math:`\in \mathbb{R}^{E})` tuple. If
         :obj:`target_layout` is :obj:`None`, the input layout will be
         preserved (e.g., a sparse matrix will be stored as a
-        :class:`torch_sparse.SparseTensor`), otherwise the connectivity is
+        :class:`torch_sparse.SparseTensor`, which requires the optional
+        :mod:`torch_sparse` dependency), otherwise the connectivity is
         converted to the specified layout. In any case, the connectivity
         will be stored in the attribute :obj:`edge_index`, and the weights
         will be eventually stored as :obj:`edge_weight`.

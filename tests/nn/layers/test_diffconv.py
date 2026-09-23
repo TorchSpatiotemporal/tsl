@@ -1,9 +1,11 @@
+import pytest
 import torch
 
 from tsl.nn.layers import DiffConv
 from tsl.ops.connectivity import convert_torch_connectivity
 
 
+@pytest.mark.torch_sparse
 def test_diff_conv():
     b, t, n, f = 1, 12, 4, 8
     x = torch.randn(b, t, n, f)
@@ -40,6 +42,7 @@ def test_diff_conv():
             assert torch.allclose(conv(x, adj), out2, atol=1e-6)
 
 
+@pytest.mark.torch_sparse
 def test_normalization():
     b, t, n, f = 1, 12, 4, 1
     x_i = torch.ones(b, t, 1, f)

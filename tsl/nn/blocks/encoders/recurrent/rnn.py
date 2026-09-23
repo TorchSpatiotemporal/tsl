@@ -2,10 +2,11 @@ from typing import List, Optional, Tuple
 
 import torch
 from einops import rearrange
-from torch import Tensor, nn
+from torch import nn
 
 from tsl.nn.layers.recurrent import GRUCell, LSTMCell, StateType
 from tsl.nn.utils import maybe_cat_exog
+from tsl.typing import Tensor
 
 from .base import RNNIBase
 

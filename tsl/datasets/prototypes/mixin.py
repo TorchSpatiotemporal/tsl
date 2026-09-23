@@ -2,11 +2,12 @@ from typing import List, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from pandas import Index
 
+from ...imports import require_optional_dependency
 from ...ops.framearray import framearray_shape, framearray_to_numpy
 from ...ops.pattern import check_pattern, infer_pattern
 from ...typing import FrameArray
+from ...typing import PandasIndex as Index
 from ...utils.python_utils import ensure_list
 from . import casting
 
@@ -162,27 +163,26 @@ class TemporalFeaturesMixin:
         return pd.DataFrame(np.stack(out, -1), index=self.index, columns=units)
 
     def holidays_onehot(self, country, subdiv=None) -> pd.DataFrame:
-        """Returns a DataFrame to indicate if dataset timestamps is holiday.
+        """Return a one-hot holiday indicator for the dataset timestamps.
+
         See https://python-holidays.readthedocs.io/en/latest/.
 
         Args:
             country (str): country for which holidays have to be checked, e.g.,
                 "CH" for Switzerland.
-            subdiv (dict, optional): optional country sub-division (state,
-                region, province, canton), e.g., "TI" for Ticino, Switzerland.
+            subdiv (str, optional): Country subdivision (state, region,
+                province, canton), e.g., "TI" for Ticino, Switzerland.
 
         Returns:
-            pandas.DataFrame: DataFrame with one column ("holiday") as one-hot
-                encoding (1 if the timestamp is in a holiday, 0 otherwise).
+            pandas.DataFrame: DataFrame with one column (``"holiday"``),
+                containing ``1`` if the timestamp is a holiday and ``0`` otherwise.
+
+        Raises:
+            ImportError: If the optional :mod:`holidays` dependency is not
+                installed.
         """
         self.__check_temporal_index()
-        try:
-            import holidays
-        except ModuleNotFoundError:
-            raise RuntimeError(
-                "You should install optional dependency "
-                "'holidays' to call 'datetime_holidays'."
-            )
+        holidays = require_optional_dependency('holidays')
 
         years = np.unique(self.index.year.values)
         h = holidays.country_holidays(country, subdiv=subdiv, years=years)

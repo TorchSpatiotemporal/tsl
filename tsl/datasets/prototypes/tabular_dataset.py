@@ -4,12 +4,20 @@ from typing import Dict, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from numpy import ndarray
-from pandas import Index
 
 from tsl import logger
 from tsl.ops.framearray import aggregate, fill_nan, framearray_to_numpy, reduce
-from tsl.typing import FillOptions, FrameArray, OptFrameArray, Scalar, TemporalIndex
+from tsl.typing import (
+    FillOptions,
+    FrameArray,
+    OptFrameArray,
+    Scalar,
+    TemporalIndex,
+    ndarray,
+)
+from tsl.typing import (
+    PandasIndex as Index,
+)
 from tsl.utils.python_utils import ensure_list
 
 from ...ops.pattern import broadcast, outer_pattern

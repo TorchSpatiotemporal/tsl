@@ -1,8 +1,8 @@
 """Test connectivity (layouts, n_edges, presence in the item)."""
 
 import numpy as np
+import pytest
 import torch
-from torch_sparse import SparseTensor
 
 from tsl.data import SpatioTemporalDataset
 
@@ -65,7 +65,10 @@ def test_dense_adjacency_layout():
     np.testing.assert_array_equal(ds[0].input['edge_index'].numpy(), adj)
 
 
+@pytest.mark.torch_sparse
 def test_sparse_tensor_layout():
+    from torch_sparse import SparseTensor
+
     adj = _dense_adj()
     st = SparseTensor.from_dense(torch.as_tensor(adj))
     ds = _dataset(st)

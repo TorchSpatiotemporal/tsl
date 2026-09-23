@@ -7,7 +7,7 @@ name = "torch-spatiotemporal"
 dynamic = ["version"]
 description = "A PyTorch Library for Relational Time Series Processing"
 readme = "README.md"
-requires-python = ">=3.8,<3.12"
+requires-python = ">=3.8"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Ivan Marisca" }, { name = "Andrea Cini" }]
@@ -29,33 +29,32 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
     "einops",
+    "hydra-core",
     "numpy>1.20.3,<2",
-    "pandas>=1.4",
+    "omegaconf",
+    "pandas>=1.4,<3",
     "pytorch-lightning>=1.8",
     "pyyaml",
     "scikit-learn",
     "scipy",
     "tables",
+    "torch>=1.13,<2.4",
+    "torch_geometric>=2.4,<3",
     "torchmetrics>=0.7",
     "tqdm>=4.66.3",
 ]
 
 [project.optional-dependencies]
-experiment = ["hydra-core", "omegaconf"]
-holidays = ["holidays"]
-full = ["torch-spatiotemporal[experiment,holidays]"]
+full = ["holidays"]
 doc = [
     "docutils",
     "furo",
+    "matplotlib",
     "myst-nb",
-    "sphinx",
+    "sphinx<9",
     "sphinx-copybutton",
     "sphinx-design",
     "sphinx-hoverxref",
@@ -69,7 +68,6 @@ dev = [
     "pytest",
     "pytest-cov",
     "ruff",
-    "twine",
     "torch-spatiotemporal[doc]",
 ]
 
@@ -117,6 +115,9 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
     "dataset_download: marks tests that download real datasets (run with '--run-datasets')",
+    "holidays: marks tests that require the optional holidays package",
+    "torch_sparse: marks tests that require the optional torch-sparse package",
+    "torch_scatter: marks tests that require the optional torch-scatter package",
 ]
 testpaths = ["tests"]
 filterwarnings = [

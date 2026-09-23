@@ -1,5 +1,7 @@
 import torch
-from torch import Tensor, nn
+from torch import nn
+
+from tsl.typing import Tensor
 
 from .batch_norm import BatchNorm
 from .instance_norm import InstanceNorm

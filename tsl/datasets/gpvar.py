@@ -2,8 +2,6 @@ from typing import List, Union
 
 import numpy as np
 import torch
-from numpy import ndarray
-from torch import Tensor
 from torch_geometric.utils import add_self_loops
 
 from tsl.nn.layers.graph_convs.gpvar import GraphPolyVAR
@@ -41,7 +39,7 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
         self,
         num_communities: int,
         num_steps: int,
-        filter_params: Union[List, Tensor, ndarray],
+        filter_params: Union[List, torch.Tensor, np.ndarray],
         sigma_noise: float = 0.2,
         norm: str = 'none',
         name: str = None,
@@ -57,7 +55,7 @@ class GPVARDataset(GaussianNoiseSyntheticDataset):
             edge_index=torch.tensor(edge_index), num_nodes=num_nodes
         )
 
-        if not isinstance(filter_params, Tensor):
+        if not isinstance(filter_params, torch.Tensor):
             filter_params = torch.as_tensor(filter_params, dtype=torch.float32)
 
         filter = _GPVAR.from_params(filter_params=filter_params, norm=norm, cached=True)

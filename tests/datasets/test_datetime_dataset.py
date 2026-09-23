@@ -122,8 +122,8 @@ def test_temporal_features_require_datetime_index():
         ds.datetime_encoded('hour')
 
 
+@pytest.mark.holidays
 def test_holidays_onehot():
-    pytest.importorskip('holidays')  # optional dependency
     ds = make_datetime(48, freq='1H')
     out = ds.holidays_onehot('IT')
     assert list(out.columns) == ['holiday']

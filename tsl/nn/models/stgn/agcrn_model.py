@@ -1,10 +1,10 @@
 from torch import Tensor, nn
-from torch_geometric.typing import OptTensor
 
 from tsl.nn.blocks.decoders import LinearReadout
 from tsl.nn.blocks.encoders import AGCRN
 from tsl.nn.models.base_model import BaseModel
 from tsl.nn.utils import maybe_cat_exog
+from tsl.typing import OptTensor
 
 
 class AGCRNModel(BaseModel):

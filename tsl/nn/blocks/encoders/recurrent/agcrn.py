@@ -1,10 +1,9 @@
 from typing import Optional
 
-from torch import Tensor
-
 from tsl.nn.layers.base import NodeEmbedding
 from tsl.nn.layers.graph_convs.adaptive_graph_conv import AdaptiveGraphConv
 from tsl.nn.layers.recurrent import AGCRNCell
+from tsl.typing import Tensor
 
 from .base import RNNBase
 

@@ -3,11 +3,12 @@ from typing import Optional, Union
 import torch
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
-from torch import Tensor, nn
+from torch import nn
 
 from tsl import logger
 from tsl.nn.blocks.encoders.recurrent import RNNI
 from tsl.nn.models.base_model import BaseModel
+from tsl.typing import Tensor
 
 
 class RNNImputerModel(BaseModel):

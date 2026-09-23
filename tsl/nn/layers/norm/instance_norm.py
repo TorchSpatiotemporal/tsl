@@ -1,7 +1,8 @@
 import torch
-from torch import Tensor
 from torch.nn import Parameter
 from torch_geometric.nn import inits
+
+from tsl.typing import Tensor
 
 
 class InstanceNorm(torch.nn.Module):

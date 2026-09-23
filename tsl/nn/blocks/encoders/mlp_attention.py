@@ -5,11 +5,10 @@ from torch import Tensor, nn
 from torch.nn import LayerNorm
 from torch.nn import functional as F
 from torch_geometric.nn import Linear, MessagePassing
-from torch_geometric.typing import Adj, OptTensor, PairTensor
-from torch_scatter import scatter
-from torch_scatter.utils import broadcast
 
-from tsl.nn.functional import sparse_softmax
+from tsl.nn.functional import scatter_sum, sparse_softmax
+from tsl.nn.utils import broadcast
+from tsl.typing import Adj, OptTensor, PairTensor
 
 from .mlp import MLP
 
@@ -127,8 +126,8 @@ class MLPAttention(MessagePassing):
         # optional reweighing
         if self.reweigh == 'l1':
             expanded_index = broadcast(index, weights, self.node_dim)
-            weights_sum = scatter(
-                weights, expanded_index, self.node_dim, dim_size=num_nodes, reduce='sum'
+            weights_sum = scatter_sum(
+                weights, expanded_index, self.node_dim, dim_size=num_nodes
             )
             weights_sum = weights_sum.index_select(self.node_dim, index)
             weights = weights / (weights_sum + 1e-5)

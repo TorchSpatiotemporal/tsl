@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 from typing import (
     Any,
@@ -18,22 +20,41 @@ from torch import Tensor
 from torch_geometric.data.data import Data as PyGData
 from torch_geometric.data.storage import BaseStorage
 from torch_geometric.data.view import ItemsView, KeysView, ValuesView
-from torch_geometric.typing import Adj
-from torch_sparse import SparseTensor
 
+from tsl.imports import is_optional_instance
 from tsl.ops.connectivity import reduce_graph
 from tsl.ops.pattern import take
+from tsl.typing import Adj, SparseTensor
 from tsl.utils.python_utils import ensure_list
 
 
 def get_size(x: Union[Tensor, SparseTensor]) -> Tuple:
+    """Return the shape of a dense tensor or SparseTensor.
+
+    Args:
+        x (Tensor or torch_sparse.SparseTensor): Object whose shape is returned.
+
+    Returns:
+        tuple: Shape of :obj:`x`.
+    """
     if isinstance(x, Tensor):
         return tuple(x.size())
-    elif isinstance(x, SparseTensor):
+    elif is_optional_instance(x, 'torch_sparse', 'SparseTensor'):
         return tuple(x.sizes())
 
 
 def pattern_size_repr(key: str, x: Union[Tensor, SparseTensor], pattern: str = None):
+    """Format an object's dimensions using an optional named pattern.
+
+    Args:
+        key (str): Name assigned to the object.
+        x (Tensor or torch_sparse.SparseTensor): Object to describe.
+        pattern (str, optional): Names for the dimensions of :obj:`x`.
+            (default: :obj:`None`)
+
+    Returns:
+        str: Human-readable representation of :obj:`x` dimensions.
+    """
     if pattern is not None:
         pattern = pattern.replace(' ', '')
         out = str(
@@ -170,6 +191,8 @@ class Data(PyGData):
         edge_index (Adj, optional): Graph connectivity either in COO
             format (a :class:`~torch.Tensor` of shape :obj:`[2, E]`) or as a
             :class:`torch_sparse.SparseTensor` with shape :obj:`[N, N]`.
+            SparseTensor connectivity requires the optional
+            :mod:`torch_sparse` dependency.
             For dynamic graphs -- with time-varying topology -- can be a Python
             list of :class:`~torch.Tensor`.
             (default: :obj:`None`)
@@ -240,7 +263,7 @@ class Data(PyGData):
     def __cat_dim__(self, key: str, value: Any, *args, **kwargs) -> Any:
         if key in self.pattern:
             if 'n' in self.pattern[key]:  # cat along node dimension
-                if isinstance(value, SparseTensor):
+                if is_optional_instance(value, 'torch_sparse', 'SparseTensor'):
                     # allow for multi-dim cat for SparseTensor (e.g., adj)
                     return tuple(
                         dim
@@ -318,14 +341,43 @@ class Data(PyGData):
         return self
 
     def subgraph_(self, subset: Tensor):
-        edge_index, edge_mask = reduce_graph(
-            subset, edge_index=self.edge_index, num_nodes=self.num_nodes
-        )
+        r"""Restrict this object in place to a node-induced subgraph.
+
+        Node and edge attributes with a declared :attr:`pattern` are sliced
+        along their respective dimensions. Attributes without a pattern use
+        PyG's node/edge attribute inference. Connectivity is optional: when
+        :attr:`edge_index` is :obj:`None`, only node attributes are reduced.
+
+        Args:
+            subset (Tensor): One-dimensional boolean node mask or node indices
+                to retain.
+
+        Returns:
+            Data: The reduced object.
+        """
+        edge_index, edge_mask = None, None
+        if self.edge_index is not None:
+            edge_index, edge_mask = reduce_graph(
+                subset, edge_index=self.edge_index, num_nodes=self.num_nodes
+            )
 
         if subset.dtype == torch.bool:
             num_nodes = int(subset.sum())
         else:
             num_nodes = subset.size(0)
+
+        # ``index_select`` requires integer indices, while ``take`` accepts a
+        # boolean node/edge mask and uses it to preserve pattern semantics.
+        node_index = (
+            subset.nonzero(as_tuple=False).squeeze(-1)
+            if subset.dtype == torch.bool
+            else subset
+        )
+        edge_index_mask = (
+            edge_mask.nonzero(as_tuple=False).squeeze(-1)
+            if edge_mask is not None and edge_mask.dtype == torch.bool
+            else edge_mask
+        )
 
         # work on a fresh 'transform' mapping so that slicing the scalers does
         # not mutate a dict shared with other 'Data' objects.
@@ -335,7 +387,7 @@ class Data(PyGData):
         for key, value in self:
             if key == 'edge_index':
                 self.edge_index = edge_index
-            elif key == 'edge_weight':
+            elif key == 'edge_weight' and edge_mask is not None:
                 self.edge_weight = self.edge_weight[edge_mask]
             elif key == 'num_nodes':
                 self.num_nodes = num_nodes
@@ -348,10 +400,10 @@ class Data(PyGData):
             elif isinstance(value, Tensor):
                 if self.is_node_attr(key):
                     node_dim = self.__cat_dim__(key, value, self._store)
-                    self[key] = torch.index_select(value, node_dim, subset)
-                elif self.is_edge_attr(key):
+                    self[key] = torch.index_select(value, node_dim, node_index)
+                elif edge_index_mask is not None and self.is_edge_attr(key):
                     edge_dim = self.__cat_dim__(key, value, self._store)
-                    self[key] = torch.index_select(value, edge_dim, edge_mask)
+                    self[key] = torch.index_select(value, edge_dim, edge_index_mask)
             if key in self.transform:
                 scaler = self.transform[key]
                 self.transform[key] = scaler.slice(node_index=subset)

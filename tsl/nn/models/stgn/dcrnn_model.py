@@ -1,10 +1,10 @@
 from einops import rearrange
 from torch import Tensor, nn
-from torch_geometric.typing import Adj, OptTensor
 
 from tsl.nn.blocks.decoders import MLPDecoder
 from tsl.nn.blocks.encoders import DCRNN, ConditionalBlock
 from tsl.nn.models.base_model import BaseModel
+from tsl.typing import Adj, OptTensor
 
 
 class DCRNNModel(BaseModel):

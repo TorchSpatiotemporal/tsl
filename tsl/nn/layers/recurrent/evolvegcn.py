@@ -4,13 +4,14 @@ from typing import Optional, Tuple
 import torch
 import torch.nn.functional as F
 from einops import rearrange, repeat
-from torch import Tensor, nn
+from torch import nn
 from torch.nn import Parameter
 from torch_geometric.nn import MessagePassing
-from torch_sparse import SparseTensor, matmul
 
+from tsl.imports import require_optional_dependency
 from tsl.nn.layers.graph_convs.mixin import NormalizedAdjacencyMixin
 from tsl.nn.utils import get_functional_activation
+from tsl.typing import SparseTensor, Tensor
 
 
 class _TopK(torch.nn.Module):
@@ -158,10 +159,21 @@ class EvolveGCNHCell(_EvolveGCNCell):
         return edge_weight.view(-1, 1) * x_j
 
     def message_and_aggregate(self, adj_t: SparseTensor, x: Tensor) -> Tensor:
-        """"""
-        # adj_t: SparseTensor [nodes, nodes]
-        # x: [(batch,) nodes, channels]
-        return matmul(adj_t, x, reduce=self.aggr)
+        """Aggregate messages over SparseTensor connectivity.
+
+        Args:
+            adj_t (torch_sparse.SparseTensor): Transposed graph connectivity.
+            x (Tensor): Node features.
+
+        Returns:
+            Tensor: Aggregated node features.
+
+        Raises:
+            ImportError: If the optional :mod:`torch_sparse` dependency is not
+                installed.
+        """
+        sparse = require_optional_dependency('torch_sparse', 'torch-sparse')
+        return sparse.matmul(adj_t, x, reduce=self.aggr)
 
 
 class EvolveGCNOCell(_EvolveGCNCell):

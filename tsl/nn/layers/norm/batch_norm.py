@@ -1,6 +1,7 @@
 import torch
 from einops import rearrange
-from torch import Tensor
+
+from tsl.typing import Tensor
 
 
 class BatchNorm(torch.nn.Module):

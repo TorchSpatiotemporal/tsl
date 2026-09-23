@@ -5,8 +5,9 @@ from typing import Iterable, List, Optional, Union
 
 import numpy as np
 import torch
-from numpy import ndarray
 from torch import Tensor
+
+from tsl.typing import ndarray
 
 _PATTERNS = {
     'tnef': re.compile('^[1-2]?t?(n{0,2}|e?)f*$'),

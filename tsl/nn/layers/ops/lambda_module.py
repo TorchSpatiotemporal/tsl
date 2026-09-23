@@ -1,6 +1,8 @@
 from typing import Callable
 
-from torch import Tensor, nn
+from torch import nn
+
+from tsl.typing import Tensor
 
 
 class Lambda(nn.Module):

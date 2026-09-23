@@ -3,13 +3,12 @@ from typing import List
 import torch
 from torch import Tensor, nn
 from torch_geometric.nn import MessagePassing
-from torch_geometric.typing import Adj, OptTensor
 from torch_geometric.utils.num_nodes import maybe_num_nodes
-from torch_sparse import SparseTensor, matmul
-from torch_sparse import cat as cat_sparse
 
+from tsl.imports import is_optional_instance, require_optional_dependency
 from tsl.nn.utils import get_functional_activation
 from tsl.ops.connectivity import asymmetric_norm, transpose
+from tsl.typing import Adj, OptTensor, SparseTensor
 
 
 def diff_conv_gso(
@@ -19,14 +18,32 @@ def diff_conv_gso(
     num_nodes: int = None,
     add_backward: bool = True,
 ):
+    """Build the SparseTensor graph shift operator for diffusion convolution.
+
+    Args:
+        edge_index (Tensor): COO edge indices or a SparseTensor connectivity.
+        edge_weight (Tensor, optional): Edge weights. (default: :obj:`None`)
+        k (int): Diffusion order. (default: :obj:`2`)
+        num_nodes (int, optional): Number of graph nodes. (default: :obj:`None`)
+        add_backward (bool): Whether to append the reverse diffusion operator.
+            (default: :obj:`True`)
+
+    Returns:
+        torch_sparse.SparseTensor: Concatenated graph shift operator.
+
+    Raises:
+        ImportError: If the optional :mod:`torch_sparse` dependency is not
+            installed.
+    """
+    sparse = require_optional_dependency('torch_sparse', 'torch-sparse')
     if isinstance(edge_index, Tensor):
         # transpose
         col, row = edge_index
         num_nodes = maybe_num_nodes(edge_index, num_nodes)
-        adj = SparseTensor(
+        adj = sparse.SparseTensor(
             row=row, col=col, value=edge_weight, sparse_sizes=(num_nodes, num_nodes)
         )
-    elif isinstance(edge_index, SparseTensor):
+    elif is_optional_instance(edge_index, 'torch_sparse', 'SparseTensor'):
         adj = edge_index
     else:
         raise RuntimeError(
@@ -42,9 +59,9 @@ def diff_conv_gso(
 
     if add_backward:
         out_bwd = DiffConv.gso(adj.t(), k=k, num_nodes=num_nodes, add_backward=False)
-        return cat_sparse(out + [out_bwd], dim=0)
+        return sparse.cat(out + [out_bwd], dim=0)
 
-    return cat_sparse(out, dim=0)
+    return sparse.cat(out, dim=0)
 
 
 class DiffConv(MessagePassing):
@@ -67,6 +84,10 @@ class DiffConv(MessagePassing):
         activation (str, optional): Activation function to be used, :obj:`None`
             for identity function (i.e., no activation).
             (default: :obj:`None`)
+
+    Note:
+        SparseTensor connectivity requires the optional :mod:`torch_sparse`
+        dependency. COO connectivity does not.
     """
 
     def __init__(
@@ -134,10 +155,21 @@ class DiffConv(MessagePassing):
         return weight.view(-1, 1) * x_j
 
     def message_and_aggregate(self, adj_t: SparseTensor, x: Tensor) -> Tensor:
-        """"""
-        # adj_t: SparseTensor [nodes, nodes]
-        # x: [(batch,) nodes, channels]
-        return matmul(adj_t, x, reduce=self.aggr)
+        """Aggregate messages over SparseTensor connectivity.
+
+        Args:
+            adj_t (torch_sparse.SparseTensor): Transposed graph connectivity.
+            x (Tensor): Node features.
+
+        Returns:
+            Tensor: Aggregated node features.
+
+        Raises:
+            ImportError: If the optional :mod:`torch_sparse` dependency is not
+                installed.
+        """
+        sparse = require_optional_dependency('torch_sparse', 'torch-sparse')
+        return sparse.matmul(adj_t, x, reduce=self.aggr)
 
     def forward(
         self,

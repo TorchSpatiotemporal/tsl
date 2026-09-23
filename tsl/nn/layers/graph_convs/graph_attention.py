@@ -4,15 +4,14 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 from einops import rearrange
-from torch import Tensor
 from torch import nn as nn
 from torch_geometric.data import Batch, Data
 from torch_geometric.nn.conv import GATConv, MessagePassing
 from torch_geometric.nn.dense.linear import Linear
-from torch_geometric.typing import Adj, OptTensor
 from torch_geometric.utils import add_remaining_self_loops
 
 from tsl.nn.functional import sparse_softmax
+from tsl.typing import Adj, OptTensor, Tensor
 
 
 class AttentionScores(MessagePassing):

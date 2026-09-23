@@ -4,11 +4,11 @@ import torch
 from torch import Tensor
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.dense.linear import Linear
-from torch_geometric.typing import Adj, OptPairTensor, OptTensor
 
 from tsl.nn.blocks.encoders import TemporalMLPAttention
 from tsl.nn.functional import sparse_softmax
 from tsl.nn.layers.norm import LayerNorm
+from tsl.typing import Adj, OptPairTensor, OptTensor
 
 
 class SpatiotemporalCrossAttention(MessagePassing):
