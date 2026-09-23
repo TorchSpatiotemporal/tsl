@@ -124,6 +124,24 @@ Thanks to all contributors so far! 🧡
     <div class="gh-contributors" data-repo="TorchSpatiotemporal/tsl">
     </div>
 
+Citing
+------
+
+If you use Torch Spatiotemporal for your research, please consider citing the library.
+
+{% raw %}
+.. code-block:: latex
+
+    @software{Cini_Torch_Spatiotemporal_2022,
+        author = {Cini, Andrea and Marisca, Ivan},
+        license = {MIT},
+        month = {3},
+        title = {{Torch Spatiotemporal}},
+        url = {https://github.com/TorchSpatiotemporal/tsl},
+        year = {2022}
+    }
+{% endraw %}
+
 
 .. toctree::
    :glob:
@@ -132,6 +150,7 @@ Thanks to all contributors so far! 🧡
    :hidden:
 
    usage/quickstart
+   usage/workflow
    usage/data_structures
    usage/spatiotemporal_dataset
    usage/notebooks

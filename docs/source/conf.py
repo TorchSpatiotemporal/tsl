@@ -88,10 +88,12 @@ html_theme_options = {
     "light_css_variables": {
         "color-brand-primary": "#D34317",
         "color-brand-content": "#D34317",
+        "readthedocs-flyout-current-version-color": "#FF5722",
     },
     "dark_css_variables": {
         "color-brand-primary": "#FF5722",
         "color-brand-content": "#FF5722",
+        "readthedocs-flyout-current-version-color": "#FF5722",
     },
 }
 

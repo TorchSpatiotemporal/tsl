@@ -75,6 +75,10 @@ section#torch-spatiotemporal h1 {
     transform: unset;
 }
 
+.main {
+    padding-bottom: 10px !important;
+}
+
 /* Tables */
 
 table.docutils {
@@ -157,6 +161,7 @@ img.inline-logo.tsl {
 
 /* Other */
 
-#furo-sidebar-ad-placement {
+#furo-sidebar-ad-placement,
+.ea-placement {
     display: none;
 }
