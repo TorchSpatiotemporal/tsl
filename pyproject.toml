@@ -122,7 +122,6 @@ markers = [
     "dataset_download: marks tests that download real datasets (run with '--run-datasets')",
     "holidays: marks tests that require the optional holidays package",
     "torch_sparse: marks tests that require the optional torch-sparse package",
-    "torch_scatter: marks tests that require the optional torch-scatter package",
 ]
 testpaths = ["tests"]
 filterwarnings = [

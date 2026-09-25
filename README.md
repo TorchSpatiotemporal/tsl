@@ -46,16 +46,16 @@ You can also explore the examples provided in the `examples` directory to see ho
 
 ## Installation
 
-<img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl supports NumPy >= 1.26 and < 3, <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pytorch.svg" width="20px" align="center"/> PyTorch >= 2.2 and < 2.13, and <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pyg.svg" width="20px" align="center"/> PyG >= 2.4 and < 3. `torch-sparse` is optional for `torch_sparse.SparseTensor` adjacency matrices.
+<img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/tsl_logo.svg" width="25px" align="center"/> tsl supports NumPy >= 1.26 and < 3, <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pytorch.svg" width="20px" align="center"/> PyTorch >= 2.2 and < 2.13, and <img src="https://raw.githubusercontent.com/TorchSpatiotemporal/tsl/main/docs/source/_static/img/logos/pyg.svg" width="20px" align="center"/> PyG >= 2.4 and < 3. `torch-sparse` is optional for `torch_sparse.SparseTensor` adjacency matrices and requires the matching `torch-scatter` runtime package.
 
 The recommended setup for local development is [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv venv --python 3.10
 uv pip install torch-spatiotemporal --torch-backend=auto
-# Optional SparseTensor extension; select the matching wheel from the PyG guide:
+# Optional SparseTensor stack; select matching wheels from the PyG guide:
 # https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html
-# uv pip install torch-sparse -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
+# uv pip install torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 ```
 
 On Windows PowerShell:
@@ -116,7 +116,7 @@ the tested model matrix and current limitations.
 
 ### PyG compiled extension
 
-`torch-sparse` is optional and only needed for `torch_sparse.SparseTensor` connectivity. Its wheels depend on the exact PyTorch and CUDA build, so install the extension from the [PyG installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html) after installing PyTorch. Sparse attention uses native PyTorch operators and does not require a compiled extension.
+`torch-sparse` is optional and only needed for `torch_sparse.SparseTensor` connectivity. It requires `torch-scatter` at runtime, so install both matching wheels from the [PyG installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html). Their wheels must match the exact PyTorch and CUDA build.
 
 ### Conda
 

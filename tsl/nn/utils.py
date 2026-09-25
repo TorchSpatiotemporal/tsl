@@ -103,8 +103,9 @@ def maybe_cat_exog(x, u, dim=-1):
 def broadcast(src: torch.Tensor, other: torch.Tensor, dim: int):
     """Broadcast a tensor to the shape of another tensor.
 
-    This function has been adapted from `torch_scatter` to avoid the dependency on the
-    `torch_scatter` package.
+    This function has been adapted from :mod:`torch_scatter` so that TSL does
+    not use that package directly. ``torch_scatter`` may still be installed as
+    a runtime dependency of the optional :mod:`torch_sparse` backend.
 
     Args:
         src (Tensor): The tensor to broadcast.

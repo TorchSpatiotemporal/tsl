@@ -25,13 +25,12 @@ The following requirements apply to the current :tsl:`tsl` release:
 * PyG >= 2.4 and < 3.
 
 The ``torch-sparse`` package is optional and is only needed when using
-:class:`torch_sparse.SparseTensor` adjacency matrices. Sparse attention now uses
-native PyTorch operators. tsl installs PyTorch and PyG with its other
-dependencies; no separate framework installation is required. If you need
-``torch-sparse``, install its wheel from
+:class:`torch_sparse.SparseTensor` adjacency matrices. It requires
+``torch-scatter`` at runtime, so if you need ``torch-sparse``, install both compiled
+packages from
 the `PyG installation guide
 <https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html>`_
-after installing PyTorch, since the wheel must match your PyTorch and
+after installing PyTorch, since their wheels must match your PyTorch and
 accelerator builds.
 
 Quickstart with uv
@@ -50,8 +49,8 @@ backend for the machine.
 
          uv venv --python 3.10
          uv pip install torch-spatiotemporal --torch-backend=auto
-         # Optional SparseTensor support; use the matching PyG wheel:
-         # uv pip install torch-sparse -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
+         # Optional SparseTensor support; use matching PyG wheels:
+         # uv pip install torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 
    .. tab-item:: Windows PowerShell
 
@@ -59,14 +58,15 @@ backend for the machine.
 
          uv venv --python 3.10
          uv pip install torch-spatiotemporal --torch-backend=auto
-         # Optional SparseTensor support; use the matching PyG wheel:
-         # uv pip install torch-sparse -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
+         # Optional SparseTensor support; use matching PyG wheels:
+         # uv pip install torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 
 
 .. admonition:: PyG optional libraries
    :class: caution
 
-   Select the matching optional-library command from the `PyG installation guide
+   Install matching ``torch-scatter`` and ``torch-sparse`` wheels using the
+   optional-library command from the `PyG installation guide
    <https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html>`_
    after PyTorch has been installed.
 
@@ -93,7 +93,7 @@ Then, activate the environment and install :tsl:`tsl` using :code:`pip`.
 The provided environment is configured for GPU use: it includes the ``nvidia``
 channel and the ``pytorch-cuda`` dependency. For a CPU-only installation,
 remove the ``nvidia`` channel and ``pytorch-cuda`` from ``conda_env.yml``
-before running ``conda env create``. The optional ``pytorch-sparse`` package in
+before running ``conda env create``. The optional ``pytorch-sparse`` and ``pytorch-scatter`` packages in
 the conda file can likewise be removed unless your workload needs
 ``torch_sparse.SparseTensor`` connectivity.
 

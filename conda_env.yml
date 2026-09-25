@@ -10,6 +10,7 @@ dependencies:
   - pytorch>=2.2
   - pytorch-cuda>=11.7         # remove for cpu installation
   - pyg>=2.4
+  - pytorch-scatter
   - pytorch-sparse
   - lightning
   - pip

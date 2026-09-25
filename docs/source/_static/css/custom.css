@@ -163,5 +163,5 @@ img.inline-logo.tsl {
 
 #furo-sidebar-ad-placement,
 .ea-placement {
-    display: none;
+    display: none !important;
 }
