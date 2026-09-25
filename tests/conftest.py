@@ -5,8 +5,10 @@ from importlib.util import find_spec
 import pytest
 
 OPTIONAL_TEST_DEPENDENCIES = {
-    'holidays': 'holidays',
-    'torch_sparse': 'torch-sparse',
+    'chronos': ('chronos', 'chronos-forecasting'),
+    'holidays': ('holidays', 'holidays'),
+    'timesfm': ('timesfm3', 'timesfm'),
+    'torch_sparse': ('torch_sparse', 'torch-sparse'),
 }
 
 
@@ -28,8 +30,8 @@ def pytest_collection_modifyitems(config, items):
 
     unavailable_markers = {
         marker: package
-        for marker, package in OPTIONAL_TEST_DEPENDENCIES.items()
-        if find_spec(marker) is None
+        for marker, (module, package) in OPTIONAL_TEST_DEPENDENCIES.items()
+        if find_spec(module) is None
     }
     for item in items:
         if skip_download is not None and "dataset_download" in item.keywords:

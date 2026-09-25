@@ -54,6 +54,11 @@ dependencies = [
 
 [project.optional-dependencies]
 full = ["holidays"]
+foundation = [
+    "chronos-forecasting>=1.4,<3; python_version >= '3.10'",
+    "timesfm[torch]>=3,<4; python_version >= '3.10'",
+    "transformers>=4.41,<5; python_version >= '3.10'",
+]
 doc = [
     "docutils",
     "furo",
@@ -78,6 +83,7 @@ dev = [
 
 [dependency-groups]
 full = ["torch-spatiotemporal[full]"]
+foundation = ["torch-spatiotemporal[foundation]"]
 doc = ["torch-spatiotemporal[doc]"]
 dev = ["torch-spatiotemporal[dev]"]
 
@@ -121,6 +127,8 @@ markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
     "dataset_download: marks tests that download real datasets (run with '--run-datasets')",
     "holidays: marks tests that require the optional holidays package",
+    "chronos: marks tests that require the optional chronos-forecasting package",
+    "timesfm: marks tests that require the optional timesfm package",
     "torch_sparse: marks tests that require the optional torch-sparse package",
 ]
 testpaths = ["tests"]
