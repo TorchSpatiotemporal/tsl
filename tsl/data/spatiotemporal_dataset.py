@@ -1344,7 +1344,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         common_ts = np.intersect1d(ts1, ts2)
 
         def is_overlapping(sample):
-            return np.any(np.in1d(sample, common_ts))
+            return np.any(np.isin(sample, common_ts))
 
         m1 = np.apply_along_axis(is_overlapping, 1, ts1)
         m2 = np.apply_along_axis(is_overlapping, 1, ts2)
@@ -1389,7 +1389,7 @@ class SpatioTemporalDataset(Dataset, DataParsingMixin):
         Args:
             filename (str): path of :obj:`SpatioTemporalDataset`.
         """
-        obj = torch.load(filename)
+        obj = torch.load(filename, weights_only=False)
         if not isinstance(obj, cls):
             raise TypeError(f"Loaded file is not of class {cls}.")
         return obj

@@ -528,14 +528,14 @@ def disjoint_months(dataset, months=None, synch_mode=SynchMode.WINDOW):
         )
     # after idxs
     indices = np.asarray(dataset._indices)
-    start_in_months = np.in1d(dataset.index[indices + start].month, months)
-    end_in_months = np.in1d(dataset.index[indices + end].month, months)
+    start_in_months = np.isin(dataset.index[indices + start].month, months)
+    end_in_months = np.isin(dataset.index[indices + end].month, months)
     idxs_in_months = start_in_months & end_in_months
     after_idxs = idxs[idxs_in_months]
     # previous idxs
     months = np.setdiff1d(np.arange(1, 13), months)
-    start_in_months = np.in1d(dataset.index[indices + start].month, months)
-    end_in_months = np.in1d(dataset.index[indices + end].month, months)
+    start_in_months = np.isin(dataset.index[indices + start].month, months)
+    end_in_months = np.isin(dataset.index[indices + end].month, months)
     idxs_in_months = start_in_months & end_in_months
     prev_idxs = idxs[idxs_in_months]
     return prev_idxs, after_idxs

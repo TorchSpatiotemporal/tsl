@@ -65,9 +65,7 @@ def test_setattr_detaches_and_atleast_1d():
 def test_transform_inverse_roundtrip_tensor():
     mod = _module()
     x = torch.randn(5, 3, 2)
-    np.testing.assert_allclose(
-        mod.inverse_transform(mod.transform(x)).numpy(), x.numpy(), rtol=1e-4
-    )
+    torch.testing.assert_close(mod.inverse_transform(mod.transform(x)), x)
 
 
 def test_transform_uses_epsilon():

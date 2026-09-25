@@ -21,6 +21,7 @@ def cat_resolver(*objs) -> list:
 
 
 def register_resolvers():
+    """Register the custom OmegaConf resolvers used by TSL experiments."""
     # ${neg:-4} -> 4
     OmegaConf.register_new_resolver(name='neg', resolver=lambda x: -x)
     # ${in:2,[1,2,3]} -> True
@@ -44,5 +45,5 @@ def register_resolvers():
     # String case operations
     for op in ['lower', 'upper', 'title', 'capitalize']:
         OmegaConf.register_new_resolver(
-            name=op, resolver=lambda x: getattr(str(x), op)()
+            name=op, resolver=lambda x, operation=op: getattr(str(x), operation)()
         )

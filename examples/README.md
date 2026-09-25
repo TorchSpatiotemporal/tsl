@@ -20,6 +20,18 @@ benchmark dataset is as simple as that:
 python forecasting/run_traffic_experiment.py model=dcrnn dataset=la logger=wandb
 ```
 
+Models whose class exposes `can_be_compiled = True` can use PyTorch compilation
+without changing the script:
+
+```bash
+python forecasting/run_traffic_experiment.py \
+    model=dcrnn dataset=la compile.enabled=true compile.mode=reduce-overhead
+```
+
+The imputation script accepts the same `compile.*` options. Compilation happens
+in place through `Predictor.compile_model()` before the Lightning trainer is
+created.
+
 Under the hood, we are telling the program to run the traffic experiment using
 the default config `config/traffic/default.yaml` instantiated with model config
 `config/traffic/model/dcrnn.yaml`, dataset config `config/traffic/dataset/la.yaml`,

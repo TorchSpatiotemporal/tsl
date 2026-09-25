@@ -172,6 +172,15 @@ def run_traffic(cfg: DictConfig):
         scale_target=cfg.scale_target,
     )
 
+    if cfg.compile.enabled:
+        compile_kwargs = {
+            key: value
+            for key, value in cfg.compile.items()
+            if key != 'enabled' and value is not None
+        }
+        predictor.compile_model(**compile_kwargs)
+        logger.info('Compiled %s with %s.', model_cls.__name__, compile_kwargs)
+
     ########################################
     # training                             #
     ########################################

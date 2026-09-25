@@ -7,7 +7,6 @@ import pytest
 OPTIONAL_TEST_DEPENDENCIES = {
     'holidays': 'holidays',
     'torch_sparse': 'torch-sparse',
-    'torch_scatter': 'torch-scatter',
 }
 
 

@@ -1,8 +1,10 @@
 import datetime
 import doctest
 import os
+import warnings
 
 from docutils import nodes
+from sphinx.deprecation import RemovedInSphinx90Warning
 
 import tsl
 
@@ -38,7 +40,7 @@ extensions = [
 
 autosummary_generate = True
 
-source_suffix = '.rst'
+source_suffix = {'.rst': 'restructuredtext'}
 master_doc = 'index'
 
 doctest_default_flags = doctest.NORMALIZE_WHITESPACE
@@ -62,8 +64,8 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'pd': ('https://pandas.pydata.org/docs/', None),
-    'PyTorch': ('https://pytorch.org/docs/stable/', None),
-    'pytorch_lightning': ('https://lightning.ai/docs/pytorch/latest/', None),
+    'PyTorch': ('https://docs.pytorch.org/docs/stable/', None),
+    'pytorch_lightning': ('https://lightning.ai/docs/pytorch/stable/', None),
     'PyG': ('https://pytorch-geometric.readthedocs.io/en/latest/', None),
 }
 
@@ -122,6 +124,12 @@ hoverxref_auto_ref = True
 hoverxref_roles = ['class', 'mod', 'doc', 'meth', 'func']
 hoverxref_mathjax = True
 hoverxref_intersphinx = ['PyG', 'numpy']
+
+# sphinx-hoverxref 1.4 emits this warning internally on Sphinx 8 while the
+# project intentionally constrains Sphinx to <9.
+warnings.filterwarnings(
+    'ignore', category=RemovedInSphinx90Warning, module=r'hoverxref\.extension'
+)
 
 # -- Setup options -----------------------------------------------------------
 #

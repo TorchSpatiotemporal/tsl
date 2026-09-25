@@ -42,9 +42,13 @@ class BaseModel(nn.Module):
 
     * the parameter :attr:`return_type` specifies which the return type of the
       forward function (:class:`~torch.Tensor`, :obj:`list` or :obj:`dict`).
+
+    * the class attribute :attr:`can_be_compiled` indicates whether the model
+      is covered by TSL's full-graph :meth:`~torch.nn.Module.compile` tests.
     """
 
     return_type: ModelReturnOptions = None
+    can_be_compiled: bool = False
 
     def __init__(self):
         super(BaseModel, self).__init__()

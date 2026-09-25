@@ -316,15 +316,14 @@ class STGNN(BaseModel):
             x (Tensor): Input sequence with shape ``[B, T, N, d_in]``.
             edge_index (Adj): Graph connectivity.
             edge_weight (Tensor, optional): Edge weights. (default: :obj:`None`)
-            u (Tensor, optional): Encoder covariates with shape ``[B, T, N, d]``
-            or ``[B, T, d]``. (default: :obj:`None`)
-            v (Tensor, optional): Static attributes with shape ``[B, N, d]`` or
-            ``[B, d]``. (default: :obj:`None`)
-            u_h (Tensor, optional): Future covariates with shape ``[B, H, N, d]``
-            or ``[B, H, d]``. (default: :obj:`None`)
-            node_idx (Tensor, optional): Global indices of the nodes in ``x``.
-            When provided, these select the corresponding rows of ``self.emb``.
-            (default: :obj:`None`)
+            u (Tensor, optional): Encoder covariates with shape
+                ``[B, T, N, d]`` or ``[B, T, d]``. (default: :obj:`None`)
+            v (Tensor, optional): Static attributes with shape
+                ``[B, N, d]`` or ``[B, d]``. (default: :obj:`None`)
+            u_h (Tensor, optional): Future covariates with shape
+                ``[B, H, N, d]`` or ``[B, H, d]``. (default: :obj:`None`)
+            node_idx (Tensor, optional): Global node indices used to select
+                embeddings. (default: :obj:`None`)
             **kwargs: Additional arguments available to the argument-mapping
                 hooks.
 

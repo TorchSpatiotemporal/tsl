@@ -47,6 +47,7 @@ class GRINModel(BaseModel):
     """
 
     return_type = list
+    can_be_compiled = True
 
     def __init__(
         self,

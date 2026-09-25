@@ -37,7 +37,7 @@ import importlib
 
 original_import = builtins.__import__
 def guarded_import(name, *args, **kwargs):
-    if name == "torch_sparse" or name.startswith("torch_sparse.") or name == "torch_scatter" or name.startswith("torch_scatter."):
+    if name == "torch_sparse" or name.startswith("torch_sparse."):
         raise ModuleNotFoundError(f"optional dependency {{name}} is unavailable")
     return original_import(name, *args, **kwargs)
 

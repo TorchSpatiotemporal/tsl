@@ -56,7 +56,11 @@ class GRUCellBase(RNNCellBase):
 
 
 class GRUCell(nn.GRUCell, RNNCellBase):
-    __doc__ = nn.GRUCell.__doc__
+    """A gated recurrent unit cell with tsl state initialization.
+
+    The constructor and forward method have the same interface as
+    :class:`torch.nn.GRUCell`.
+    """
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(hidden_size={self.hidden_size})'
@@ -126,7 +130,11 @@ class LSTMCellBase(RNNCellBase):
 
 
 class LSTMCell(nn.LSTMCell, RNNCellBase):
-    __doc__ = nn.LSTMCell.__doc__
+    """A long short-term memory cell with tsl state initialization.
+
+    The constructor and forward method have the same interface as
+    :class:`torch.nn.LSTMCell`.
+    """
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(hidden_size={self.hidden_size})'

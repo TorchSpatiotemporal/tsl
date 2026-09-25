@@ -62,6 +62,7 @@ class SPINModel(BaseModel):
     """
 
     return_type = tuple
+    can_be_compiled = True
 
     def __init__(
         self,
@@ -202,6 +203,7 @@ class SPINHierarchicalModel(BaseModel):
     """
 
     return_type = tuple
+    can_be_compiled = True
 
     def __init__(
         self,

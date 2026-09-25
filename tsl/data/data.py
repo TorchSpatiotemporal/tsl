@@ -260,6 +260,12 @@ class Data(PyGData):
             info += ["transform=[{}]".format(', '.join(self.transform.keys()))]
         return '{}(\n  {}\n)'.format(cls, ',\n  '.join(info))
 
+    def __copy__(self):
+        out = super().__copy__()
+        out.__dict__['input'] = StorageView(out._store, self.input._keys)
+        out.__dict__['target'] = StorageView(out._store, self.target._keys)
+        return out
+
     def __cat_dim__(self, key: str, value: Any, *args, **kwargs) -> Any:
         if key in self.pattern:
             if 'n' in self.pattern[key]:  # cat along node dimension

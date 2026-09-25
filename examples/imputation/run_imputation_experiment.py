@@ -157,6 +157,15 @@ def run_imputation(cfg: DictConfig):
         warm_up_steps=cfg.warm_up_steps,
     )
 
+    if cfg.compile.enabled:
+        compile_kwargs = {
+            key: value
+            for key, value in cfg.compile.items()
+            if key != 'enabled' and value is not None
+        }
+        imputer.compile_model(**compile_kwargs)
+        logger.info('Compiled %s with %s.', model_cls.__name__, compile_kwargs)
+
     ########################################
     # logging options                      #
     ########################################

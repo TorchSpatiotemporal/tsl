@@ -1,4 +1,4 @@
-SPHINXBUILD   = sphinx-build
+SPHINXBUILD   = uv run --no-sync sphinx-build
 SPHINXPROJ    = tsl
 SOURCEDIR     = source
 BUILDDIR      = build

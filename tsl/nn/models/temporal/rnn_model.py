@@ -30,6 +30,7 @@ class RNNModel(BaseModel):
     """
 
     return_type = Tensor
+    can_be_compiled = False
 
     def __init__(
         self,
@@ -116,6 +117,8 @@ class FCRNNModel(RNNModel):
         activation (str, optional): Activation function.
             (default: :obj:`relu`)
     """
+
+    can_be_compiled = False
 
     def __init__(
         self,

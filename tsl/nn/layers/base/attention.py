@@ -51,7 +51,6 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-@torch.jit.script
 def _get_causal_mask(
     seq_len: int, diagonal: int = 0, device: Optional[torch.device] = None
 ):

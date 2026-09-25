@@ -168,7 +168,7 @@ class Scaler:
         if ext == 'npz':
             params = np.load(filename)
         elif ext == 'pt':
-            params = torch.load(filename)
+            params = torch.load(filename, weights_only=False)
         else:
             raise RuntimeError(f"Filename {filename} is not in a valid format.")
         return cls(**params)

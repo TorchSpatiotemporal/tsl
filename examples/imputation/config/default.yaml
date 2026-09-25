@@ -44,6 +44,11 @@ patience: 50
 batch_size: 32
 grad_clip_val: 5
 scale_target: True
+compile:
+  enabled: False
+  mode: null
+  fullgraph: False
+  dynamic: null
 optimizer:
   name: Adam
   hparams:

@@ -34,6 +34,7 @@ class TransformerModel(BaseModel):
     """
 
     return_type = Tensor
+    can_be_compiled = True
 
     def __init__(
         self,

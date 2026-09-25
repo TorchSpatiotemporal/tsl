@@ -39,6 +39,8 @@ class STIDModel(BaseModel):
             (default: :obj:`0.15`)
     """
 
+    can_be_compiled = True
+
     def __init__(
         self,
         input_size: int,

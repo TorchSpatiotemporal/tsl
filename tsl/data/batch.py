@@ -504,7 +504,7 @@ class DisjointBatch(Batch):
                 0 if i in dims else slice(None)  # e.g. dims=[1] -> [:, 0, :]
                 for i in range(data[key].ndim)
             ]
-            data[key] = data[key][idx]
+            data[key] = data[key][tuple(idx)]
             if key in data.pattern:
                 pattern_dims = data.pattern[key].split(' ')
                 pattern_dims = [

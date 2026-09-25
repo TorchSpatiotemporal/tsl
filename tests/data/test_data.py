@@ -4,6 +4,8 @@ Tensors use the *grid* discipline -- every cell holds a unique value -- so that
 view filtering, rearranging and subgraph results can be matched element-wise.
 """
 
+import copy
+
 import numpy as np
 import pytest
 import torch
@@ -147,6 +149,21 @@ def test_mask_and_transform_flags():
     )
     assert d.has_mask is True
     assert d.has_transform is True
+
+
+def test_shallow_copy_rebinds_storage_views():
+    source = Data(input={'x': _grid(2)}, target={'y': _grid(2)})
+
+    copied = copy.copy(source)
+    copied.x = copied.x + 1
+    copied.y = copied.y + 2
+
+    assert copied.input._mapping is copied._store
+    assert copied.target._mapping is copied._store
+    assert copied.input.x is copied.x
+    assert copied.target.y is copied.y
+    assert torch.equal(source.x, _grid(2))
+    assert torch.equal(source.y, _grid(2))
 
 
 # -- __cat_dim__ ------------------------------------------------------------

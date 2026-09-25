@@ -120,7 +120,7 @@ class Predictor(pl.LightningModule):
         outside the predictor, without checking that hyperparameters of the
         checkpoint's model are the same of the predictor's model.
         """
-        storage = torch.load(filename, lambda storage, loc: storage)
+        storage = torch.load(filename, lambda storage, loc: storage, weights_only=False)
         # if predictor.model has been instantiated inside predictor
         if self.model_cls is not None:
             model_cls = storage['hyper_parameters']['model_class']
@@ -142,6 +142,34 @@ class Predictor(pl.LightningModule):
     def is_tsl_model(self):
         """"""
         return self.model is not None and isinstance(self.model, BaseModel)
+
+    def compile_model(self, **compile_kwargs) -> torch.nn.Module:
+        """Compile the wrapped model in place with :meth:`torch.nn.Module.compile`.
+
+        TSL models are compiled only when their :attr:`can_be_compiled` class
+        attribute is :obj:`True`. Arbitrary user-provided modules are forwarded
+        directly to PyTorch because TSL cannot declare their compatibility.
+
+        Args:
+            **compile_kwargs: Keyword arguments forwarded to
+                :meth:`torch.nn.Module.compile`.
+
+        Returns:
+            torch.nn.Module: The compiled model owned by this predictor.
+
+        Raises:
+            RuntimeError: If no model is set or a TSL model is not marked as
+                compile-compatible.
+        """
+        if self.model is None:
+            raise RuntimeError('Cannot compile a predictor without a model.')
+        if self.is_tsl_model and not self.model.can_be_compiled:
+            name = self.model.__class__.__name__
+            raise RuntimeError(
+                f'{name} is not marked as compatible with torch.compile.'
+            )
+        self.model.compile(**compile_kwargs)
+        return self.model
 
     @property
     def trainable_parameters(self) -> int:

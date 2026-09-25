@@ -46,6 +46,8 @@ class RNNImputerModel(BaseModel):
             (default: :obj:`False`)
     """
 
+    can_be_compiled = True
+
     def __init__(
         self,
         input_size: int,
@@ -174,6 +176,7 @@ class BiRNNImputerModel(BaseModel):
     """
 
     return_type = list
+    can_be_compiled = True
 
     def __init__(
         self,

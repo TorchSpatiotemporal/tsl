@@ -46,7 +46,7 @@ def infer_mask(df, infer_from='next'):
         offset_i = 12 * (year_i - year_j) + (month_i - month_j)
         mask_i = mask_j.shift(1, pd.DateOffset(months=offset_i))
         mask_i = mask_i[~mask_i.index.duplicated(keep='first')]
-        mask_i = mask_i[np.in1d(mask_i.index, mask.index)]
+        mask_i = mask_i[np.isin(mask_i.index, mask.index)]
         i_idx = mask_i.index
         eval_mask.loc[i_idx] = ~mask_i.loc[i_idx] & mask.loc[i_idx]
     return eval_mask

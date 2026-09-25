@@ -73,7 +73,7 @@ def init_experiment(tmp_path):
     log_dir.mkdir()
     # load cfg with hydra
     with initialize(
-        config_path='config', job_name='test_example_forecasting', version_base=None
+        config_path='config', job_name='test_example_forecasting', version_base='1.3'
     ):
         cfg = compose(config_name='test_forecasting', overrides=[])
     return cfg, str(log_dir)

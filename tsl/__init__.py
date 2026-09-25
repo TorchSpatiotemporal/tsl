@@ -8,7 +8,7 @@ nn = LazyLoader('nn', globals(), 'tsl.nn')
 engines = LazyLoader('engines', globals(), 'tsl.engines')
 metrics = LazyLoader('metrics', globals(), 'tsl.metrics')
 
-__version__ = '0.9.6'
+__version__ = '1.0.0'
 
 epsilon = 5e-8
 config = Config()

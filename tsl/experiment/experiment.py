@@ -1,3 +1,5 @@
+import argparse
+import importlib
 import inspect
 import os
 import os.path as osp
@@ -20,6 +22,39 @@ from tsl.utils.python_utils import ensure_list
 from .resolvers import register_resolvers
 
 register_resolvers()
+
+
+def patch_hydra_argparse_for_python_314() -> None:
+    """Apply Hydra 1.4's argparse compatibility fix to Hydra 1.3.
+
+    Python 3.14 validates help text while options are registered. Hydra 1.3
+    uses a lazy object for its shell-completion help text, so validation must
+    be skipped only while Hydra builds that parser. Remove this shim when TSL
+    adopts Hydra 1.4, which includes the upstream fix.
+    """
+    if sys.version_info < (3, 14):
+        return
+
+    hydra_main = importlib.import_module("hydra.main")
+    original = hydra_main.get_args_parser
+
+    # Avoid wrapping more than once.
+    if getattr(original, "_tsl_python_314_compat", False):
+        return
+
+    def get_args_parser():
+        check_help = argparse.ArgumentParser._check_help
+        argparse.ArgumentParser._check_help = lambda self, action: None
+        try:
+            return original()
+        finally:
+            argparse.ArgumentParser._check_help = check_help
+
+    get_args_parser._tsl_python_314_compat = True
+    hydra_main.get_args_parser = get_args_parser
+
+
+patch_hydra_argparse_for_python_314()
 
 
 def get_hydra_cli_arg(key: str, delete: bool = False):
@@ -164,7 +199,7 @@ class Experiment:
         return hydra.main(
             config_path=self.config_path,
             config_name=self.config_name,
-            version_base=None,
+            version_base="1.3",
         )(run_fn_decorator(run_fn))
 
     def __repr__(self):

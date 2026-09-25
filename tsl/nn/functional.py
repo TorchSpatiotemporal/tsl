@@ -3,7 +3,7 @@ from typing import Optional
 import torch
 from torch import Tensor
 
-from tsl.imports import require_optional_dependency
+import tsl
 from tsl.nn.utils import broadcast
 
 __all__ = [
@@ -13,7 +13,6 @@ __all__ = [
 ]
 
 
-@torch.jit.script
 def gated_tanh(input: Tensor, dim: int = -1) -> Tensor:
     r"""The gated tanh unite. Computes:
 
@@ -44,8 +43,7 @@ def scatter_sum(
 ) -> torch.Tensor:
     """Scatter sum function.
 
-    This function has been adapted from `torch_scatter` to avoid the dependency on the
-    `torch_scatter` package.
+    This implementation uses native PyTorch scatter operations.
     """
     index = broadcast(index, src, dim)
     if out is None:
@@ -60,14 +58,6 @@ def scatter_sum(
         return out.scatter_add_(dim, index, src)
     else:
         return out.scatter_add_(dim, index, src)
-
-
-def _get_scatter_function(name):
-    """Load a TorchScript scatter function after validating its dependency."""
-    require_optional_dependency('torch_scatter', 'torch-scatter')
-    from . import _functional_scatter
-
-    return getattr(_functional_scatter, name)
 
 
 def sparse_softmax(
@@ -100,10 +90,34 @@ def sparse_softmax(
             (default: :obj:`-2`)
 
     Raises:
-        ImportError: If the optional :mod:`torch_scatter` dependency is not
-            installed.
+        NotImplementedError: If neither :attr:`index` nor :attr:`ptr` is given.
+
+    Notes:
+        When this function is called from a :func:`torch.compile` region,
+        provide :attr:`num_nodes` explicitly to avoid deriving an output shape
+        from tensor data.
     """
-    return _get_scatter_function('sparse_softmax')(src, index, ptr, num_nodes, dim)
+    if index is None:
+        if ptr is None:
+            raise NotImplementedError
+        counts = ptr.diff()
+        index = torch.arange(counts.numel(), device=ptr.device)
+        index = torch.repeat_interleave(index, counts)
+
+    if num_nodes is None:
+        num_nodes = int(index.max()) + 1 if index.numel() > 0 else 0
+
+    expanded_index = broadcast(index, src, dim)
+    size = list(src.size())
+    size[dim] = num_nodes
+    src_max = torch.full(size, -torch.inf, dtype=src.dtype, device=src.device)
+    src_max.scatter_reduce_(dim, expanded_index, src, reduce='amax', include_self=True)
+    src_max = torch.gather(src_max, dim, expanded_index)
+    out = (src - src_max).exp()
+    out_sum = torch.zeros(size, dtype=src.dtype, device=src.device)
+    out_sum.scatter_add_(dim, expanded_index, out)
+    out_sum = torch.gather(out_sum, dim, expanded_index)
+    return out / (out_sum + tsl.epsilon)
 
 
 def sparse_multi_head_attention(
@@ -146,10 +160,22 @@ def sparse_multi_head_attention(
         Output: attention values have shape :math:`(B, Nt, E)`; attention
             weights have shape :math:`(S, H)`
 
-    Raises:
-        ImportError: If the optional :mod:`torch_scatter` dependency is not
-            installed.
+    Notes:
+        When this function is called from a :func:`torch.compile` region,
+        provide :attr:`dim_size` explicitly to avoid deriving an output shape
+        from tensor data.
+
     """
-    return _get_scatter_function('sparse_multi_head_attention')(
-        q, k, v, index, dim_size, dropout_p
-    )
+    dim = 0
+    _, n_heads, embedding_size = q.shape
+    if dim_size is None:
+        dim_size = int(index.max()) + 1 if index.numel() > 0 else 0
+    alpha = (q * k).sum(dim=-1) / embedding_size**0.5
+    alpha = sparse_softmax(alpha, index, num_nodes=dim_size, dim=dim)
+    if dropout_p > 0.0:
+        alpha = torch.nn.functional.dropout(alpha, p=dropout_p)
+    weighted_v = v * alpha.view(-1, n_heads, 1)
+    out = torch.zeros((dim_size, n_heads, v.size(2)), dtype=v.dtype, device=v.device)
+    add_index = broadcast(index, weighted_v, dim)
+    out.scatter_add_(dim, add_index, weighted_v)
+    return out, alpha

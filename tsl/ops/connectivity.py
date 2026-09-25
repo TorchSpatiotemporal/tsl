@@ -233,12 +233,17 @@ def transpose(
 
     Returns:
         TensArray or tuple: Transposed connectivity, with weights for COO input.
+
+    Raises:
+        TypeError: If :attr:`edge_index` is not a supported connectivity type.
     """
+    if isinstance(edge_index, (Tensor, np.ndarray)):
+        if edge_weights is not None:
+            return edge_index[[1, 0]], edge_weights
+        return edge_index[[1, 0]]
     if is_optional_instance(edge_index, 'torch_sparse', 'SparseTensor'):
         return edge_index.t()
-    if edge_weights is not None:
-        return edge_index[[1, 0]], edge_weights
-    return edge_index[[1, 0]]
+    raise TypeError(f'Unsupported connectivity type {type(edge_index)!r}.')
 
 
 def reduce_graph(

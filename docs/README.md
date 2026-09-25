@@ -1,11 +1,15 @@
 # Building Documentation
 
-To build the documentation from tsl root directory:
+To build the documentation from the tsl root directory:
 
-1. Install PyTorch and PyG via `pip install -r docs/requirements.txt`.
-2. Install tsl and [Sphinx](https://www.sphinx-doc.org/en/master/) requirements
-   via `pip install .[doc]`
-3. Generate the documentation file via:
+1. Install the project and its documentation dependencies with
+   [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv venv && uv pip install -e ".[doc]" --torch-backend=auto
+```
+
+2. Generate the documentation via:
 
 ```bash
 cd docs

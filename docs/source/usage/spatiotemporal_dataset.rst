@@ -1,10 +1,6 @@
 Spatiotemporal Dataset
 ======================
 
-.. warning::
-
-    This page is still under development.
-
 An elegant and effective solution to handle datasets in PyTorch is by means of
 the :class:`torch.utils.data.Dataset` object. This object allows us to access
 the samples as in any Python mapping object, by implementing the

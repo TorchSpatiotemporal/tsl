@@ -30,6 +30,7 @@ class RNNEncGCNDecModel(BaseModel):
     """
 
     return_type = Tensor
+    can_be_compiled = False
 
     def __init__(
         self,
