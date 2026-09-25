@@ -8,6 +8,9 @@
     <img alt="PyPI - Python Version" src="https://img.shields.io/badge/python-3.10--3.14-blue">
     <!-- img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/torch-spatiotemporal" -->
     <img alt="Total downloads" src="https://static.pepy.tech/badge/torch-spatiotemporal">
+    <a href="https://codecov.io/github/TorchSpatiotemporal/tsl" >
+    <img src="https://codecov.io/github/TorchSpatiotemporal/tsl/branch/main/graph/badge.svg?token=O13EK9C03L"/>
+    </a>
     <a href='https://torch-spatiotemporal.readthedocs.io/en/latest/?badge=latest'><img src='https://readthedocs.org/projects/torch-spatiotemporal/badge/?version=latest' alt='Documentation Status' /></a>
     </p>
     <p>
