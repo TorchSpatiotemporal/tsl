@@ -100,7 +100,7 @@ class ElectricityBenchmark(_MTSBenchmarkDataset):
     default_similarity_score = None
     default_temporal_aggregation = 'sum'
     default_spatial_aggregation = 'sum'
-    default_freq = '1H'
+    default_freq = '1h'
     start_date = '01-01-2012 00:00'
 
     @property
@@ -131,7 +131,7 @@ class TrafficBenchmark(_MTSBenchmarkDataset):
     default_similarity_score = None
     default_temporal_aggregation = 'mean'
     default_spatial_aggregation = 'mean'
-    default_freq = '1H'
+    default_freq = '1h'
     start_date = '01-01-2015 00:00'
 
     @property

@@ -48,7 +48,7 @@ def framearray_shape(x: FrameArray) -> tuple:
 def aggregate(
     x: FrameArray,
     index: Index,
-    aggr_fn: Callable = np.sum,
+    aggr_fn: Union[str, Callable] = "sum",
     axis: int = 1,
     level: int = 0,
 ) -> FrameArray:
@@ -61,7 +61,8 @@ def aggregate(
             the index over which aggregation is performed. The :obj:`i`-th
             element of index at :obj:`axis` and :obj:`level` will be mapped to
             :obj:`index[i]`-th position in new index.
-        aggr_fn (Callable): Function to be used for aggregation.
+        aggr_fn (str or Callable): Function to be used for aggregation.
+            (default :obj:`"sum"`)
         axis (int): Axis over which performing aggregation, :obj:`0` for index,
             :obj:`1` for columns.
             (default :obj:`1`)
@@ -81,7 +82,7 @@ def aggregate(
         cols = [x.columns.unique(i).values for i in range(x.columns.nlevels)]
         cols[level] = index
         grouper = pd.MultiIndex.from_product(cols, names=x.columns.names)
-        x = x.groupby(grouper, axis=1).aggregate(aggr_fn)
+        x = x.T.groupby(grouper).aggregate(aggr_fn).T
         x.columns = pd.MultiIndex.from_tuples(x.columns, names=grouper.names)
     if to_numpy:
         x = framearray_to_numpy(x)

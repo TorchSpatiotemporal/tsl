@@ -150,7 +150,6 @@ If you use Torch Spatiotemporal for your research, please consider citing the li
    :hidden:
 
    usage/quickstart
-   usage/workflow
    usage/data_structures
    usage/spatiotemporal_dataset
    usage/notebooks

@@ -22,9 +22,9 @@ pytestmark = pytest.mark.dataset_download
 
 # (class, n_nodes, freq)
 CASES = [
-    (ElectricityBenchmark, 321, '1H'),
-    (TrafficBenchmark, 862, '1H'),
-    (SolarBenchmark, 137, '10T'),
+    (ElectricityBenchmark, 321, '1h'),
+    (TrafficBenchmark, 862, '1h'),
+    (SolarBenchmark, 137, '10min'),
     (ExchangeBenchmark, 8, '1D'),
 ]
 

@@ -54,8 +54,8 @@ class PvUS(DatetimeDataset):
 
     available_zones = ['east', 'west']
     urls = {
-        'east': "https://drive.switch.ch/index.php/s/ZUORMr4uzBSr04b/download",
-        'west': "https://drive.switch.ch/index.php/s/HRPNJdeAzeQLA1f/download",
+        'east': "https://huggingface.co/datasets/TorchSpatiotemporal/ProcessedDatasets/resolve/v1.0.0/pv_us/east.h5",
+        'west': "https://huggingface.co/datasets/TorchSpatiotemporal/ProcessedDatasets/resolve/v1.0.0/pv_us/west.h5",
     }
 
     similarity_options = {'distance', 'correntropy'}

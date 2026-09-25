@@ -129,6 +129,8 @@ filterwarnings = [
     "ignore:Sparse CSR tensor support is in beta state:UserWarning",
     "ignore:Sparse CSC tensor support is in beta state:UserWarning",
     "ignore:The '.*_dataloader' does not have many workers.*",
+    "ignore:Checkpoint directory .* exists and is not empty.*:UserWarning",
+    "ignore:.*`tensorboardX` has been removed as a dependency.*:UserWarning",
 ]
 
 [tool.coverage.run]

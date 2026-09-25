@@ -98,7 +98,7 @@ class Elergone(DatetimeDataset):
         tsl.logger.info('Loaded raw dataset.')
         # idx = sorted(df.index)
         # start, end = idx[0], idx[-1]
-        # idx = pd.date_range(start, end, freq='15T')
+        # idx = pd.date_range(start, end, freq='15min')
         # df = df.reindex(index=idx)
         df /= 4.0  # kW -> kWh
         # drop duplicates

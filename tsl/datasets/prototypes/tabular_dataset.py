@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from copy import deepcopy
-from typing import Dict, List, Mapping, Optional, Tuple, Union
+from typing import Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -511,13 +511,12 @@ class TabularDataset(Dataset, TabularParsingMixin):
     def aggregate_(
         self,
         node_index: Optional[Union[Index, Mapping]] = None,
-        aggr: str = None,
+        aggr: Union[str, Callable] = None,
         mask_tolerance: float = 0.0,
     ):
 
         # get aggregation function among numpy functions
         aggr = aggr if aggr is not None else self.spatial_aggregation
-        aggr_fn = getattr(np, aggr)
 
         # node_index parsing: eventually must be an n_nodes-sized array where
         # value at position i is the cluster id of i-th node
@@ -542,11 +541,11 @@ class TabularDataset(Dataset, TabularParsingMixin):
         assert len(node_index) == self.n_nodes
 
         # aggregate main dataframe
-        self.target = aggregate(self.target, node_index, aggr_fn)
+        self.target = aggregate(self.target, node_index, aggr)
 
         # aggregate mask (if node-wise) and threshold aggregated value
         if self.has_mask:
-            mask = aggregate(self.mask, node_index, np.mean)
+            mask = aggregate(self.mask, node_index, "mean")
             mask = mask >= (1.0 - mask_tolerance)
             self.set_mask(mask)
 
@@ -555,17 +554,17 @@ class TabularDataset(Dataset, TabularParsingMixin):
             value, pattern = attr['value'], attr['pattern']
             dims = pattern.strip().split(' ')
             if dims[0] == 'n':
-                value = aggregate(value, node_index, aggr_fn, axis=0)
+                value = aggregate(value, node_index, aggr, axis=0)
             for lvl, dim in enumerate(dims[1:]):
                 if dim == 'n':
-                    value = aggregate(value, node_index, aggr_fn, axis=1, level=lvl)
+                    value = aggregate(value, node_index, aggr, axis=1, level=lvl)
             self._covariates[name]['value'] = value
         return self
 
     def aggregate(
         self,
         node_index: Optional[Union[Index, Mapping]] = None,
-        aggr: str = None,
+        aggr: Union[str, Callable] = None,
         mask_tolerance: float = 0.0,
     ):
         ds = deepcopy(self)

@@ -31,7 +31,7 @@ def grid_dataframe(n_steps, n_nodes, n_channels, offset=0, index=None):
     return pd.DataFrame(data, index=index, columns=columns)
 
 
-def datetime_index(n_steps, freq='1H', start='2020-01-01'):
+def datetime_index(n_steps, freq='1h', start='2020-01-01'):
     return pd.date_range(start=start, periods=n_steps, freq=freq)
 
 
@@ -39,7 +39,7 @@ def make_tabular(n_steps=10, n_nodes=3, n_channels=2, **kwargs):
     return TabularDataset(target=grid_array(n_steps, n_nodes, n_channels), **kwargs)
 
 
-def make_datetime(n_steps=24, n_nodes=3, n_channels=1, freq='1H', **kwargs):
+def make_datetime(n_steps=24, n_nodes=3, n_channels=1, freq='1h', **kwargs):
     df = grid_dataframe(
         n_steps, n_nodes, n_channels, index=datetime_index(n_steps, freq=freq)
     )

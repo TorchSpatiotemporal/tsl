@@ -109,7 +109,10 @@ class AirQuality(DatetimeDataset, MissingValuesMixin):
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
 
-    url = "https://drive.switch.ch/index.php/s/W0fRqotjHxIndPj/download"
+    url = (
+        "https://huggingface.co/datasets/TorchSpatiotemporal"
+        "/ProcessedDatasets/resolve/v1.0.0/air/air_quality.zip"
+    )
 
     similarity_options = {'distance'}
 

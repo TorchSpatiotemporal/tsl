@@ -1,5 +1,5 @@
 from . import multi, recurrent
-from .conditional import ConditionalBlock, ConditionalTCNBlock
+from .conditional import ConditionalBlock, ConditionalEncoder, ConditionalTCNBlock
 from .mlp import MLP, ResidualMLP
 from .mlp_attention import MLPAttention, TemporalMLPAttention
 from .multi import MultiMLP, MultiRNN
@@ -13,6 +13,7 @@ __all__ = [
     'ResidualMLP',
     'MultiMLP',
     'ConditionalBlock',
+    'ConditionalEncoder',
     'TemporalConvNet',
     'SpatioTemporalConvNet',
     'ConditionalTCNBlock',

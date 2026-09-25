@@ -13,7 +13,10 @@ from tsl.utils import download_url, extract_zip
 class _PeMS(DatetimeDataset):
     r"""Abstract class for PeMSD datasets."""
 
-    url: None
+    url = (
+        "https://huggingface.co/datasets/TorchSpatiotemporal"
+        "/ProcessedDatasets/resolve/v1.0.0/traffic/"
+    )
     start_date: None
     similarity_options = {'distance', 'stcn', 'binary'}
     num_sensors: None
@@ -58,7 +61,7 @@ class _PeMS(DatetimeDataset):
         fp = np.load(self.raw_files_paths[0])
         data = fp['data']
         fp.close()
-        index = pd.date_range(start=self.start_date, periods=len(data), freq='5T')
+        index = pd.date_range(start=self.start_date, periods=len(data), freq='5min')
 
         df_flow = pd.DataFrame(data=data[..., 0], index=index).astype('float32')
 
@@ -130,7 +133,7 @@ class PeMS03(_PeMS):
     name = 'PeMS03'
     start_date = '09-01-2018 00:00'
     num_sensors = 358
-    url = 'https://drive.switch.ch/index.php/s/uHzXFWkLk4QcxD2/download'
+    url = _PeMS.url + 'pems03.zip'
 
     @property
     def raw_file_names(self):
@@ -189,7 +192,7 @@ class PeMS04(_PeMS):
     name = 'PeMS04'
     start_date = '01-01-2018 00:00'
     num_sensors = 307
-    url = 'https://drive.switch.ch/index.php/s/iyOIdo2KQQOxikk/download'
+    url = _PeMS.url + 'pems04.zip'
 
     @property
     def raw_file_names(self):
@@ -224,7 +227,7 @@ class PeMS07(_PeMS):
     name = 'PeMS07'
     start_date = '05-01-2017 00:00'
     num_sensors = 883
-    url = 'https://drive.switch.ch/index.php/s/MEORmJbPECSfylK/download'
+    url = _PeMS.url + 'pems07.zip'
 
     @property
     def raw_file_names(self):
@@ -266,7 +269,7 @@ class PeMS08(_PeMS):
     name = 'PeMS08'
     start_date = '07-01-2016 00:00'
     num_sensors = 170
-    url = 'https://drive.switch.ch/index.php/s/RZOxK3M3idN3IAu/download'
+    url = _PeMS.url + 'pems08.zip'
 
     @property
     def raw_file_names(self):

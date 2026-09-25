@@ -8,7 +8,7 @@ from ..utils import download_url, extract_zip
 from .prototypes import DatetimeDataset
 from .prototypes.casting import to_pandas_freq
 
-__base_url__ = "https://drive.switch.ch/index.php/s/nJgK7ca28hk7AMU/download"
+__base_url__ = "https://huggingface.co/datasets/TorchSpatiotemporal/ProcessedDatasets/resolve/v1.0.0/large_st/"
 __subsets__ = ["CA", "GBA", "GLA", "SD"]
 SubsetType = Literal["CA", "GBA", "GLA", "SD"]
 
@@ -88,21 +88,21 @@ class LargeST(DatetimeDataset):
             fill missing values with :obj:`0`; if :obj:`None`, do not impute
             (leave :obj:`nan`).
             (default: :obj:`"zero"`)
-        freq (str): The sampling rate used for resampling (e.g., :obj:`"15T"`
+        freq (str): The sampling rate used for resampling (e.g., :obj:`"15min"`
             for 15-minutes intervals resampling).
-            (default: :obj:`"15T"`)
+            (default: :obj:`"15min"`)
         precision (int or str): The float precision of the dataset.
             (default: :obj:`32`)
     """
 
     base_url = __base_url__
     url = {
-        "2017": __base_url__ + "?path=%2F2017&files=data.h5",
-        "2018": __base_url__ + "?path=%2F2018&files=data.h5",
-        "2019": __base_url__ + "?path=%2F2019&files=data.h5",
-        "2020": __base_url__ + "?path=%2F2020&files=data.h5",
-        "2021": __base_url__ + "?path=%2F2021&files=data.h5",
-        "sensors": __base_url__ + "?files=sensors.zip",
+        "2017": __base_url__ + "2017/data.h5",
+        "2018": __base_url__ + "2018/data.h5",
+        "2019": __base_url__ + "2019/data.h5",
+        "2020": __base_url__ + "2020/data.h5",
+        "2021": __base_url__ + "2021/data.h5",
+        "sensors": __base_url__ + "sensors.zip",
     }
 
     similarity_options = {"precomputed"}
@@ -113,7 +113,7 @@ class LargeST(DatetimeDataset):
         subset: SubsetType = "CA",
         year: Optional[Union[int, Sequence[int]]] = 2019,
         imputation_mode: Literal["nearest", "zero", None] = "zero",
-        freq: str = "15T",
+        freq: str = "15min",
         precision: Union[int, str] = 32,
     ):
         # set root path
@@ -216,7 +216,7 @@ class LargeST(DatetimeDataset):
             # align to authors' preprocessing
             if self.freq is not None:
                 data_df = data_df.resample(self.freq).mean()
-                # in authors' code: data_df.resample('15T').mean().round(0)
+                # in authors' code: data_df.resample('15min').mean().round(0)
             readings.append(data_df)
 
         readings = (

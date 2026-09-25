@@ -31,7 +31,10 @@ class PemsBay(DatetimeDataset):
         + :obj:`dist`: :math:`N \times N` matrix of node pairwise distances.
     """
 
-    url = "https://drive.switch.ch/index.php/s/5NPcgGFAIJ4oFcT/download"
+    url = (
+        "https://huggingface.co/datasets/TorchSpatiotemporal"
+        "/ProcessedDatasets/resolve/v1.0.0/traffic/pems_bay.zip"
+    )
 
     similarity_options = {'distance', 'stcn'}
 
