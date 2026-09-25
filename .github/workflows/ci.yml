@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
 
       - name: Install uv and set up Python
-        uses: astral-sh/setup-uv@v9
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           python-version: "3.11"
           version: "0.12.19"
@@ -62,7 +62,7 @@ jobs:
           persist-credentials: false
 
       - name: Install uv and set up Python ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v9
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           python-version: ${{ matrix.python-version }}
           version: "0.12.19"
