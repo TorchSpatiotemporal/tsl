@@ -93,8 +93,9 @@ def _pre_experiment_routine(cfg: DictConfig):
     with flag_override(cfg, 'struct', False):
         cfg.run = DictConfig(run_args)
 
-    # override data_dir in tsl config
-    config.data_dir = cfg.get('data_dir', config.data_dir)
+    # override data_dir in tsl config (if missing or null, keep the default)
+    if cfg.get('data_dir') is not None:
+        config.data_dir = cfg.data_dir
 
     # if True, then allow for adding new args to the cfg
     if cfg.get('allow_config_extension', False):
